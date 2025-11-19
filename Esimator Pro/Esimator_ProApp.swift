@@ -11,6 +11,7 @@ import SwiftUI
 struct EstimatorProApp: App {
     @StateObject private var jobVM = JobViewModel()
     @StateObject private var invoiceVM = InvoiceViewModel()
+    @StateObject private var clientVM = ClientViewModel()
     @State private var showingSplash = true
     @State private var splashOpacity = 1.0
 
@@ -22,6 +23,7 @@ struct EstimatorProApp: App {
                 }
                 .environmentObject(jobVM)
                 .environmentObject(invoiceVM)
+                .environmentObject(clientVM)
 
                 if showingSplash {
                     SplashScreenView()
