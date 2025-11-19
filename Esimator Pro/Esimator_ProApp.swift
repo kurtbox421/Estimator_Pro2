@@ -8,10 +8,15 @@
 import SwiftUI
 
 @main
-struct Esimator_ProApp: App {
+struct EstimatorProApp: App {
+    @StateObject private var jobVM = JobViewModel()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            NavigationStack {
+                RootView()
+            }
+            .environmentObject(jobVM)
         }
     }
 }

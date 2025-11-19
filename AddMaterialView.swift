@@ -1,0 +1,69 @@
+//
+//  AddMaterialView.swift
+//  Esimator Pro
+//
+//  Created by Curtis Bollinger on 11/18/25.
+//
+
+import SwiftUI
+
+struct AddMaterialView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var onSave: (Material) -> Void
+
+    @State private var name = ""
+    @State private var quantity = ""
+    @State private var unitCost = ""
+
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Material")) {
+                    TextField("Name", text: $name)
+                }
+
+                Section(header: Text("Details")) {
+                    TextField("Quantity", text: $quantity)
+                        .keyboardType(.decimalPad)
+                    TextField("Unit cost", text: $unitCost)
+                        .keyboardType(.decimalPad)
+                }
+            }
+            .navigationTitle("Add Material")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { save() }
+                        .disabled(!canSave)
+                }
+            }
+        }
+    }
+
+    private var canSave: Bool {
+        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
+        Double(quantity) != nil &&
+        Double(unitCost) != nil
+    }
+
+    private func save() {
+        guard let q = Double(quantity),
+              let u = Double(unitCost),
+              !name.trimmingCharacters(in: .whitespaces).isEmpty
+        else { return }
+
+        let material = Material(
+            name: name.trimmingCharacters(in: .whitespaces),
+            quantity: q,
+            unitCost: u
+        )
+
+        onSave(material)
+        dismiss()
+    }
+}
+
