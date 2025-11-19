@@ -14,6 +14,27 @@ enum AppTab: String, CaseIterable {
     case settings  = "Settings"
 }
 
+private struct AdaptiveLayout {
+    let contentWidth: CGFloat
+    let horizontalPadding: CGFloat
+
+    init(containerSize: CGSize,
+         maxContentWidth: CGFloat = 860,
+         minPadding: CGFloat = 16,
+         minContentWidth: CGFloat = 320) {
+        let availableWidth = containerSize.width
+
+        if availableWidth >= maxContentWidth + (minPadding * 2) {
+            contentWidth = maxContentWidth
+            horizontalPadding = max((availableWidth - maxContentWidth) / 2, minPadding)
+        } else {
+            let adjustedWidth = max(availableWidth - (minPadding * 2), minContentWidth)
+            contentWidth = adjustedWidth
+            horizontalPadding = minPadding
+        }
+    }
+}
+
 struct RootView: View {
     @EnvironmentObject private var jobVM: JobViewModel
     @State private var selectedTab: AppTab = .estimates
@@ -22,24 +43,31 @@ struct RootView: View {
 
 
     var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: backgroundColors(for: selectedTab),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+        GeometryReader { geometry in
+            let layout = AdaptiveLayout(containerSize: geometry.size)
 
-            VStack(spacing: 16) {
-                headerBar
+            ZStack {
+                LinearGradient(
+                    colors: backgroundColors(for: selectedTab),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
 
-                heroCard
-                    .padding(.horizontal, 24)
+                VStack(spacing: 16) {
+                    headerBar(availableWidth: layout.contentWidth)
 
-                contentForSelectedTab
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    heroCard
+                        .frame(maxWidth: layout.contentWidth, alignment: .center)
+
+                    contentForSelectedTab
+                        .frame(maxWidth: layout.contentWidth)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.top, 12)
+                .padding(.horizontal, layout.horizontalPadding)
             }
-            .padding(.top, 12)
         }
         .sheet(isPresented: $showingAddJob) {
             NavigationView {
@@ -55,73 +83,98 @@ struct RootView: View {
 
     // MARK: - Header with tabs + buttons
 
-    private var headerBar: some View {
-        HStack {
-            // Tabs
-            HStack(spacing: 10) {
-                ForEach(AppTab.allCases, id: \.self) { tab in
-                    Button {
-                        selectedTab = tab
-                    } label: {
-                        Text(tab.rawValue)
-                            .font(.subheadline.weight(.semibold))
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 14)
-                            .background(
-                                Capsule()
-                                    .fill(selectedTab == tab
-                                          ? Color.white.opacity(0.95)
-                                          : Color.black.opacity(0.25))
-                            )
-                            .foregroundColor(selectedTab == tab ? .black : .white)
-                    }
-                }
-            }
+    private func headerBar(availableWidth: CGFloat) -> some View {
+        ViewThatFits(in: .horizontal) {
+            headerHorizontal
+            headerStacked(width: availableWidth)
+        }
+    }
 
-            Spacer()
-
-            // Right side buttons (only meaningful on Estimates for now)
-            HStack(spacing: 10) {
+    private var tabButtons: some View {
+        HStack(spacing: 10) {
+            ForEach(AppTab.allCases, id: \.self) { tab in
                 Button {
-                    switch selectedTab {
-                    case .estimates:
-                        showingAddJob = true
-                    case .invoices:
-                        invoiceSheetMode = .add
-                    case .clients, .settings:
-                        break
-                    }
+                    selectedTab = tab
                 } label: {
-                    Image(systemName: "plus")
-                        .font(.headline)
-                        .padding(8)
-                        .background(Color.white.opacity(0.95))
-                        .clipShape(Circle())
-                        .foregroundColor(.black)
-                }
-
-                Button {
-                    // later: quick action / AI tools, whatever
-                } label: {
-                    Image(systemName: "paintbrush.pointed.fill")
-                        .font(.headline)
-                        .padding(8)
+                    Text(tab.rawValue)
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 14)
                         .background(
-                            LinearGradient(
-                                colors: [
-                                    Color(red: 1.0, green: 0.17, blue: 0.60),
-                                    Color(red: 0.90, green: 0.30, blue: 1.0)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+                            Capsule()
+                                .fill(selectedTab == tab
+                                      ? Color.white.opacity(0.95)
+                                      : Color.black.opacity(0.25))
                         )
-                        .clipShape(Circle())
-                        .foregroundColor(.white)
+                        .foregroundColor(selectedTab == tab ? .black : .white)
                 }
             }
         }
-        .padding(.horizontal, 24)
+    }
+
+    private var actionButtons: some View {
+        HStack(spacing: 10) {
+            Button {
+                switch selectedTab {
+                case .estimates:
+                    showingAddJob = true
+                case .invoices:
+                    invoiceSheetMode = .add
+                case .clients, .settings:
+                    break
+                }
+            } label: {
+                Image(systemName: "plus")
+                    .font(.headline)
+                    .padding(8)
+                    .background(Color.white.opacity(0.95))
+                    .clipShape(Circle())
+                    .foregroundColor(.black)
+            }
+
+            Button {
+                // later: quick action / AI tools, whatever
+            } label: {
+                Image(systemName: "paintbrush.pointed.fill")
+                    .font(.headline)
+                    .padding(8)
+                    .background(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 1.0, green: 0.17, blue: 0.60),
+                                Color(red: 0.90, green: 0.30, blue: 1.0)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .clipShape(Circle())
+                    .foregroundColor(.white)
+            }
+        }
+    }
+
+    private var headerHorizontal: some View {
+        HStack {
+            tabButtons
+            Spacer(minLength: 16)
+            actionButtons
+        }
+    }
+
+    private func headerStacked(width: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                tabButtons
+                    .padding(.trailing)
+            }
+
+            HStack {
+                Spacer()
+                actionButtons
+            }
+        }
+        .frame(maxWidth: width)
     }
 
     // MARK: - Hero card at top
