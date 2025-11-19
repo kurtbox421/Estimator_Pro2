@@ -37,6 +37,7 @@ private struct AdaptiveLayout {
 
 struct RootView: View {
     @EnvironmentObject private var jobVM: JobViewModel
+    @EnvironmentObject private var clientVM: ClientViewModel
     @State private var selectedTab: AppTab = .estimates
     @State private var showingAddJob = false
     @State private var invoiceSheetMode: AddEditInvoiceView.Mode?
@@ -120,7 +121,11 @@ struct RootView: View {
                     showingAddJob = true
                 case .invoices:
                     invoiceSheetMode = .add
-                case .clients, .settings:
+                case .clients:
+                    withAnimation {
+                        clientVM.add()
+                    }
+                case .settings:
                     break
                 }
             } label: {
@@ -458,41 +463,28 @@ struct InvoicesTabView: View {
 // MARK: - Clients tab
 
 struct ClientsTabView: View {
-    @State private var clients: [ClientInfo] = [
-        .init(
-            name: "Johnny Appleseed",
-            company: "B&B Apple Company",
-            address: "123 Honeycrisp Dr • Cupertino, CA",
-            jobs: 1,
-            phone: "(234) 421-3860"
-        ),
-        .init(
-            name: "Maria Sanchez",
-            company: "Sunrise Renovations",
-            address: "88 Goldenrod Ave • Portland, OR",
-            jobs: 3,
-            phone: "(503) 881-2244"
-        )
-    ]
+    @EnvironmentObject private var clientVM: ClientViewModel
     private let rowInsets = EdgeInsets(top: 0, leading: 24, bottom: 12, trailing: 24)
 
     var body: some View {
         List {
-            ForEach(clients) { client in
-                ClientBubbleCard(client: client)
+            ForEach($clientVM.clients) { $client in
+                ClientEditableCard(client: $client)
                     .listRowInsets(rowInsets)
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button(role: .destructive) {
-                            delete(client)
+                            withAnimation {
+                                clientVM.delete(client.wrappedValue)
+                            }
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
                     }
             }
 
-            if clients.isEmpty {
+            if clientVM.clients.isEmpty {
                 Text("Add a client to start building your directory.")
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.75))
@@ -501,35 +493,41 @@ struct ClientsTabView: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
             }
+
+            addClientButton
+                .listRowInsets(rowInsets)
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
     }
 
-    private func delete(_ client: ClientInfo) {
-        withAnimation {
-            clients.removeAll { $0.id == client.id }
+    private var addClientButton: some View {
+        Button {
+            withAnimation {
+                clientVM.add()
+            }
+        } label: {
+            HStack {
+                Image(systemName: "person.badge.plus")
+                    .font(.headline)
+                Text("Add client")
+                    .font(.headline.weight(.semibold))
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(Color.white.opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                    )
+            )
         }
-    }
-}
-
-private struct ClientInfo: Identifiable {
-    let id = UUID()
-    let name: String
-    let company: String
-    let address: String
-    let jobs: Int
-    let phone: String
-
-    var jobSummary: String {
-        jobs == 1 ? "1 job" : "\(jobs) jobs"
-    }
-
-    var initials: String {
-        let parts = name.split(separator: " ")
-        let letters = parts.prefix(2).compactMap { $0.first }
-        let initials = letters.map { String($0) }.joined()
-        return initials.isEmpty ? "?" : initials
+        .buttonStyle(.plain)
     }
 }
 
@@ -604,59 +602,74 @@ private extension Invoice.InvoiceStatus {
     }
 }
 
-private struct ClientBubbleCard: View {
-    let client: ClientInfo
+private struct ClientEditableCard: View {
+    @Binding var client: Client
 
     var body: some View {
-        HStack(alignment: .center, spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.2), Color.white.opacity(0.05)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .overlay(
-                        Circle()
-                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                    )
-                Text(client.initials)
-                    .font(.headline.weight(.semibold))
-                    .foregroundColor(.white)
-            }
-            .frame(width: 52, height: 52)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 16) {
+                ClientAvatar(initials: client.initials)
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text(client.name)
-                    .font(.headline)
-                    .foregroundColor(.white)
+                VStack(alignment: .leading, spacing: 8) {
+                    TextField("Client name", text: $client.name)
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled()
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.white)
 
-                Text(client.company)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(.white.opacity(0.9))
-
-                Text(client.address)
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.75))
+                    TextField("Company", text: $client.company)
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled()
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.9))
+                }
             }
 
-            Spacer()
+            ClientEditableField(
+                title: "Address",
+                prompt: "Street, city, state",
+                systemImage: "mappin.and.ellipse",
+                text: $client.address
+            )
 
-            VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                ClientEditableField(
+                    title: "Phone",
+                    prompt: "(555) 123-4567",
+                    systemImage: "phone.fill",
+                    text: $client.phone,
+                    capitalization: .never,
+                    keyboardType: .phonePad
+                )
+
+                ClientEditableField(
+                    title: "Email",
+                    prompt: "hello@example.com",
+                    systemImage: "envelope.fill",
+                    text: $client.email,
+                    capitalization: .never,
+                    keyboardType: .emailAddress
+                )
+            }
+
+            ClientEditableField(
+                title: "Notes",
+                prompt: "Reminders, preferences, etc.",
+                systemImage: "note.text",
+                text: $client.notes,
+                capitalization: .sentences,
+                disableAutocorrection: false
+            )
+
+            Stepper(value: $client.jobCount, in: 0...999) {
                 Label(client.jobSummary, systemImage: "briefcase.fill")
                     .font(.caption.weight(.semibold))
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 10)
-                    .background(Color.white.opacity(0.08))
-                    .clipShape(Capsule())
                     .foregroundColor(.white)
-
-                Label(client.phone, systemImage: "phone.fill")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.white.opacity(0.95))
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Color.white.opacity(0.06))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -665,9 +678,71 @@ private struct ClientBubbleCard: View {
                 .fill(Color.white.opacity(0.05))
                 .overlay(
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
                 )
         )
+    }
+}
+
+private struct ClientAvatar: View {
+    let initials: String
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.18), Color.white.opacity(0.05)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    Circle()
+                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                )
+
+            Text(initials)
+                .font(.headline.weight(.semibold))
+                .foregroundColor(.white)
+        }
+        .frame(width: 54, height: 54)
+    }
+}
+
+private struct ClientEditableField: View {
+    let title: String
+    let prompt: String
+    let systemImage: String?
+    @Binding var text: String
+    var capitalization: TextInputAutocapitalization = .words
+    var keyboardType: UIKeyboardType = .default
+    var disableAutocorrection: Bool = true
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title.uppercased())
+                .font(.caption2.weight(.semibold))
+                .foregroundColor(.white.opacity(0.65))
+
+            HStack(spacing: 8) {
+                if let systemImage {
+                    Image(systemName: systemImage)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundColor(.white.opacity(0.85))
+                }
+
+                TextField(prompt, text: $text)
+                    .textInputAutocapitalization(capitalization)
+                    .autocorrectionDisabled(disableAutocorrection)
+                    .keyboardType(keyboardType)
+                    .foregroundColor(.white)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Color.white.opacity(0.06))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
     }
 }
 
