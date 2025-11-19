@@ -606,34 +606,21 @@ private struct ClientEditableCard: View {
     @Binding var client: Client
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top, spacing: 16) {
-                ClientAvatar(initials: client.initials)
+        VStack(alignment: .leading, spacing: 14) {
+            header
 
-                VStack(alignment: .leading, spacing: 8) {
-                    TextField("Client name", text: $client.name)
-                        .textInputAutocapitalization(.words)
-                        .autocorrectionDisabled()
-                        .font(.headline.weight(.semibold))
-                        .foregroundColor(.white)
+            Divider().overlay(Color.white.opacity(0.15))
 
-                    TextField("Company", text: $client.company)
-                        .textInputAutocapitalization(.words)
-                        .autocorrectionDisabled()
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.9))
-                }
-            }
-
-            ClientEditableField(
+            ClientInfoTile(
                 title: "Address",
-                prompt: "Street, city, state",
+                prompt: "123 Main St · City, ST",
                 systemImage: "mappin.and.ellipse",
-                text: $client.address
+                text: $client.address,
+                capitalization: .sentences
             )
 
             HStack(spacing: 12) {
-                ClientEditableField(
+                ClientInfoTile(
                     title: "Phone",
                     prompt: "(555) 123-4567",
                     systemImage: "phone.fill",
@@ -642,7 +629,7 @@ private struct ClientEditableCard: View {
                     keyboardType: .phonePad
                 )
 
-                ClientEditableField(
+                ClientInfoTile(
                     title: "Email",
                     prompt: "hello@example.com",
                     systemImage: "envelope.fill",
@@ -652,7 +639,7 @@ private struct ClientEditableCard: View {
                 )
             }
 
-            ClientEditableField(
+            ClientInfoTile(
                 title: "Notes",
                 prompt: "Reminders, preferences, etc.",
                 systemImage: "note.text",
@@ -661,15 +648,7 @@ private struct ClientEditableCard: View {
                 disableAutocorrection: false
             )
 
-            Stepper(value: $client.jobCount, in: 0...999) {
-                Label(client.jobSummary, systemImage: "briefcase.fill")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.white)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(Color.white.opacity(0.06))
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            ClientJobTile(jobCount: $client.jobCount, summary: client.jobSummary)
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -710,7 +689,7 @@ private struct ClientAvatar: View {
     }
 }
 
-private struct ClientEditableField: View {
+private struct ClientInfoTile: View {
     let title: String
     let prompt: String
     let systemImage: String?
@@ -720,28 +699,103 @@ private struct ClientEditableField: View {
     var disableAutocorrection: Bool = true
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title.uppercased())
-                .font(.caption2.weight(.semibold))
-                .foregroundColor(.white.opacity(0.65))
-
-            HStack(spacing: 8) {
-                if let systemImage {
-                    Image(systemName: systemImage)
-                        .font(.footnote.weight(.semibold))
-                        .foregroundColor(.white.opacity(0.85))
-                }
-
-                TextField(prompt, text: $text)
-                    .textInputAutocapitalization(capitalization)
-                    .autocorrectionDisabled(disableAutocorrection)
-                    .keyboardType(keyboardType)
-                    .foregroundColor(.white)
+        VStack(alignment: .leading, spacing: 6) {
+            if let systemImage {
+                Label(title.uppercased(), systemImage: systemImage)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.7))
+                    .labelStyle(.titleAndIcon)
+            } else {
+                Text(title.uppercased())
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.7))
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(Color.white.opacity(0.06))
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+            TextField(prompt, text: $text)
+                .textInputAutocapitalization(capitalization)
+                .autocorrectionDisabled(disableAutocorrection)
+                .keyboardType(keyboardType)
+                .font(.subheadline)
+                .foregroundColor(.white)
+                .padding(.vertical, 8)
+                .padding(.horizontal, 10)
+                .background(Color.white.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.white.opacity(0.05))
+        )
+    }
+}
+
+private struct ClientJobTile: View {
+    @Binding var jobCount: Int
+    let summary: String
+
+    var body: some View {
+        Stepper(value: $jobCount, in: 0...999) {
+            HStack {
+                Label("Projects", systemImage: "briefcase.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+
+                Spacer()
+
+                Text(summary)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.85))
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(Capsule())
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.white.opacity(0.05))
+        )
+    }
+}
+
+private extension ClientEditableCard {
+    var header: some View {
+        HStack(alignment: .top, spacing: 14) {
+            ClientAvatar(initials: client.initials)
+
+            VStack(alignment: .leading, spacing: 6) {
+                TextField("Client name", text: $client.name)
+                    .textInputAutocapitalization(.words)
+                    .autocorrectionDisabled()
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.white)
+
+                TextField("Company", text: $client.company)
+                    .textInputAutocapitalization(.words)
+                    .autocorrectionDisabled()
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.9))
+
+                Text(client.jobSummary)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.85))
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(Capsule())
+            }
+
+            Spacer()
+
+            Image(systemName: "ellipsis")
+                .font(.headline.weight(.semibold))
+                .foregroundColor(.white.opacity(0.8))
+                .padding(10)
+                .background(Color.white.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
     }
 }
