@@ -10,6 +10,7 @@ import SwiftUI
 @main
 struct EstimatorProApp: App {
     @StateObject private var jobVM = JobViewModel()
+    @StateObject private var invoiceVM = InvoiceViewModel()
 
     var body: some Scene {
         WindowGroup {
@@ -17,6 +18,7 @@ struct EstimatorProApp: App {
                 RootView()
             }
             .environmentObject(jobVM)
+            .environmentObject(invoiceVM)
         }
     }
 }
