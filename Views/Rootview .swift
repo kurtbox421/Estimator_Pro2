@@ -19,6 +19,8 @@ struct RootView: View {
     @State private var selectedTab: AppTab = .estimates
     @State private var showingAddJob = false
     @State private var editingJob: Job?
+    @State private var jobPendingDeletion: Job?
+    @State private var showingDeleteConfirmation = false
 
 
     var body: some View {
@@ -53,6 +55,21 @@ struct RootView: View {
             NavigationView {
                 AddEditJobView(mode: .edit(job))
             }
+        }
+        .confirmationDialog(
+            "Delete job?",
+            isPresented: $showingDeleteConfirmation,
+            presenting: jobPendingDeletion
+        ) { pendingJob in
+            Button("Delete", role: .destructive) {
+                jobVM.delete(pendingJob)
+                jobPendingDeletion = nil
+            }
+            Button("Cancel", role: .cancel) {
+                jobPendingDeletion = nil
+            }
+        } message: { pendingJob in
+            Text("\"\(pendingJob.name)\" will be removed from your library and any saved materials will be lost.")
         }
     }
 
@@ -160,9 +177,15 @@ struct RootView: View {
     private var contentForSelectedTab: some View {
         switch selectedTab {
         case .estimates:
-            EstimatesTabView { job in
-                editingJob = job
-            }
+            EstimatesTabView(
+                onEdit: { job in
+                    editingJob = job
+                },
+                onDelete: { job in
+                    jobPendingDeletion = job
+                    showingDeleteConfirmation = true
+                }
+            )
         case .invoices:
             InvoicesTabView()
         case .clients:
@@ -239,6 +262,7 @@ struct HeroCardView: View {
 struct EstimatesTabView: View {
     @EnvironmentObject private var vm: JobViewModel
     var onEdit: (Job) -> Void = { _ in }
+    var onDelete: (Job) -> Void = { _ in }
 
     var body: some View {
         VStack(spacing: 16) {
@@ -246,18 +270,17 @@ struct EstimatesTabView: View {
                 NavigationLink {
                     JobDetailView(job: job)
                 } label: {
-                    EstimateJobCard(job: job) {
-                        onEdit(job)
-                    }
+                    EstimateJobCard(
+                        job: job,
+                        onEdit: { onEdit(job) },
+                        onDelete: { onDelete(job) }
+                    )
                 }
                 .buttonStyle(.plain)
-                .simultaneousGesture(LongPressGesture(minimumDuration: 0.6).onEnded { _ in
-                    onEdit(job)
-                })
             }
 
             if vm.jobs.isEmpty {
-                Text("No estimates yet. Tap the + button (coming soon) to add your first job.")
+                Text("No estimates yet. Tap the + button to add your first job.")
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.7))
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -271,6 +294,7 @@ struct EstimatesTabView: View {
 struct EstimateJobCard: View {
     let job: Job
     let onEdit: () -> Void
+    let onDelete: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -348,6 +372,10 @@ struct EstimateJobCard: View {
         .contextMenu {
             Button(action: onEdit) {
                 Label("Edit Job", systemImage: "square.and.pencil")
+            }
+
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete Job", systemImage: "trash")
             }
         }
     }
