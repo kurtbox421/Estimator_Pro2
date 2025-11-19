@@ -11,14 +11,37 @@ import SwiftUI
 struct EstimatorProApp: App {
     @StateObject private var jobVM = JobViewModel()
     @StateObject private var invoiceVM = InvoiceViewModel()
+    @State private var showingSplash = true
+    @State private var splashOpacity = 1.0
 
     var body: some Scene {
         WindowGroup {
-            NavigationStack {
-                RootView()
+            ZStack {
+                NavigationStack {
+                    RootView()
+                }
+                .environmentObject(jobVM)
+                .environmentObject(invoiceVM)
+
+                if showingSplash {
+                    SplashScreenView()
+                        .opacity(splashOpacity)
+                        .transition(.opacity)
+                        .zIndex(1)
+                }
             }
-            .environmentObject(jobVM)
-            .environmentObject(invoiceVM)
+            .onAppear(perform: dismissSplashIfNeeded)
+        }
+    }
+
+    private func dismissSplashIfNeeded() {
+        guard showingSplash else { return }
+        withAnimation(.easeInOut(duration: 1.0)) {
+            splashOpacity = 0
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            showingSplash = false
         }
     }
 }
