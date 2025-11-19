@@ -32,14 +32,11 @@ struct RootView: View {
             VStack(spacing: 16) {
                 headerBar
 
-                ScrollView {
-                    VStack(spacing: 20) {
-                        heroCard
-                        contentForSelectedTab
-                    }
+                heroCard
                     .padding(.horizontal, 24)
-                    .padding(.bottom, 24)
-                }
+
+                contentForSelectedTab
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .padding(.top, 12)
         }
@@ -230,16 +227,28 @@ struct HeroCardView: View {
 
 struct EstimatesTabView: View {
     @EnvironmentObject private var vm: JobViewModel
+    private let rowInsets = EdgeInsets(top: 0, leading: 24, bottom: 12, trailing: 24)
 
     var body: some View {
-        VStack(spacing: 16) {
+        List {
             ForEach(vm.jobs) { job in
                 NavigationLink {
                     JobDetailView(job: job)
                 } label: {
                     EstimateJobCard(job: job)
                 }
-                .buttonStyle(.plain)
+                .listRowInsets(rowInsets)
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        withAnimation {
+                            vm.delete(job)
+                        }
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
             }
 
             if vm.jobs.isEmpty {
@@ -247,9 +256,13 @@ struct EstimatesTabView: View {
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.7))
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 8)
+                    .listRowInsets(rowInsets)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
             }
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
     }
 }
 
@@ -337,29 +350,46 @@ struct EstimateJobCard: View {
 // MARK: - Invoices tab
 
 struct InvoicesTabView: View {
+    @State private var invoices: [InvoiceInfo] = [
+        .init(project: "Kitchen Remodel", client: "Maria Sanchez", amount: 12450, status: .draft),
+        .init(project: "Patio Extension", client: "Johnny Appleseed", amount: 8800, status: .sent),
+        .init(project: "Basement Finish", client: "Harper Logistics", amount: 18750, status: .overdue)
+    ]
+    private let rowInsets = EdgeInsets(top: 0, leading: 24, bottom: 12, trailing: 24)
+
     var body: some View {
-        VStack(spacing: 16) {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.white.opacity(0.06))
-                .overlay(
-                    VStack(spacing: 8) {
-                        Image(systemName: "doc.text.image")
-                            .font(.largeTitle)
-                            .foregroundColor(.white.opacity(0.8))
-
-                        Text("No invoices yet")
-                            .font(.headline)
-                            .foregroundColor(.white)
-
-                        Text("Convert an estimate to create your first invoice. It will show up here for easy sharing and tracking.")
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.8))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
+        List {
+            ForEach(invoices) { invoice in
+                InvoiceCard(invoice: invoice)
+                    .listRowInsets(rowInsets)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            delete(invoice)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
                     }
-                    .padding(24)
-                )
-                .frame(maxWidth: .infinity, minHeight: 180)
+            }
+
+            if invoices.isEmpty {
+                Text("No invoices yet. Convert an estimate and it will show up here for easy sharing and tracking.")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.8))
+                    .multilineTextAlignment(.leading)
+                    .listRowInsets(rowInsets)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+    }
+
+    private func delete(_ invoice: InvoiceInfo) {
+        withAnimation {
+            invoices.removeAll { $0.id == invoice.id }
         }
     }
 }
@@ -367,7 +397,7 @@ struct InvoicesTabView: View {
 // MARK: - Clients tab
 
 struct ClientsTabView: View {
-    private let clients: [ClientInfo] = [
+    @State private var clients: [ClientInfo] = [
         .init(
             name: "Johnny Appleseed",
             company: "B&B Apple Company",
@@ -383,11 +413,22 @@ struct ClientsTabView: View {
             phone: "(503) 881-2244"
         )
     ]
+    private let rowInsets = EdgeInsets(top: 0, leading: 24, bottom: 12, trailing: 24)
 
     var body: some View {
-        VStack(spacing: 16) {
+        List {
             ForEach(clients) { client in
                 ClientBubbleCard(client: client)
+                    .listRowInsets(rowInsets)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            delete(client)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
             }
 
             if clients.isEmpty {
@@ -395,10 +436,45 @@ struct ClientsTabView: View {
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.75))
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 8)
+                    .listRowInsets(rowInsets)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+    }
+
+    private func delete(_ client: ClientInfo) {
+        withAnimation {
+            clients.removeAll { $0.id == client.id }
+        }
+    }
+}
+
+private struct InvoiceInfo: Identifiable {
+    enum Status: String {
+        case draft = "Draft"
+        case sent = "Sent"
+        case overdue = "Overdue"
+
+        var tint: Color {
+            switch self {
+            case .draft:
+                return Color.blue.opacity(0.45)
+            case .sent:
+                return Color.green.opacity(0.45)
+            case .overdue:
+                return Color.red.opacity(0.55)
             }
         }
     }
+
+    let id = UUID()
+    let project: String
+    let client: String
+    let amount: Double
+    let status: Status
 }
 
 private struct ClientInfo: Identifiable {
@@ -418,6 +494,50 @@ private struct ClientInfo: Identifiable {
         let letters = parts.prefix(2).compactMap { $0.first }
         let initials = letters.map { String($0) }.joined()
         return initials.isEmpty ? "?" : initials
+    }
+}
+
+private struct InvoiceCard: View {
+    let invoice: InvoiceInfo
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(invoice.project)
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.white)
+
+                    Text(invoice.client)
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.85))
+                }
+
+                Spacer()
+
+                Text("$\(invoice.amount, specifier: "%.2f")")
+                    .font(.headline)
+                    .foregroundColor(.white)
+            }
+
+            Label(invoice.status.rawValue, systemImage: "paperplane")
+                .font(.caption.weight(.semibold))
+                .padding(.vertical, 6)
+                .padding(.horizontal, 12)
+                .background(invoice.status.tint)
+                .clipShape(Capsule())
+                .foregroundColor(.white)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color.white.opacity(0.06))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                )
+        )
     }
 }
 
