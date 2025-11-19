@@ -13,8 +13,6 @@
 		3969FD0B2ECD37000005C1AE /* AddEditJobView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3969FD0A2ECD37000005C1AE /* AddEditJobView.swift */; };
 		3969FD0D2ECD372A0005C1AE /* JobDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3969FD0C2ECD372A0005C1AE /* JobDetailView.swift */; };
 		3969FD0F2ECD37F10005C1AE /* Material.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3969FD0E2ECD37F10005C1AE /* Material.swift */; };
-		3969FD112ECD396A0005C1AE /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3969FD102ECD396A0005C1AE /* Theme.swift */; };
-		3969FD132ECD3CED0005C1AE /* Rootview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3969FD122ECD3CED0005C1AE /* Rootview.swift */; };
 		3969FD152ECD3F410005C1AE /* AddMaterialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3969FD142ECD3F410005C1AE /* AddMaterialView.swift */; };
 /* End PBXBuildFile section */
 
@@ -26,8 +24,6 @@
 		3969FD0A2ECD37000005C1AE /* AddEditJobView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditJobView.swift; sourceTree = "<group>"; };
 		3969FD0C2ECD372A0005C1AE /* JobDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobDetailView.swift; sourceTree = "<group>"; };
 		3969FD0E2ECD37F10005C1AE /* Material.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Material.swift; sourceTree = "<group>"; };
-		3969FD102ECD396A0005C1AE /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
-		3969FD122ECD3CED0005C1AE /* Rootview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Rootview.swift; sourceTree = "<group>"; };
 		3969FD142ECD3F410005C1AE /* AddMaterialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddMaterialView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -53,16 +49,12 @@
 		3969FCE82ECD35790005C1AE = {
 			isa = PBXGroup;
 			children = (
-				3969FD142ECD3F410005C1AE /* AddMaterialView.swift */,
-				3969FD122ECD3CED0005C1AE /* Rootview.swift */,
-				3969FD102ECD396A0005C1AE /* Theme.swift */,
-				3969FD0E2ECD37F10005C1AE /* Material.swift */,
+				3969FCF32ECD35790005C1AE /* Esimator Pro */,
 				3969FD072ECD36970005C1AE /* Utilities */,
 				3969FD062ECD368D0005C1AE /* Managers */,
 				3969FD052ECD36830005C1AE /* Views */,
 				3969FD042ECD366F0005C1AE /* ViewModels */,
 				3969FD032ECD36610005C1AE /* Models */,
-				3969FCF32ECD35790005C1AE /* Esimator Pro */,
 				3969FCF22ECD35790005C1AE /* Products */,
 			);
 			sourceTree = "<group>";
@@ -86,6 +78,7 @@
 		3969FD042ECD366F0005C1AE /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
+				3969FD0E2ECD37F10005C1AE /* Material.swift */,
 				3969FD012ECD36190005C1AE /* JobViewModel.swift */,
 			);
 			path = ViewModels;
@@ -96,6 +89,7 @@
 			children = (
 				3969FD082ECD36E10005C1AE /* JobListView.swift */,
 				3969FD0A2ECD37000005C1AE /* AddEditJobView.swift */,
+				3969FD142ECD3F410005C1AE /* AddMaterialView.swift */,
 				3969FD0C2ECD372A0005C1AE /* JobDetailView.swift */,
 			);
 			path = Views;
@@ -189,9 +183,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3969FD112ECD396A0005C1AE /* Theme.swift in Sources */,
 				3969FD0F2ECD37F10005C1AE /* Material.swift in Sources */,
-				3969FD132ECD3CED0005C1AE /* Rootview.swift in Sources */,
 				3969FD0B2ECD37000005C1AE /* AddEditJobView.swift in Sources */,
 				3969FD0D2ECD372A0005C1AE /* JobDetailView.swift in Sources */,
 				3969FD022ECD36190005C1AE /* JobViewModel.swift in Sources */,
