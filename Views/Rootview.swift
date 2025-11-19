@@ -412,42 +412,77 @@ private struct ClientInfo: Identifiable {
     var jobSummary: String {
         jobs == 1 ? "1 job" : "\(jobs) jobs"
     }
+
+    var initials: String {
+        let parts = name.split(separator: " ")
+        let letters = parts.prefix(2).compactMap { $0.first }
+        let initials = letters.map { String($0) }.joined()
+        return initials.isEmpty ? "?" : initials
+    }
 }
 
 private struct ClientBubbleCard: View {
     let client: ClientInfo
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("\(client.name) — \(client.company)")
-                .font(.headline)
-                .foregroundColor(.white)
+        HStack(alignment: .center, spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.2), Color.white.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+                Text(client.initials)
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.white)
+            }
+            .frame(width: 52, height: 52)
 
-            Text(client.address)
-                .font(.subheadline)
-                .foregroundColor(.white.opacity(0.8))
+            VStack(alignment: .leading, spacing: 6) {
+                Text(client.name)
+                    .font(.headline)
+                    .foregroundColor(.white)
 
-            HStack {
+                Text(client.company)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.white.opacity(0.9))
+
+                Text(client.address)
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.75))
+            }
+
+            Spacer()
+
+            VStack(alignment: .leading, spacing: 8) {
                 Label(client.jobSummary, systemImage: "briefcase.fill")
                     .font(.caption.weight(.semibold))
-                    .foregroundColor(.white.opacity(0.9))
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(Capsule())
+                    .foregroundColor(.white)
 
-                Spacer()
-
-                Text(client.phone)
+                Label(client.phone, systemImage: "phone.fill")
                     .font(.caption.weight(.semibold))
-                    .foregroundColor(.white.opacity(0.9))
+                    .foregroundColor(.white.opacity(0.95))
             }
-            .padding(.top, 4)
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color.white.opacity(0.06))
+                .fill(Color.white.opacity(0.05))
                 .overlay(
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
                 )
         )
     }

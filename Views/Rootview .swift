@@ -413,38 +413,124 @@ struct InvoicesTabView: View {
 // MARK: - Clients tab
 
 struct ClientsTabView: View {
+    private let clients: [ClientInfo] = [
+        .init(
+            name: "Johnny Appleseed",
+            company: "B&B Apple Company",
+            address: "123 Honeycrisp Dr • Cupertino, CA",
+            jobs: 1,
+            phone: "(234) 421-3860"
+        ),
+        .init(
+            name: "Maria Sanchez",
+            company: "Sunrise Renovations",
+            address: "88 Goldenrod Ave • Portland, OR",
+            jobs: 3,
+            phone: "(503) 881-2244"
+        )
+    ]
+
     var body: some View {
         VStack(spacing: 16) {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.white.opacity(0.06))
-                .overlay(
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Johnny Appleseed — B&B Apple Company")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                            Text("123 Honeycrisp Dr")
-                                .font(.subheadline)
-                                .foregroundColor(.white.opacity(0.8))
+            ForEach(clients) { client in
+                ClientBubbleCard(client: client)
+            }
 
-                            HStack {
-                                Label("1 job", systemImage: "folder.fill")
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.85))
-                            }
-                            .padding(.top, 4)
-                        }
-
-                        Spacer()
-
-                        Text("(234) 421-3860")
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.85))
-                    }
-                    .padding(20)
-                )
-                .frame(maxWidth: .infinity)
+            if clients.isEmpty {
+                Text("Add a client to start building your directory.")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.75))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 8)
+            }
         }
+    }
+}
+
+private struct ClientInfo: Identifiable {
+    let id = UUID()
+    let name: String
+    let company: String
+    let address: String
+    let jobs: Int
+    let phone: String
+
+    var jobSummary: String {
+        jobs == 1 ? "1 job" : "\(jobs) jobs"
+    }
+
+    var initials: String {
+        let parts = name.split(separator: " ")
+        let letters = parts.prefix(2).compactMap { $0.first }
+        let initials = letters.map { String($0) }.joined()
+        return initials.isEmpty ? "?" : initials
+    }
+}
+
+private struct ClientBubbleCard: View {
+    let client: ClientInfo
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.2), Color.white.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    )
+                Text(client.initials)
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.white)
+            }
+            .frame(width: 52, height: 52)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(client.name)
+                    .font(.headline)
+                    .foregroundColor(.white)
+
+                Text(client.company)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.white.opacity(0.9))
+
+                Text(client.address)
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.75))
+            }
+
+            Spacer()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Label(client.jobSummary, systemImage: "briefcase.fill")
+                    .font(.caption.weight(.semibold))
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(Capsule())
+                    .foregroundColor(.white)
+
+                Label(client.phone, systemImage: "phone.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.95))
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color.white.opacity(0.05))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                )
+        )
     }
 }
 
