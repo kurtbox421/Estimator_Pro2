@@ -18,6 +18,7 @@ struct RootView: View {
     @EnvironmentObject private var jobVM: JobViewModel
     @State private var selectedTab: AppTab = .estimates
     @State private var showingAddJob = false
+    @State private var editingJob: Job?
 
 
     var body: some View {
@@ -46,6 +47,11 @@ struct RootView: View {
         .sheet(isPresented: $showingAddJob) {
             NavigationView {
                 AddEditJobView(mode: .add)
+            }
+        }
+        .sheet(item: $editingJob) { job in
+            NavigationView {
+                AddEditJobView(mode: .edit(job))
             }
         }
     }
@@ -154,7 +160,9 @@ struct RootView: View {
     private var contentForSelectedTab: some View {
         switch selectedTab {
         case .estimates:
-            EstimatesTabView()
+            EstimatesTabView { job in
+                editingJob = job
+            }
         case .invoices:
             InvoicesTabView()
         case .clients:
@@ -230,6 +238,7 @@ struct HeroCardView: View {
 
 struct EstimatesTabView: View {
     @EnvironmentObject private var vm: JobViewModel
+    var onEdit: (Job) -> Void = { _ in }
 
     var body: some View {
         VStack(spacing: 16) {
@@ -237,9 +246,14 @@ struct EstimatesTabView: View {
                 NavigationLink {
                     JobDetailView(job: job)
                 } label: {
-                    EstimateJobCard(job: job)
+                    EstimateJobCard(job: job) {
+                        onEdit(job)
+                    }
                 }
                 .buttonStyle(.plain)
+                .simultaneousGesture(LongPressGesture(minimumDuration: 0.6).onEnded { _ in
+                    onEdit(job)
+                })
             }
 
             if vm.jobs.isEmpty {
@@ -256,6 +270,7 @@ struct EstimatesTabView: View {
 
 struct EstimateJobCard: View {
     let job: Job
+    let onEdit: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -282,13 +297,11 @@ struct EstimateJobCard: View {
 
                 Spacer()
 
-                Button {
-                    // later: open job detail
-                } label: {
+                Button(action: onEdit) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .fill(Color.white.opacity(0.08))
-                        Image(systemName: "folder.fill")
+                        Image(systemName: "square.and.pencil")
                             .foregroundColor(.white.opacity(0.9))
                     }
                     .frame(width: 50, height: 50)
@@ -332,6 +345,11 @@ struct EstimateJobCard: View {
                         .stroke(Color.white.opacity(0.12), lineWidth: 1)
                 )
         )
+        .contextMenu {
+            Button(action: onEdit) {
+                Label("Edit Job", systemImage: "square.and.pencil")
+            }
+        }
     }
 }
 // MARK: - Invoices tab
