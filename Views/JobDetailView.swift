@@ -12,6 +12,7 @@ struct JobDetailView: View {
 
     @State private var job: Job
     @State private var showingAddMaterial = false
+    @State private var editingMaterial: Material?
 
     init(job: Job) {
         _job = State(initialValue: job)
@@ -153,6 +154,25 @@ struct JobDetailView: View {
                                         .foregroundColor(.white)
                                 }
                                 .padding(.vertical, 6)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    editingMaterial = material
+                                }
+                                .swipeActions(edge: .leading) {
+                                    Button {
+                                        editingMaterial = material
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
+                                    .tint(.blue)
+                                }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        deleteMaterial(material)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
 
                                 Divider().background(Color.white.opacity(0.15))
                             }
@@ -194,5 +214,91 @@ struct JobDetailView: View {
                 vm.update(job)
             }
         }
+        .sheet(item: $editingMaterial) { material in
+            MaterialEditorView(material: material) { updatedMaterial in
+                updateMaterial(updatedMaterial)
+            }
+        }
+    }
+
+    private func deleteMaterial(_ material: Material) {
+        guard let index = job.materials.firstIndex(where: { $0.id == material.id }) else { return }
+        job.materials.remove(at: index)
+        vm.update(job)
+    }
+
+    private func updateMaterial(_ material: Material) {
+        guard let index = job.materials.firstIndex(where: { $0.id == material.id }) else { return }
+        job.materials[index] = material
+        vm.update(job)
+    }
+}
+
+private struct MaterialEditorView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var material: Material
+    var onSave: (Material) -> Void
+
+    @State private var name: String
+    @State private var quantity: String
+    @State private var unitCost: String
+
+    init(material: Material, onSave: @escaping (Material) -> Void) {
+        self.material = material
+        self.onSave = onSave
+        _name = State(initialValue: material.name)
+        _quantity = State(initialValue: String(material.quantity))
+        _unitCost = State(initialValue: String(material.unitCost))
+    }
+
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Material")) {
+                    TextField("Name", text: $name)
+                }
+
+                Section(header: Text("Details")) {
+                    TextField("Quantity", text: $quantity)
+                        .keyboardType(.decimalPad)
+                    TextField("Unit cost", text: $unitCost)
+                        .keyboardType(.decimalPad)
+                }
+            }
+            .navigationTitle("Edit Material")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { save() }
+                        .disabled(!canSave)
+                }
+            }
+        }
+    }
+
+    private var canSave: Bool {
+        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
+        Double(quantity) != nil &&
+        Double(unitCost) != nil
+    }
+
+    private func save() {
+        guard let q = Double(quantity),
+              let u = Double(unitCost)
+        else { return }
+
+        let updatedMaterial = Material(
+            id: material.id,
+            name: name.trimmingCharacters(in: .whitespaces),
+            quantity: q,
+            unitCost: u
+        )
+
+        onSave(updatedMaterial)
+        dismiss()
     }
 }
