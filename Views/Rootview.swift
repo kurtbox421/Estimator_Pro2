@@ -18,6 +18,7 @@ struct RootView: View {
     @EnvironmentObject private var jobVM: JobViewModel
     @State private var selectedTab: AppTab = .estimates
     @State private var showingAddJob = false
+    @State private var invoiceSheetMode: AddEditInvoiceView.Mode?
 
 
     var body: some View {
@@ -43,6 +44,11 @@ struct RootView: View {
         .sheet(isPresented: $showingAddJob) {
             NavigationView {
                 AddEditJobView(mode: .add)
+            }
+        }
+        .sheet(item: $invoiceSheetMode) { mode in
+            NavigationView {
+                AddEditInvoiceView(mode: mode)
             }
         }
     }
@@ -77,8 +83,13 @@ struct RootView: View {
             // Right side buttons (only meaningful on Estimates for now)
             HStack(spacing: 10) {
                 Button {
-                    if selectedTab == .estimates {
+                    switch selectedTab {
+                    case .estimates:
                         showingAddJob = true
+                    case .invoices:
+                        invoiceSheetMode = .add
+                    case .clients, .settings:
+                        break
                     }
                 } label: {
                     Image(systemName: "plus")
@@ -153,7 +164,9 @@ struct RootView: View {
         case .estimates:
             EstimatesTabView()
         case .invoices:
-            InvoicesTabView()
+            InvoicesTabView { invoice in
+                invoiceSheetMode = .edit(invoice)
+            }
         case .clients:
             ClientsTabView()
         case .settings:
@@ -350,30 +363,31 @@ struct EstimateJobCard: View {
 // MARK: - Invoices tab
 
 struct InvoicesTabView: View {
-    @State private var invoices: [InvoiceInfo] = [
-        .init(project: "Kitchen Remodel", client: "Maria Sanchez", amount: 12450, status: .draft),
-        .init(project: "Patio Extension", client: "Johnny Appleseed", amount: 8800, status: .sent),
-        .init(project: "Basement Finish", client: "Harper Logistics", amount: 18750, status: .overdue)
-    ]
+    @EnvironmentObject private var invoiceVM: InvoiceViewModel
+    var onSelectInvoice: (Invoice) -> Void = { _ in }
     private let rowInsets = EdgeInsets(top: 0, leading: 24, bottom: 12, trailing: 24)
 
     var body: some View {
         List {
-            ForEach(invoices) { invoice in
+            ForEach(invoiceVM.invoices) { invoice in
                 InvoiceCard(invoice: invoice)
                     .listRowInsets(rowInsets)
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
+                    .contentShape(Rectangle())
+                    .onTapGesture { onSelectInvoice(invoice) }
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button(role: .destructive) {
-                            delete(invoice)
+                            withAnimation {
+                                invoiceVM.delete(invoice)
+                            }
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
                     }
             }
 
-            if invoices.isEmpty {
+            if invoiceVM.invoices.isEmpty {
                 Text("No invoices yet. Convert an estimate and it will show up here for easy sharing and tracking.")
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.8))
@@ -385,12 +399,6 @@ struct InvoicesTabView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-    }
-
-    private func delete(_ invoice: InvoiceInfo) {
-        withAnimation {
-            invoices.removeAll { $0.id == invoice.id }
-        }
     }
 }
 
@@ -452,31 +460,6 @@ struct ClientsTabView: View {
     }
 }
 
-private struct InvoiceInfo: Identifiable {
-    enum Status: String {
-        case draft = "Draft"
-        case sent = "Sent"
-        case overdue = "Overdue"
-
-        var tint: Color {
-            switch self {
-            case .draft:
-                return Color.blue.opacity(0.45)
-            case .sent:
-                return Color.green.opacity(0.45)
-            case .overdue:
-                return Color.red.opacity(0.55)
-            }
-        }
-    }
-
-    let id = UUID()
-    let project: String
-    let client: String
-    let amount: Double
-    let status: Status
-}
-
 private struct ClientInfo: Identifiable {
     let id = UUID()
     let name: String
@@ -498,20 +481,36 @@ private struct ClientInfo: Identifiable {
 }
 
 private struct InvoiceCard: View {
-    let invoice: InvoiceInfo
+    let invoice: Invoice
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(invoice.project)
-                        .font(.headline.weight(.semibold))
-                        .foregroundColor(.white)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(invoice.title)
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.white)
 
-                    Text(invoice.client)
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.85))
+                Text(invoice.clientName)
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.85))
+
+                if let dueDate = invoice.dueDate {
+                    Text("Due \(dueDate, formatter: invoiceDueDateFormatter)")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.75))
                 }
+            }
+
+            Divider().background(Color.white.opacity(0.2))
+
+            HStack {
+                Label(invoice.status.displayName, systemImage: "paperplane.fill")
+                    .font(.caption.weight(.semibold))
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12)
+                    .background(invoice.status.pillColor)
+                    .clipShape(Capsule())
+                    .foregroundColor(.white)
 
                 Spacer()
 
@@ -519,14 +518,6 @@ private struct InvoiceCard: View {
                     .font(.headline)
                     .foregroundColor(.white)
             }
-
-            Label(invoice.status.rawValue, systemImage: "paperplane")
-                .font(.caption.weight(.semibold))
-                .padding(.vertical, 6)
-                .padding(.horizontal, 12)
-                .background(invoice.status.tint)
-                .clipShape(Capsule())
-                .foregroundColor(.white)
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -538,6 +529,25 @@ private struct InvoiceCard: View {
                         .stroke(Color.white.opacity(0.12), lineWidth: 1)
                 )
         )
+    }
+}
+
+private let invoiceDueDateFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateStyle = .medium
+    return formatter
+}()
+
+private extension Invoice.InvoiceStatus {
+    var pillColor: Color {
+        switch self {
+        case .draft:
+            return Color.blue.opacity(0.45)
+        case .sent:
+            return Color.green.opacity(0.45)
+        case .overdue:
+            return Color.red.opacity(0.55)
+        }
     }
 }
 
