@@ -10,11 +10,13 @@ import SwiftUI
 struct JobDetailView: View {
     @EnvironmentObject private var vm: JobViewModel
 
+    private let jobID: Job.ID
     @State private var job: Job
     @State private var showingAddMaterial = false
     @State private var editingMaterial: Material?
 
     init(job: Job) {
+        jobID = job.id
         _job = State(initialValue: job)
     }
 
@@ -219,6 +221,10 @@ struct JobDetailView: View {
                 updateMaterial(updatedMaterial)
             }
         }
+        .onAppear(perform: syncJobWithViewModel)
+        .onReceive(vm.$jobs) { _ in
+            syncJobWithViewModel()
+        }
     }
 
     private func deleteMaterial(_ material: Material) {
@@ -231,6 +237,11 @@ struct JobDetailView: View {
         guard let index = job.materials.firstIndex(where: { $0.id == material.id }) else { return }
         job.materials[index] = material
         vm.update(job)
+    }
+
+    private func syncJobWithViewModel() {
+        guard let updatedJob = vm.jobs.first(where: { $0.id == jobID }) else { return }
+        job = updatedJob
     }
 }
 

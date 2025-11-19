@@ -36,6 +36,12 @@ class JobViewModel: ObservableObject {
         jobs.remove(atOffsets: offsets)
     }
 
+    func delete(_ job: Job) {
+        if let index = jobs.firstIndex(where: { $0.id == job.id }) {
+            jobs.remove(at: index)
+        }
+    }
+
     // MARK: - Persistence
 
     private func saveJobs() {
