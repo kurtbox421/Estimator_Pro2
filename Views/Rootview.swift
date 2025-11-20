@@ -5,6 +5,7 @@
 //  Created by Curtis Bollinger on 11/18/25.
 //
 import SwiftUI
+import PhotosUI
 
 // MARK: - Tabs
 
@@ -729,15 +730,53 @@ private struct ClientSummaryRow: View {
 
 struct SettingsTabView: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            settingRow(icon: "building.2.fill", title: "Company details")
-            settingRow(icon: "paintpalette.fill", title: "Branding & logo")
-            settingRow(icon: "doc.text.fill", title: "Estimate defaults")
-            settingRow(icon: "lock.fill", title: "Privacy & security")
+        NavigationStack {
+            List {
+                NavigationLink {
+                    CompanyDetailsView()
+                } label: {
+                    SettingRow(icon: "building.2.fill", title: "Company details")
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+
+                NavigationLink {
+                    BrandingLogoView()
+                } label: {
+                    SettingRow(icon: "paintpalette.fill", title: "Branding & logo")
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+
+                NavigationLink {
+                    EstimateDefaultsView()
+                } label: {
+                    SettingRow(icon: "doc.text.fill", title: "Estimate defaults")
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+
+                NavigationLink {
+                    PrivacyPolicyView()
+                } label: {
+                    SettingRow(icon: "lock.fill", title: "Privacy & security")
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .listRowBackground(Color.clear)
+            .navigationTitle("Settings")
         }
     }
+}
 
-    private func settingRow(icon: String, title: String) -> some View {
+private struct SettingRow: View {
+    let icon: String
+    let title: String
+
+    var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.headline)
@@ -757,9 +796,295 @@ struct SettingsTabView: View {
                 .foregroundColor(.white.opacity(0.6))
         }
         .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(Color.white.opacity(0.06))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                )
         )
+    }
+}
+
+// MARK: - Company details
+
+struct CompanyDetailsView: View {
+    @EnvironmentObject private var companySettings: CompanySettingsStore
+
+    var body: some View {
+        Form {
+            Section("Company") {
+                TextField("Company name", text: $companySettings.companyName)
+                TextField("Address", text: $companySettings.companyAddress)
+                TextField("Phone", text: $companySettings.companyPhone)
+                    .keyboardType(.phonePad)
+                TextField("Email", text: $companySettings.companyEmail)
+                    .keyboardType(.emailAddress)
+                    .textInputAutocapitalization(.never)
+            }
+        }
+        .navigationTitle("Company details")
+    }
+}
+
+// MARK: - Branding & logo
+
+struct BrandingLogoView: View {
+    @AppStorage("brandingLogoData") private var brandingLogoData: Data = Data()
+    @State private var selectedItem: PhotosPickerItem?
+    @State private var logoImage: UIImage?
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                logoPreview
+
+                PhotosPicker(selection: $selectedItem, matching: .images) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "photo.on.rectangle.angled")
+                            .font(.headline)
+                        Text("Choose logo from Photos")
+                            .font(.headline)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 18)
+                    .background(
+                        Capsule()
+                            .fill(Color.accentColor)
+                    )
+                }
+                .buttonStyle(.plain)
+                .onChange(of: selectedItem) { newItem in
+                    Task {
+                        guard let data = try? await newItem?.loadTransferable(type: Data.self) else { return }
+                        brandingLogoData = data
+                        logoImage = UIImage(data: data)
+                    }
+                }
+
+                Text("Your logo will appear on estimates and invoices where you add it later.")
+                    .font(.footnote)
+                    .foregroundColor(.white.opacity(0.85))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 32)
+        }
+        .navigationTitle("Branding & logo")
+        .onAppear(perform: loadStoredLogo)
+    }
+
+    @ViewBuilder
+    private var logoPreview: some View {
+        if let logoImage {
+            Image(uiImage: logoImage)
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: 240, maxHeight: 240)
+                .cornerRadius(22)
+                .shadow(color: Color.black.opacity(0.25), radius: 10, x: 0, y: 8)
+                .padding(.top, 12)
+        } else {
+            VStack(spacing: 10) {
+                Image(systemName: "photo.on.rectangle.angled")
+                    .font(.system(size: 34, weight: .medium))
+                    .foregroundColor(.white.opacity(0.7))
+                Text("No logo yet")
+                    .font(.headline)
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            .frame(maxWidth: 260, minHeight: 200)
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(style: StrokeStyle(lineWidth: 2, dash: [8]))
+                    .foregroundColor(.white.opacity(0.35))
+            )
+            .padding(.top, 12)
+        }
+    }
+
+    private func loadStoredLogo() {
+        guard !brandingLogoData.isEmpty else { return }
+        logoImage = UIImage(data: brandingLogoData)
+    }
+}
+
+// MARK: - Estimate defaults
+
+private struct SavedMaterial: Identifiable, Codable, Equatable {
+    var id = UUID()
+    var name: String
+    var price: Double
+}
+
+struct EstimateDefaultsView: View {
+    @State private var materials: [SavedMaterial] = []
+    @State private var newName: String = ""
+    @State private var newPrice: String = ""
+    private let storageKey = "estimateDefaultsMaterials"
+
+    var body: some View {
+        List {
+            Section("Common materials") {
+                if materials.isEmpty {
+                    Text("Add materials you use all the time (e.g., \"1/2\" drywall sheet\", \"Cement mix\").")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .listRowBackground(Color.clear)
+                } else {
+                    ForEach($materials) { $material in
+                        HStack(spacing: 12) {
+                            TextField("Material", text: $material.name)
+
+                            Spacer()
+
+                            TextField("Price", value: $material.price, format: .number)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 110)
+                        }
+                    }
+                    .onDelete(perform: deleteMaterials)
+                }
+            }
+
+            Section("Add new") {
+                HStack(spacing: 12) {
+                    TextField("Material name", text: $newName)
+
+                    Spacer()
+
+                    TextField("Price", text: $newPrice)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 110)
+
+                    Button {
+                        addMaterial()
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title3)
+                    }
+                    .disabled(!canAddMaterial)
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .listRowBackground(Color.clear)
+        .navigationTitle("Estimate defaults")
+        .onAppear(perform: loadMaterials)
+        .onChange(of: materials) { _ in
+            saveMaterials()
+        }
+    }
+
+    private var canAddMaterial: Bool {
+        let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmedName.isEmpty && Double(newPrice) != nil
+    }
+
+    private func addMaterial() {
+        let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let priceValue = Double(newPrice), !trimmedName.isEmpty else { return }
+
+        let material = SavedMaterial(name: trimmedName, price: priceValue)
+        materials.append(material)
+        newName = ""
+        newPrice = ""
+    }
+
+    private func deleteMaterials(at offsets: IndexSet) {
+        materials.remove(atOffsets: offsets)
+    }
+
+    private func loadMaterials() {
+        guard let data = UserDefaults.standard.data(forKey: storageKey) else { return }
+        if let decoded = try? JSONDecoder().decode([SavedMaterial].self, from: data) {
+            materials = decoded
+        }
+    }
+
+    private func saveMaterials() {
+        guard let data = try? JSONEncoder().encode(materials) else { return }
+        UserDefaults.standard.set(data, forKey: storageKey)
+    }
+}
+
+// MARK: - Privacy policy
+
+struct PrivacyPolicyView: View {
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Privacy & Security")
+                    .font(.title.bold())
+
+                Text("""
+Estimator Pro is designed for contractors, not data brokers. This app stores your information so you can manage jobs, clients, estimates, and invoices more efficiently.
+
+1. Data we store
+
+Company details (name, address, phone, email)
+
+Client information (names, contact details, notes)
+
+Job, estimate, and invoice data (descriptions, prices, dates)
+
+All of this data is stored on your device and/or in your chosen backup service depending on how your device is configured.
+
+2. How your data is used
+
+Your data is used only to power features inside Estimator Pro, such as:
+
+Creating and updating estimates and invoices
+
+Linking jobs to clients
+
+Generating totals and summaries
+
+We do not sell your data, rent it, or use it for advertising.
+
+3. Sync, backup, and third-party services
+
+If you enable device backup or cloud sync, your data may be stored and backed up by those services under their own privacy policies.
+
+If you choose to connect integrations in the future (for example, calendar or email), only the minimum necessary data will be shared to make those features work.
+
+4. Security
+
+Sensitive business data is stored using the system’s secure storage mechanisms where appropriate.
+
+You are responsible for protecting access to your device (password, Face ID, Touch ID, etc.).
+
+Do not share screenshots or exported files with anyone you do not trust.
+
+5. Your choices
+
+You can:
+
+Edit or delete clients, jobs, estimates, and invoices from within the app
+
+Delete the app from your device at any time (this removes local data that is not backed up elsewhere)
+
+6. Changes to this policy
+
+This privacy policy may be updated over time as new features are added. Updated versions will be included in the app.
+
+7. Contact
+
+If you have questions or concerns about privacy or data handling in Estimator Pro, contact your company’s administrator or the app developer using the email listed on the App Store page.
+""")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            }
+            .padding()
+        }
+        .navigationTitle("Privacy & security")
     }
 }
