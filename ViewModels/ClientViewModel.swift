@@ -13,6 +13,26 @@ final class ClientViewModel: ObservableObject {
         loadClients()
     }
 
+    func addClient(
+        name: String,
+        company: String = "",
+        address: String = "",
+        phone: String = "",
+        email: String = "",
+        notes: String = ""
+    ) -> Client {
+        let newClient = Client(
+            name: name,
+            company: company,
+            address: address,
+            phone: phone,
+            email: email,
+            notes: notes
+        )
+        clients.append(newClient)
+        return newClient
+    }
+
     func add(_ client: Client = Client()) {
         clients.append(client)
     }
