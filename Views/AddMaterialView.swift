@@ -9,33 +9,55 @@ import SwiftUI
 
 struct AddMaterialView: View {
     enum Mode {
-        case add
-        case edit(Material)
+        case add(job: Job)
+        case edit(job: Job, index: Int)
+        case addToInvoice(invoice: Invoice)
+        case editInInvoice(invoice: Invoice, index: Int)
     }
 
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var settingsManager: SettingsManager
 
     let mode: Mode
-    var onSave: (Material) -> Void
+    @ObservedObject var jobVM: JobViewModel
+    @ObservedObject var invoiceVM: InvoiceViewModel
 
-    @State private var name: String
-    @State private var quantity: String
-    @State private var unitCost: String
+    @State private var name: String = ""
+    @State private var quantityText: String = ""
+    @State private var unitCostText: String = ""
 
-    init(mode: Mode = .add, onSave: @escaping (Material) -> Void) {
+    private let existingMaterialID: UUID?
+
+    init(mode: Mode, jobVM: JobViewModel, invoiceVM: InvoiceViewModel) {
         self.mode = mode
-        self.onSave = onSave
+        self.jobVM = jobVM
+        self.invoiceVM = invoiceVM
 
         switch mode {
         case .add:
-            _name = State(initialValue: "")
-            _quantity = State(initialValue: "")
-            _unitCost = State(initialValue: "")
-        case .edit(let material):
-            _name = State(initialValue: material.name)
-            _quantity = State(initialValue: String(material.quantity))
-            _unitCost = State(initialValue: String(material.unitCost))
+            existingMaterialID = nil
+        case .edit(let job, let index):
+            if job.materials.indices.contains(index) {
+                let material = job.materials[index]
+                existingMaterialID = material.id
+                _name = State(initialValue: material.name)
+                _quantityText = State(initialValue: String(material.quantity))
+                _unitCostText = State(initialValue: String(material.unitCost))
+            } else {
+                existingMaterialID = nil
+            }
+        case .addToInvoice:
+            existingMaterialID = nil
+        case .editInInvoice(let invoice, let index):
+            if invoice.materials.indices.contains(index) {
+                let material = invoice.materials[index]
+                existingMaterialID = material.id
+                _name = State(initialValue: material.name)
+                _quantityText = State(initialValue: String(material.quantity))
+                _unitCostText = State(initialValue: String(material.unitCost))
+            } else {
+                existingMaterialID = nil
+            }
         }
     }
 
@@ -47,9 +69,9 @@ struct AddMaterialView: View {
                 }
 
                 Section(header: Text("Details")) {
-                    TextField("Quantity", text: $quantity)
+                    TextField("Quantity", text: $quantityText)
                         .keyboardType(.decimalPad)
-                    TextField("Unit cost", text: $unitCost)
+                    TextField("Unit cost", text: $unitCostText)
                         .keyboardType(.decimalPad)
                 }
             }
@@ -67,7 +89,7 @@ struct AddMaterialView: View {
             .onChange(of: name) { _ in
                 applyCommonMaterialPriceIfNeeded()
             }
-            .onChange(of: quantity) { _ in
+            .onChange(of: quantityText) { _ in
                 applyCommonMaterialPriceIfNeeded()
             }
         }
@@ -75,42 +97,43 @@ struct AddMaterialView: View {
 
     private var canSave: Bool {
         !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        Double(quantity) != nil &&
-        Double(unitCost) != nil
+        Double(quantityText) != nil &&
+        Double(unitCostText) != nil
     }
 
     private func save() {
-        guard let q = Double(quantity),
-              let u = Double(unitCost)
+        guard let q = Double(quantityText),
+              let u = Double(unitCostText)
         else { return }
 
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return }
 
-        let material: Material
-        if case .edit(let existing) = mode {
-            material = Material(
-                id: existing.id,
-                name: trimmedName,
-                quantity: q,
-                unitCost: u
-            )
-        } else {
-            material = Material(
-                name: trimmedName,
-                quantity: q,
-                unitCost: u
-            )
+        let material = Material(
+            id: existingMaterialID ?? UUID(),
+            name: trimmedName,
+            quantity: q,
+            unitCost: u
+        )
+
+        switch mode {
+        case .add(let job):
+            jobVM.addMaterial(material, to: job)
+        case .edit(let job, let index):
+            jobVM.update(job, replacingMaterialAt: index, with: material)
+        case .addToInvoice(let invoice):
+            invoiceVM.addMaterial(material, to: invoice)
+        case .editInInvoice(let invoice, let index):
+            invoiceVM.update(invoice, replacingMaterialAt: index, with: material)
         }
 
-        onSave(material)
         dismiss()
     }
 
     private var modeTitle: String {
         switch mode {
-        case .add: return "Add Material"
-        case .edit: return "Edit Material"
+        case .add, .addToInvoice: return "Add Material"
+        case .edit, .editInInvoice: return "Edit Material"
         }
     }
 
@@ -119,8 +142,8 @@ struct AddMaterialView: View {
               !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         else { return }
 
-        if unitCost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            unitCost = String(format: "%.2f", price)
+        if unitCostText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            unitCostText = String(format: "%.2f", price)
         }
     }
 }
