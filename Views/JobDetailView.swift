@@ -203,6 +203,7 @@ struct JobDetailView: View {
 
                                 Divider().background(Color.white.opacity(0.15))
                             }
+                            .onDelete(perform: deleteMaterials)
                         }
                     }
                     .padding(20)
@@ -261,10 +262,14 @@ struct JobDetailView: View {
         }
     }
 
+    private func deleteMaterials(at offsets: IndexSet) {
+        job.materials.remove(atOffsets: offsets)
+        vm.update(job)
+    }
+
     private func deleteMaterial(_ material: Material) {
         guard let index = job.materials.firstIndex(where: { $0.id == material.id }) else { return }
-        job.materials.remove(at: index)
-        vm.update(job)
+        deleteMaterials(at: IndexSet(integer: index))
     }
 
     private func updateMaterial(_ material: Material) {
