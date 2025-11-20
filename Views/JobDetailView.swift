@@ -14,8 +14,8 @@ struct JobDetailView: View {
 
     private let jobID: Job.ID
     @State private var job: Job
-    @State private var showingAddMaterial = false
-    @State private var editingMaterial: Material?
+    @State private var editingMaterialIndex: Int?
+    @State private var showingMaterialSheet = false
     @State private var createdInvoice: Invoice?
     @State private var showingInvoiceEditor = false
 
@@ -143,13 +143,14 @@ struct JobDetailView: View {
                                     .foregroundColor(.white.opacity(0.7))
                             }
 
-                            Spacer()
+                        Spacer()
 
-                            Button {
-                                showingAddMaterial = true
-                            } label: {
-                                Label("Add", systemImage: "plus")
-                                    .font(.caption.bold())
+                        Button {
+                            editingMaterialIndex = nil
+                            showingMaterialSheet = true
+                        } label: {
+                            Label("Add", systemImage: "plus")
+                                .font(.caption.bold())
                                     .padding(.vertical, 6)
                                     .padding(.horizontal, 10)
                                     .background(Color.white.opacity(0.16))
@@ -163,7 +164,8 @@ struct JobDetailView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.white.opacity(0.75))
                         } else {
-                            ForEach(job.materials) { material in
+                            ForEach(job.materials.indices, id: \.self) { index in
+                                let material = job.materials[index]
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(material.name)
@@ -181,21 +183,15 @@ struct JobDetailView: View {
                                         .foregroundColor(.white)
                                 }
                                 .padding(.vertical, 6)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    editingMaterial = material
-                                }
-                                .swipeActions(edge: .leading) {
-                                    Button {
-                                        editingMaterial = material
-                                    } label: {
-                                        Label("Edit", systemImage: "pencil")
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button("Edit") {
+                                        editingMaterialIndex = index
+                                        showingMaterialSheet = true
                                     }
                                     .tint(.blue)
-                                }
-                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+
                                     Button(role: .destructive) {
-                                        deleteMaterial(material)
+                                        vm.removeMaterial(at: index, in: job)
                                     } label: {
                                         Label("Delete", systemImage: "trash")
                                     }
@@ -203,7 +199,6 @@ struct JobDetailView: View {
 
                                 Divider().background(Color.white.opacity(0.15))
                             }
-                            .onDelete(perform: deleteMaterials)
                         }
                     }
                     .padding(20)
@@ -236,15 +231,19 @@ struct JobDetailView: View {
         }
         .navigationTitle("Estimate")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showingAddMaterial) {
-            AddMaterialView { newMaterial in
-                job.materials.append(newMaterial)
-                vm.update(job)
-            }
-        }
-        .sheet(item: $editingMaterial) { material in
-            MaterialEditorView(material: material) { updatedMaterial in
-                updateMaterial(updatedMaterial)
+        .sheet(isPresented: $showingMaterialSheet) {
+            if let index = editingMaterialIndex {
+                AddMaterialView(
+                    mode: .edit(job: job, index: index),
+                    jobVM: vm,
+                    invoiceVM: invoiceVM
+                )
+            } else {
+                AddMaterialView(
+                    mode: .add(job: job),
+                    jobVM: vm,
+                    invoiceVM: invoiceVM
+                )
             }
         }
         .sheet(isPresented: $showingInvoiceEditor) {
@@ -260,22 +259,6 @@ struct JobDetailView: View {
         .onReceive(vm.$jobs) { _ in
             syncJobWithViewModel()
         }
-    }
-
-    private func deleteMaterials(at offsets: IndexSet) {
-        job.materials.remove(atOffsets: offsets)
-        vm.update(job)
-    }
-
-    private func deleteMaterial(_ material: Material) {
-        guard let index = job.materials.firstIndex(where: { $0.id == material.id }) else { return }
-        deleteMaterials(at: IndexSet(integer: index))
-    }
-
-    private func updateMaterial(_ material: Material) {
-        guard let index = job.materials.firstIndex(where: { $0.id == material.id }) else { return }
-        job.materials[index] = material
-        vm.update(job)
     }
 
     private func syncJobWithViewModel() {
@@ -297,74 +280,5 @@ struct JobDetailView: View {
         invoiceVM.add(invoice)
         createdInvoice = invoice
         showingInvoiceEditor = true
-    }
-}
-
-private struct MaterialEditorView: View {
-    @Environment(\.dismiss) private var dismiss
-
-    var material: Material
-    var onSave: (Material) -> Void
-
-    @State private var name: String
-    @State private var quantity: String
-    @State private var unitCost: String
-
-    init(material: Material, onSave: @escaping (Material) -> Void) {
-        self.material = material
-        self.onSave = onSave
-        _name = State(initialValue: material.name)
-        _quantity = State(initialValue: String(material.quantity))
-        _unitCost = State(initialValue: String(material.unitCost))
-    }
-
-    var body: some View {
-        NavigationView {
-            Form {
-                Section(header: Text("Material")) {
-                    TextField("Name", text: $name)
-                }
-
-                Section(header: Text("Details")) {
-                    TextField("Quantity", text: $quantity)
-                        .keyboardType(.decimalPad)
-                    TextField("Unit cost", text: $unitCost)
-                        .keyboardType(.decimalPad)
-                }
-            }
-            .navigationTitle("Edit Material")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
-                        .disabled(!canSave)
-                }
-            }
-        }
-    }
-
-    private var canSave: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty &&
-        Double(quantity) != nil &&
-        Double(unitCost) != nil
-    }
-
-    private func save() {
-        guard let q = Double(quantity),
-              let u = Double(unitCost)
-        else { return }
-
-        let updatedMaterial = Material(
-            id: material.id,
-            name: name.trimmingCharacters(in: .whitespaces),
-            quantity: q,
-            unitCost: u
-        )
-
-        onSave(updatedMaterial)
-        dismiss()
     }
 }

@@ -42,6 +42,32 @@ class JobViewModel: ObservableObject {
         }
     }
 
+    func update(_ job: Job, replacingMaterialAt index: Int, with material: Material) {
+        guard let jobIndex = jobs.firstIndex(where: { $0.id == job.id }),
+              jobs[jobIndex].materials.indices.contains(index) else { return }
+
+        var updatedJob = job
+        updatedJob.materials[index] = material
+        jobs[jobIndex] = updatedJob
+    }
+
+    func addMaterial(_ material: Material, to job: Job) {
+        guard let jobIndex = jobs.firstIndex(where: { $0.id == job.id }) else { return }
+
+        var updatedJob = job
+        updatedJob.materials.append(material)
+        jobs[jobIndex] = updatedJob
+    }
+
+    func removeMaterial(at index: Int, in job: Job) {
+        guard let jobIndex = jobs.firstIndex(where: { $0.id == job.id }),
+              jobs[jobIndex].materials.indices.contains(index) else { return }
+
+        var updatedJob = job
+        updatedJob.materials.remove(at: index)
+        jobs[jobIndex] = updatedJob
+    }
+
     func jobs(for client: Client) -> [Job] {
         jobs.filter { $0.clientId == client.id }
     }

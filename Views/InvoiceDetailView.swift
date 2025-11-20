@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct InvoiceDetailView: View {
+    @EnvironmentObject var jobVM: JobViewModel
     @EnvironmentObject var invoiceVM: InvoiceViewModel
     @EnvironmentObject var clientVM: ClientViewModel
 
@@ -8,8 +9,8 @@ struct InvoiceDetailView: View {
 
     @State private var invoice: Invoice
     @State private var isShowingEditSheet = false
-    @State private var isPresentingEditMaterial = false
     @State private var editingMaterialIndex: Int?
+    @State private var showingMaterialSheet = false
 
     init(invoice: Invoice) {
         invoiceID = invoice.id
@@ -67,13 +68,19 @@ struct InvoiceDetailView: View {
             .environmentObject(invoiceVM)
             .environmentObject(clientVM)
         }
-        .sheet(isPresented: $isPresentingEditMaterial) {
+        .sheet(isPresented: $showingMaterialSheet) {
             if let index = editingMaterialIndex {
-                AddMaterialView(mode: .edit(invoice.materials[index])) { updatedMaterial in
-                    var updated = invoice
-                    updated.materials[index] = updatedMaterial
-                    invoiceVM.update(updated)
-                }
+                AddMaterialView(
+                    mode: .editInInvoice(invoice: invoice, index: index),
+                    jobVM: jobVM,
+                    invoiceVM: invoiceVM
+                )
+            } else {
+                AddMaterialView(
+                    mode: .addToInvoice(invoice: invoice),
+                    jobVM: jobVM,
+                    invoiceVM: invoiceVM
+                )
             }
         }
         .onAppear(perform: syncInvoiceWithViewModel)
@@ -160,13 +167,30 @@ struct InvoiceDetailView: View {
 
     private var materialsCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Materials")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                Text("\(invoice.materials.count) items")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.7))
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Materials")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    Text("\(invoice.materials.count) items")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.7))
+                }
+
+                Spacer()
+
+                Button {
+                    editingMaterialIndex = nil
+                    showingMaterialSheet = true
+                } label: {
+                    Label("Add", systemImage: "plus")
+                        .font(.caption.bold())
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 10)
+                        .background(Color.white.opacity(0.16))
+                        .clipShape(Capsule())
+                        .foregroundColor(.white)
+                }
             }
 
             if invoice.materials.isEmpty {
@@ -174,20 +198,21 @@ struct InvoiceDetailView: View {
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.75))
             } else {
-                ForEach(Array(invoice.materials.enumerated()), id: \.offset) { index, element in
-                    MaterialRow(material: element)
-                        .swipeActions {
+                ForEach(invoice.materials.indices, id: \.self) { index in
+                    let material = invoice.materials[index]
+                    MaterialRow(material: material)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button("Edit") {
+                                editingMaterialIndex = index
+                                showingMaterialSheet = true
+                            }
+                            .tint(.blue)
+
                             Button(role: .destructive) {
-                                var updated = invoice
-                                updated.materials.remove(at: index)
-                                invoiceVM.update(updated)
+                                invoiceVM.removeMaterial(at: index, in: invoice)
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
-                        }
-                        .onTapGesture {
-                            editingMaterialIndex = index
-                            isPresentingEditMaterial = true
                         }
 
                     Divider().background(Color.white.opacity(0.15))
