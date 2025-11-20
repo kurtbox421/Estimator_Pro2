@@ -21,6 +21,14 @@ class InvoiceViewModel: ObservableObject {
 
     // MARK: - CRUD
 
+    @discardableResult
+    func createInvoice(from job: Job, clientName: String) -> Invoice {
+        let invoice = Invoice(from: job, clientName: clientName)
+        invoices.append(invoice)
+        saveInvoices()
+        return invoice
+    }
+
     func add(_ invoice: Invoice) {
         invoices.append(invoice)
     }
