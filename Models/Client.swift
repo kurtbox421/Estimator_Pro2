@@ -7,18 +7,12 @@ struct Client: Identifiable, Codable, Equatable {
     var address: String = ""
     var phone: String = ""
     var email: String = ""
-    var jobCount: Int = 0
     var notes: String = ""
 }
 
 extension Client {
-    var jobSummary: String {
-        switch jobCount {
-        case 1:
-            return "1 job"
-        default:
-            return "\(jobCount) jobs"
-        }
+    static func jobSummary(for jobCount: Int) -> String {
+        jobCount == 1 ? "1 job" : "\(jobCount) jobs"
     }
 
     var initials: String {
@@ -37,7 +31,6 @@ extension Client {
             address: "123 Honeycrisp Dr · Cupertino, CA",
             phone: "(234) 421-3860",
             email: "johnny@bbapple.co",
-            jobCount: 1,
             notes: "Prefers afternoon calls"
         ),
         Client(
@@ -46,7 +39,6 @@ extension Client {
             address: "88 Goldenrod Ave · Portland, OR",
             phone: "(503) 881-2244",
             email: "maria@sunrisebuilds.com",
-            jobCount: 3,
             notes: "Repeat customer"
         )
     ]

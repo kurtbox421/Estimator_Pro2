@@ -2,10 +2,13 @@ import SwiftUI
 
 struct ClientEditableCard: View {
     @Binding var client: Client
+    let jobCount: Int
 
     var body: some View {
+        let summary = Client.jobSummary(for: jobCount)
+
         VStack(alignment: .leading, spacing: 14) {
-            header
+            header(summary: summary)
 
             Divider().overlay(Color.white.opacity(0.15))
 
@@ -46,7 +49,7 @@ struct ClientEditableCard: View {
                 disableAutocorrection: false
             )
 
-            ClientJobTile(jobCount: $client.jobCount, summary: client.jobSummary)
+            ClientJobTile(jobCount: jobCount, summary: summary)
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -130,26 +133,24 @@ struct ClientInfoTile: View {
 }
 
 struct ClientJobTile: View {
-    @Binding var jobCount: Int
+    let jobCount: Int
     let summary: String
 
     var body: some View {
-        Stepper(value: $jobCount, in: 0...999) {
-            HStack {
-                Label("Projects", systemImage: "briefcase.fill")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.white)
+        HStack {
+            Label("Projects", systemImage: "briefcase.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.white)
 
-                Spacer()
+            Spacer()
 
-                Text(summary)
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.white.opacity(0.85))
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 10)
-                    .background(Color.white.opacity(0.08))
-                    .clipShape(Capsule())
-            }
+            Text(summary)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(.white.opacity(0.85))
+                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .background(Color.white.opacity(0.08))
+                .clipShape(Capsule())
         }
         .padding(14)
         .background(
@@ -160,7 +161,7 @@ struct ClientJobTile: View {
 }
 
 extension ClientEditableCard {
-    var header: some View {
+    func header(summary: String) -> some View {
         HStack(alignment: .top, spacing: 14) {
             ClientAvatar(initials: client.initials)
 
@@ -177,7 +178,7 @@ extension ClientEditableCard {
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.9))
 
-                Text(client.jobSummary)
+                Text(summary)
                     .font(.caption.weight(.semibold))
                     .foregroundColor(.white.opacity(0.85))
                     .padding(.vertical, 6)

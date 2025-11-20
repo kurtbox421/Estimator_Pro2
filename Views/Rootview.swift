@@ -475,6 +475,7 @@ struct InvoicesTabView: View {
 
 struct ClientsTabView: View {
     @EnvironmentObject private var clientVM: ClientViewModel
+    @EnvironmentObject private var jobVM: JobViewModel
     private let rowInsets = EdgeInsets(top: 0, leading: 24, bottom: 12, trailing: 24)
 
     var body: some View {
@@ -482,11 +483,12 @@ struct ClientsTabView: View {
             // one row per client
             ForEach(clientVM.clients.indices, id: \.self) { index in
                 let client = clientVM.clients[index]
+                let jobCount = jobVM.jobCount(for: client)
 
                 NavigationLink {
                     ClientDetailView(client: $clientVM.clients[index])
                 } label: {
-                    ClientRowCard(client: client)
+                    ClientRowCard(client: client, jobCount: jobCount)
                 }
                 .listRowInsets(rowInsets)
                 .listRowSeparator(.hidden)
@@ -596,6 +598,7 @@ private extension Invoice.InvoiceStatus {
 
 private struct ClientRowCard: View {
     let client: Client
+    let jobCount: Int
 
     var body: some View {
         HStack(spacing: 12) {
@@ -629,7 +632,7 @@ private struct ClientRowCard: View {
                         .foregroundColor(.white.opacity(0.7))
                 }
 
-                Text(client.jobSummary)
+                Text(Client.jobSummary(for: jobCount))
                     .font(.caption.weight(.semibold))
                     .foregroundColor(.white.opacity(0.85))
                     .padding(.vertical, 4)
@@ -653,11 +656,14 @@ private struct ClientRowCard: View {
 // Detail screen
 struct ClientDetailView: View {
     @Binding var client: Client
+    @EnvironmentObject private var jobVM: JobViewModel
 
     var body: some View {
+        let jobCount = jobVM.jobCount(for: client)
+
         ScrollView {
             VStack(spacing: 16) {
-                ClientEditableCard(client: $client)
+                ClientEditableCard(client: $client, jobCount: jobCount)
             }
             .padding(.horizontal, 24)
             .padding(.top, 24)
