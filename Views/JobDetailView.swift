@@ -57,7 +57,7 @@ struct JobDetailView: View {
                                 Text("Labor")
                                     .font(.caption)
                                     .foregroundColor(.white.opacity(0.7))
-                                Text("$\(job.laborCost, specifier: "%.2f")")
+                                Text(job.laborCost.currencyFormatted)
                                     .font(.headline)
                                     .foregroundColor(.white)
                             }
@@ -68,7 +68,7 @@ struct JobDetailView: View {
                                 Text("Materials")
                                     .font(.caption)
                                     .foregroundColor(.white.opacity(0.7))
-                                Text("$\(job.materialCost, specifier: "%.2f")")
+                                Text(job.materialCost.currencyFormatted)
                                     .font(.headline)
                                     .foregroundColor(.white)
                             }
@@ -79,7 +79,7 @@ struct JobDetailView: View {
                                 Text("Total")
                                     .font(.caption)
                                     .foregroundColor(.white.opacity(0.7))
-                                Text("$\(job.total, specifier: "%.2f")")
+                                Text(job.total.currencyFormatted)
                                     .font(.title3.bold())
                                     .foregroundColor(.orange)
                             }
@@ -168,19 +168,19 @@ struct JobDetailView: View {
                                 let material = job.materials[index]
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(material.name)
-                                            .font(.subheadline.weight(.semibold))
-                                            .foregroundColor(.white)
-                                        Text("\(material.quantity, specifier: "%.2f") × $\(material.unitCost, specifier: "%.2f")")
-                                            .font(.caption)
-                                            .foregroundColor(.white.opacity(0.75))
+                                Text(material.name)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(.white)
+                                Text("\(material.quantity, specifier: "%.2f") × \(material.unitCost.currencyFormatted)")
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.75))
                                     }
 
-                                    Spacer()
+                            Spacer()
 
-                                    Text("$\(material.cost, specifier: "%.2f")")
-                                        .font(.subheadline.bold())
-                                        .foregroundColor(.white)
+                            Text(material.cost.currencyFormatted)
+                                .font(.subheadline.bold())
+                                .foregroundColor(.white)
                                 }
                                 .contentShape(Rectangle())
                                 .padding(.vertical, 6)

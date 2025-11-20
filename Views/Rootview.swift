@@ -389,7 +389,7 @@ struct EstimateJobCard: View {
             Divider().background(Color.white.opacity(0.2))
 
             HStack {
-                Label("$\(job.total, specifier: "%.2f")", systemImage: "dollarsign.circle.fill")
+                Label(job.total.currencyFormatted, systemImage: "dollarsign.circle.fill")
                     .font(.headline)
                     .foregroundColor(.white)
 
@@ -538,7 +538,7 @@ private struct InvoiceCard: View {
                     .foregroundColor(.white.opacity(0.85))
 
                 if let dueDate = invoice.dueDate {
-                    Text("Due \(dueDate, formatter: invoiceDueDateFormatter)")
+                    Text("Due \(dueDate, formatter: Formatters.invoiceDueDate)")
                         .font(.caption)
                         .foregroundColor(.white.opacity(0.75))
                 }
@@ -557,7 +557,7 @@ private struct InvoiceCard: View {
 
                 Spacer()
 
-                Text("$\(invoice.amount, specifier: "%.2f")")
+                Text(invoice.amount.currencyFormatted)
                     .font(.headline)
                     .foregroundColor(.white)
             }
@@ -574,12 +574,6 @@ private struct InvoiceCard: View {
         )
     }
 }
-
-let invoiceDueDateFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .medium
-    return formatter
-}()
 
 extension Invoice.InvoiceStatus {
     var pillColor: Color {

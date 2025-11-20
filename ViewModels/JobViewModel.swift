@@ -24,11 +24,13 @@ class JobViewModel: ObservableObject {
 
     func add(_ job: Job) {
         jobs.append(job)
+        sortJobs()
     }
 
     func update(_ job: Job) {
         if let index = jobs.firstIndex(where: { $0.id == job.id }) {
             jobs[index] = job
+            sortJobs()
         }
     }
 
@@ -49,6 +51,7 @@ class JobViewModel: ObservableObject {
         var updatedJob = job
         updatedJob.materials[index] = material
         jobs[jobIndex] = updatedJob
+        sortJobs()
     }
 
     func addMaterial(_ material: Material, to job: Job) {
@@ -57,6 +60,7 @@ class JobViewModel: ObservableObject {
         var updatedJob = job
         updatedJob.materials.append(material)
         jobs[jobIndex] = updatedJob
+        sortJobs()
     }
 
     func removeMaterial(at index: Int, in job: Job) {
@@ -66,6 +70,7 @@ class JobViewModel: ObservableObject {
         var updatedJob = job
         updatedJob.materials.remove(at: index)
         jobs[jobIndex] = updatedJob
+        sortJobs()
     }
 
     func jobs(for client: Client) -> [Job] {
@@ -92,8 +97,18 @@ class JobViewModel: ObservableObject {
         do {
             let decoded = try JSONDecoder().decode([Job].self, from: data)
             jobs = decoded
+            sortJobs()
         } catch {
             print("Failed to load jobs: \(error)")
+        }
+    }
+
+    private func sortJobs() {
+        jobs.sort { lhs, rhs in
+            if lhs.dateCreated != rhs.dateCreated {
+                return lhs.dateCreated > rhs.dateCreated
+            }
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
         }
     }
 }
