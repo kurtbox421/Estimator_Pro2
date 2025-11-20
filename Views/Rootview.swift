@@ -436,7 +436,7 @@ struct InvoicesTabView: View {
         List {
             ForEach(invoiceVM.invoices) { invoice in
                 NavigationLink {
-                    InvoiceDetailView(invoice: invoice)
+                    InvoiceDetailView(invoiceVM: invoiceVM, invoice: invoice)
                 } label: {
                     InvoiceCard(invoice: invoice)
                 }

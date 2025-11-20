@@ -63,30 +63,39 @@ class InvoiceViewModel: ObservableObject {
         invoices.remove(at: index)
     }
 
+    func addMaterial(to invoice: Invoice, material: Material) {
+        guard let invoiceIndex = invoices.firstIndex(where: { $0.id == invoice.id }) else { return }
+
+        invoices[invoiceIndex].materials.append(material)
+    }
+
+    func updateMaterial(in invoice: Invoice, at index: Int, with material: Material) {
+        guard let invoiceIndex = invoices.firstIndex(where: { $0.id == invoice.id }),
+              invoices[invoiceIndex].materials.indices.contains(index) else { return }
+
+        invoices[invoiceIndex].materials[index] = material
+    }
+
+    func removeMaterial(from invoice: Invoice, at index: Int) {
+        guard let invoiceIndex = invoices.firstIndex(where: { $0.id == invoice.id }),
+              invoices[invoiceIndex].materials.indices.contains(index) else { return }
+
+        invoices[invoiceIndex].materials.remove(at: index)
+    }
+
     func update(_ invoice: Invoice, replacingMaterialAt index: Int, with material: Material) {
         guard let invoiceIndex = invoices.firstIndex(where: { $0.id == invoice.id }),
               invoices[invoiceIndex].materials.indices.contains(index) else { return }
 
-        var updatedInvoice = invoice
-        updatedInvoice.materials[index] = material
-        invoices[invoiceIndex] = updatedInvoice
+        updateMaterial(in: invoice, at: index, with: material)
     }
 
     func addMaterial(_ material: Material, to invoice: Invoice) {
-        guard let invoiceIndex = invoices.firstIndex(where: { $0.id == invoice.id }) else { return }
-
-        var updatedInvoice = invoice
-        updatedInvoice.materials.append(material)
-        invoices[invoiceIndex] = updatedInvoice
+        addMaterial(to: invoice, material: material)
     }
 
     func removeMaterial(at index: Int, in invoice: Invoice) {
-        guard let invoiceIndex = invoices.firstIndex(where: { $0.id == invoice.id }),
-              invoices[invoiceIndex].materials.indices.contains(index) else { return }
-
-        var updatedInvoice = invoice
-        updatedInvoice.materials.remove(at: index)
-        invoices[invoiceIndex] = updatedInvoice
+        removeMaterial(from: invoice, at: index)
     }
 
     // MARK: - Persistence
