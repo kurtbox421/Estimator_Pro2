@@ -16,9 +16,7 @@ struct InvoiceDetailView: View {
         return clientVM.clients.first(where: { $0.id == clientID })
     }
 
-    private var formattedAmount: String {
-        currentInvoice.amount.formatted(.currency(code: Locale.current.currency?.identifier ?? "USD"))
-    }
+    private var formattedAmount: String { currentInvoice.amount.currencyFormatted }
 
     private var currentInvoice: Invoice {
         invoiceVM.invoices.first(where: { $0.id == invoice.id }) ?? invoice
@@ -127,7 +125,7 @@ struct InvoiceDetailView: View {
                         Text("Due date")
                             .font(.caption)
                             .foregroundColor(.white.opacity(0.7))
-                        Text(dueDate, formatter: invoiceDueDateFormatter)
+                        Text(dueDate, formatter: Formatters.invoiceDueDate)
                             .font(.headline)
                             .foregroundColor(.white)
                     }
@@ -237,7 +235,7 @@ struct InvoiceDetailView: View {
             detailRow(title: "Amount", value: formattedAmount)
             detailRow(
                 title: "Due date",
-                value: currentInvoice.dueDate.map { invoiceDueDateFormatter.string(from: $0) } ?? "Not set"
+                value: currentInvoice.dueDate.map { Formatters.invoiceDueDate.string(from: $0) } ?? "Not set"
             )
         }
         .padding(20)
@@ -316,14 +314,14 @@ private struct MaterialRow: View {
                 Text(material.name)
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(.white)
-                Text("\(material.quantity, specifier: "%.2f") × $\(material.unitCost, specifier: "%.2f")")
+                Text("\(material.quantity, specifier: "%.2f") × \(material.unitCost.currencyFormatted)")
                     .font(.caption)
                     .foregroundColor(.white.opacity(0.75))
             }
 
             Spacer()
 
-            Text("$\(material.total, specifier: "%.2f")")
+            Text(material.total.currencyFormatted)
                 .font(.subheadline.bold())
                 .foregroundColor(.white)
         }
