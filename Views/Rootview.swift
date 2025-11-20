@@ -231,9 +231,7 @@ struct RootView: View {
         case .estimates:
             EstimatesTabView()
         case .invoices:
-            InvoicesTabView { invoice in
-                invoiceSheetMode = .edit(invoice)
-            }
+            InvoicesTabView()
         case .clients:
             ClientsTabView()
         case .settings:
@@ -432,27 +430,28 @@ struct EstimateJobCard: View {
 
 struct InvoicesTabView: View {
     @EnvironmentObject private var invoiceVM: InvoiceViewModel
-    var onSelectInvoice: (Invoice) -> Void = { _ in }
     private let rowInsets = EdgeInsets(top: 0, leading: 24, bottom: 12, trailing: 24)
 
     var body: some View {
         List {
             ForEach(invoiceVM.invoices) { invoice in
-                InvoiceCard(invoice: invoice)
-                    .listRowInsets(rowInsets)
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-                    .contentShape(Rectangle())
-                    .onTapGesture { onSelectInvoice(invoice) }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            withAnimation {
-                                invoiceVM.delete(invoice)
-                            }
-                        } label: {
-                            Label("Delete", systemImage: "trash")
+                NavigationLink {
+                    InvoiceDetailView(invoice: invoice)
+                } label: {
+                    InvoiceCard(invoice: invoice)
+                }
+                .listRowInsets(rowInsets)
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        withAnimation {
+                            invoiceVM.delete(invoice)
                         }
+                    } label: {
+                        Label("Delete", systemImage: "trash")
                     }
+                }
             }
 
             if invoiceVM.invoices.isEmpty {
@@ -576,13 +575,13 @@ private struct InvoiceCard: View {
     }
 }
 
-private let invoiceDueDateFormatter: DateFormatter = {
+let invoiceDueDateFormatter: DateFormatter = {
     let formatter = DateFormatter()
     formatter.dateStyle = .medium
     return formatter
 }()
 
-private extension Invoice.InvoiceStatus {
+extension Invoice.InvoiceStatus {
     var pillColor: Color {
         switch self {
         case .draft:
