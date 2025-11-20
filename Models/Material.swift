@@ -13,8 +13,12 @@ struct Material: Identifiable, Codable {
     var quantity: Double
     var unitCost: Double
 
-    var cost: Double {
+    var total: Double {
         quantity * unitCost
+    }
+
+    var cost: Double {
+        total
     }
 
     init(
