@@ -13,6 +13,7 @@ struct EstimatorProApp: App {
     @StateObject private var invoiceVM = InvoiceViewModel()
     @StateObject private var clientVM = ClientViewModel()
     @StateObject private var companySettings = CompanySettingsStore()
+    @StateObject private var settingsManager = SettingsManager()
     @State private var showingSplash = true
     @State private var splashOpacity = 1.0
 
@@ -26,6 +27,7 @@ struct EstimatorProApp: App {
                 .environmentObject(invoiceVM)
                 .environmentObject(clientVM)
                 .environmentObject(companySettings)
+                .environmentObject(settingsManager)
 
                 if showingSplash {
                     SplashScreenView()
