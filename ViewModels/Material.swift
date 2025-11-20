@@ -7,6 +7,11 @@
 
 import Foundation
 
+extension Material {
+    var total: Double {
+        return quantity * unitCost
+    }
+}
 struct Material: Identifiable, Codable {
     let id: UUID
     var name: String
