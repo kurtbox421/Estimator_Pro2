@@ -3,17 +3,22 @@ import SwiftUI
 struct InvoiceDetailView: View {
     @EnvironmentObject var invoiceVM: InvoiceViewModel
     @EnvironmentObject var clientVM: ClientViewModel
-    @EnvironmentObject var jobVM: JobViewModel
 
-    let invoice: Invoice
+    let invoiceID: Invoice.ID
 
+    @State private var invoice: Invoice
     @State private var isShowingEditSheet = false
+    @State private var isPresentingEditMaterial = false
+    @State private var editingMaterialIndex: Int?
 
-    private var associatedJob: Job? {
-        jobVM.jobs.first { job in
-            let matchesClient = invoice.clientId == nil || job.clientId == invoice.clientId
-            return matchesClient && job.name == invoice.title
-        }
+    init(invoice: Invoice) {
+        invoiceID = invoice.id
+        _invoice = State(initialValue: invoice)
+    }
+
+    private var client: Client? {
+        guard let clientID = invoice.clientID else { return nil }
+        return clientVM.clients.first(where: { $0.id == clientID })
     }
 
     private var formattedAmount: String {
@@ -37,10 +42,8 @@ struct InvoiceDetailView: View {
                     headerCard
                         .padding(.horizontal, 24)
 
-                    if let job = associatedJob {
-                        materialsCard(for: job)
-                            .padding(.horizontal, 24)
-                    }
+                    materialsCard
+                        .padding(.horizontal, 24)
 
                     invoiceDetailsCard
                         .padding(.horizontal, 24)
@@ -64,6 +67,19 @@ struct InvoiceDetailView: View {
             .environmentObject(invoiceVM)
             .environmentObject(clientVM)
         }
+        .sheet(isPresented: $isPresentingEditMaterial) {
+            if let index = editingMaterialIndex {
+                AddMaterialView(mode: .edit(invoice.materials[index])) { updatedMaterial in
+                    var updated = invoice
+                    updated.materials[index] = updatedMaterial
+                    invoiceVM.update(updated)
+                }
+            }
+        }
+        .onAppear(perform: syncInvoiceWithViewModel)
+        .onReceive(invoiceVM.$invoices) { _ in
+            syncInvoiceWithViewModel()
+        }
     }
 
     private var headerCard: some View {
@@ -72,7 +88,7 @@ struct InvoiceDetailView: View {
                 .font(.title2.bold())
                 .foregroundColor(.white)
 
-            Text(invoice.clientName)
+            Text(client?.name ?? invoice.clientName)
                 .font(.subheadline)
                 .foregroundColor(.white.opacity(0.85))
 
@@ -142,40 +158,39 @@ struct InvoiceDetailView: View {
         )
     }
 
-    private func materialsCard(for job: Job) -> some View {
+    private var materialsCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Materials")
                     .font(.headline)
                     .foregroundColor(.white)
-                Text("\(job.materials.count) items")
+                Text("\(invoice.materials.count) items")
                     .font(.caption)
                     .foregroundColor(.white.opacity(0.7))
             }
 
-            if job.materials.isEmpty {
+            if invoice.materials.isEmpty {
                 Text("No materials listed for this invoice.")
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.75))
             } else {
-                ForEach(job.materials) { material in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(material.name)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundColor(.white)
-                            Text("\(material.quantity, specifier: "%.2f") × $\(material.unitCost, specifier: "%.2f")")
-                                .font(.caption)
-                                .foregroundColor(.white.opacity(0.75))
+                ForEach(Array(invoice.materials.enumerated()), id: \.offset) { index, element in
+                    MaterialRow(material: element)
+                        .swipeActions {
+                            Button(role: .destructive) {
+                                var updated = invoice
+                                updated.materials.remove(at: index)
+                                invoiceVM.update(updated)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                        .onTapGesture {
+                            editingMaterialIndex = index
+                            isPresentingEditMaterial = true
                         }
 
-                        Spacer()
-
-                        Text("$\(material.cost, specifier: "%.2f")")
-                            .font(.subheadline.bold())
-                            .foregroundColor(.white)
-                    }
-                    .padding(.vertical, 6)
+                    Divider().background(Color.white.opacity(0.15))
                 }
             }
         }
@@ -197,7 +212,7 @@ struct InvoiceDetailView: View {
                 .font(.headline)
                 .foregroundColor(.white)
 
-            detailRow(title: "Client", value: invoice.clientName)
+            clientDetailRow
             detailRow(title: "Status", value: invoice.status.displayName)
             detailRow(title: "Amount", value: formattedAmount)
             detailRow(
@@ -217,6 +232,46 @@ struct InvoiceDetailView: View {
         )
     }
 
+    private var clientDetailRow: some View {
+        HStack(alignment: .top) {
+            Text("Client")
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.75))
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(client?.name ?? invoice.clientName)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+
+                if let client {
+                    if !client.company.isEmpty {
+                        Text(client.company)
+                            .font(.footnote)
+                            .foregroundColor(.white.opacity(0.85))
+                    }
+                    if !client.address.isEmpty {
+                        Text(client.address)
+                            .font(.footnote)
+                            .foregroundColor(.white.opacity(0.85))
+                    }
+                    if !client.phone.isEmpty {
+                        Text(client.phone)
+                            .font(.footnote)
+                            .foregroundColor(.white.opacity(0.85))
+                    }
+                    if !client.email.isEmpty {
+                        Text(client.email)
+                            .font(.footnote)
+                            .foregroundColor(.white.opacity(0.85))
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
     private func detailRow(title: String, value: String) -> some View {
         HStack {
             Text(title)
@@ -228,5 +283,34 @@ struct InvoiceDetailView: View {
                 .foregroundColor(.white)
         }
         .padding(.vertical, 4)
+    }
+
+    private func syncInvoiceWithViewModel() {
+        guard let updatedInvoice = invoiceVM.invoices.first(where: { $0.id == invoiceID }) else { return }
+        invoice = updatedInvoice
+    }
+}
+
+private struct MaterialRow: View {
+    let material: Material
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(material.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+                Text("\(material.quantity, specifier: "%.2f") × $\(material.unitCost, specifier: "%.2f")")
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.75))
+            }
+
+            Spacer()
+
+            Text("$\(material.total, specifier: "%.2f")")
+                .font(.subheadline.bold())
+                .foregroundColor(.white)
+        }
+        .padding(.vertical, 6)
     }
 }

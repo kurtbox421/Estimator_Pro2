@@ -15,7 +15,6 @@ struct AddEditInvoiceView: View {
     @State private var title: String
     @State private var selectedClientId: UUID?
     @State private var clientName: String
-    @State private var amount: String
     @State private var status: Invoice.InvoiceStatus
     @State private var includeDueDate: Bool
     @State private var dueDate: Date
@@ -29,15 +28,13 @@ struct AddEditInvoiceView: View {
             _title = State(initialValue: "")
             _selectedClientId = State(initialValue: nil)
             _clientName = State(initialValue: "")
-            _amount = State(initialValue: "")
             _status = State(initialValue: .draft)
             _includeDueDate = State(initialValue: false)
             _dueDate = State(initialValue: Date())
         case .edit(let invoice):
             _title = State(initialValue: invoice.title)
-            _selectedClientId = State(initialValue: invoice.clientId)
+            _selectedClientId = State(initialValue: invoice.clientID)
             _clientName = State(initialValue: invoice.clientName)
-            _amount = State(initialValue: String(invoice.amount))
             _status = State(initialValue: invoice.status)
             _includeDueDate = State(initialValue: invoice.dueDate != nil)
             _dueDate = State(initialValue: invoice.dueDate ?? Date())
@@ -79,8 +76,6 @@ struct AddEditInvoiceView: View {
                 }
 
                 Section(header: Text("Billing")) {
-                    TextField("Amount", text: $amount)
-                        .keyboardType(.decimalPad)
                     Picker("Status", selection: $status) {
                         ForEach(Invoice.InvoiceStatus.allCases) { status in
                             Text(status.displayName).tag(status)
@@ -146,15 +141,13 @@ struct AddEditInvoiceView: View {
     private var isValid: Bool {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedClient = clientName.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmedTitle.isEmpty || trimmedClient.isEmpty { return false }
-        return Double(amount.trimmingCharacters(in: .whitespacesAndNewlines)) != nil
+        return !trimmedTitle.isEmpty && !trimmedClient.isEmpty
     }
 
     private func save() {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedClient = clientName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let amountValue = Double(amount.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
-        guard !trimmedTitle.isEmpty, !trimmedClient.isEmpty, amountValue.isFinite else { return }
+        guard !trimmedTitle.isEmpty, !trimmedClient.isEmpty else { return }
 
         let dueDateValue = includeDueDate ? dueDate : nil
 
@@ -162,9 +155,9 @@ struct AddEditInvoiceView: View {
         case .add:
             let invoice = Invoice(
                 title: trimmedTitle,
-                clientId: selectedClientId,
+                clientID: selectedClientId,
                 clientName: trimmedClient,
-                amount: amountValue,
+                materials: [],
                 status: status,
                 dueDate: dueDateValue
             )
@@ -173,9 +166,8 @@ struct AddEditInvoiceView: View {
         case .edit(let existing):
             var updated = existing
             updated.title = trimmedTitle
-            updated.clientId = selectedClientId
+            updated.clientID = selectedClientId
             updated.clientName = trimmedClient
-            updated.amount = amountValue
             updated.status = status
             updated.dueDate = dueDateValue
             invoiceVM.update(updated)

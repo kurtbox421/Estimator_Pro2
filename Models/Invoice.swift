@@ -19,39 +19,40 @@ struct Invoice: Identifiable, Codable {
 
     var id: UUID
     var title: String
-    var clientId: UUID?
+    var clientID: UUID?
     var clientName: String
-    var amount: Double
+    var materials: [Material]
     var status: InvoiceStatus
-    var createdAt: Date
     var dueDate: Date?
+
+    var amount: Double {
+        materials.reduce(0) { $0 + $1.total }
+    }
 
     init(
         id: UUID = UUID(),
         title: String,
-        clientId: UUID? = nil,
+        clientID: UUID? = nil,
         clientName: String,
-        amount: Double,
+        materials: [Material] = [],
         status: InvoiceStatus,
-        createdAt: Date = Date(),
         dueDate: Date? = nil
     ) {
         self.id = id
         self.title = title
-        self.clientId = clientId
+        self.clientID = clientID
         self.clientName = clientName
-        self.amount = amount
+        self.materials = materials
         self.status = status
-        self.createdAt = createdAt
         self.dueDate = dueDate
     }
 
     init(from job: Job, clientName: String) {
         self.init(
             title: job.name,
-            clientId: job.clientId,
+            clientID: job.clientId,
             clientName: clientName,
-            amount: job.total,
+            materials: job.materials,
             status: .draft
         )
     }
@@ -59,11 +60,10 @@ struct Invoice: Identifiable, Codable {
     private enum CodingKeys: String, CodingKey {
         case id
         case title
-        case clientId
+        case clientID
         case clientName
-        case amount
+        case materials
         case status
-        case createdAt
         case dueDate
     }
 
@@ -72,11 +72,10 @@ struct Invoice: Identifiable, Codable {
 
         id = try container.decode(UUID.self, forKey: .id)
         title = try container.decode(String.self, forKey: .title)
-        clientId = try container.decodeIfPresent(UUID.self, forKey: .clientId)
+        clientID = try container.decodeIfPresent(UUID.self, forKey: .clientID)
         clientName = try container.decode(String.self, forKey: .clientName)
-        amount = try container.decode(Double.self, forKey: .amount)
+        materials = try container.decodeIfPresent([Material].self, forKey: .materials) ?? []
         status = try container.decode(InvoiceStatus.self, forKey: .status)
-        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
         dueDate = try container.decodeIfPresent(Date.self, forKey: .dueDate)
     }
 }
