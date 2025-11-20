@@ -8,14 +8,36 @@
 import SwiftUI
 
 struct AddMaterialView: View {
+    enum Mode {
+        case add
+        case edit(Material)
+    }
+
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var settingsManager: SettingsManager
 
+    let mode: Mode
     var onSave: (Material) -> Void
 
-    @State private var name = ""
-    @State private var quantity = ""
-    @State private var unitCost = ""
+    @State private var name: String
+    @State private var quantity: String
+    @State private var unitCost: String
+
+    init(mode: Mode = .add, onSave: @escaping (Material) -> Void) {
+        self.mode = mode
+        self.onSave = onSave
+
+        switch mode {
+        case .add:
+            _name = State(initialValue: "")
+            _quantity = State(initialValue: "")
+            _unitCost = State(initialValue: "")
+        case .edit(let material):
+            _name = State(initialValue: material.name)
+            _quantity = State(initialValue: String(material.quantity))
+            _unitCost = State(initialValue: String(material.unitCost))
+        }
+    }
 
     var body: some View {
         NavigationView {
@@ -31,7 +53,7 @@ struct AddMaterialView: View {
                         .keyboardType(.decimalPad)
                 }
             }
-            .navigationTitle("Add Material")
+            .navigationTitle(modeTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -65,14 +87,31 @@ struct AddMaterialView: View {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return }
 
-        let material = Material(
-            name: trimmedName,
-            quantity: q,
-            unitCost: u
-        )
+        let material: Material
+        if case .edit(let existing) = mode {
+            material = Material(
+                id: existing.id,
+                name: trimmedName,
+                quantity: q,
+                unitCost: u
+            )
+        } else {
+            material = Material(
+                name: trimmedName,
+                quantity: q,
+                unitCost: u
+            )
+        }
 
         onSave(material)
         dismiss()
+    }
+
+    private var modeTitle: String {
+        switch mode {
+        case .add: return "Add Material"
+        case .edit: return "Edit Material"
+        }
     }
 
     private func applyCommonMaterialPriceIfNeeded() {

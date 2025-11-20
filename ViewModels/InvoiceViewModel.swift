@@ -12,22 +12,38 @@ class InvoiceViewModel: ObservableObject {
     init() {
         if !loadInvoices() {
             invoices = [
-                Invoice(title: "Kitchen Remodel", clientName: "Maria Sanchez", amount: 12_450, status: .draft),
-                Invoice(title: "Patio Extension", clientName: "Johnny Appleseed", amount: 8_800, status: .sent),
-                Invoice(title: "Basement Finish", clientName: "Harper Logistics", amount: 18_750, status: .overdue)
+                Invoice(
+                    title: "Kitchen Remodel",
+                    clientName: "Maria Sanchez",
+                    materials: [
+                        Material(name: "Cabinetry", quantity: 12, unitCost: 150),
+                        Material(name: "Tile", quantity: 80, unitCost: 4.25)
+                    ],
+                    status: .draft
+                ),
+                Invoice(
+                    title: "Patio Extension",
+                    clientName: "Johnny Appleseed",
+                    materials: [
+                        Material(name: "Pavers", quantity: 150, unitCost: 3.5),
+                        Material(name: "Sand", quantity: 20, unitCost: 15)
+                    ],
+                    status: .sent
+                ),
+                Invoice(
+                    title: "Basement Finish",
+                    clientName: "Harper Logistics",
+                    materials: [
+                        Material(name: "Drywall", quantity: 60, unitCost: 18),
+                        Material(name: "Paint", quantity: 15, unitCost: 32)
+                    ],
+                    status: .overdue
+                )
             ]
         }
     }
 
     // MARK: - CRUD
-
-    @discardableResult
-    func createInvoice(from job: Job, clientName: String) -> Invoice {
-        let invoice = Invoice(from: job, clientName: clientName)
-        invoices.append(invoice)
-        saveInvoices()
-        return invoice
-    }
 
     func add(_ invoice: Invoice) {
         invoices.append(invoice)

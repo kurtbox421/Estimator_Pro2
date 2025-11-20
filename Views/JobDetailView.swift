@@ -285,7 +285,16 @@ struct JobDetailView: View {
 
     private func convertToInvoice() {
         let clientName = clientVM.clients.first(where: { $0.id == job.clientId })?.name ?? "Unassigned"
-        let invoice = invoiceVM.createInvoice(from: job, clientName: clientName)
+        let invoice = Invoice(
+            id: UUID(),
+            title: job.name,
+            clientID: job.clientId,
+            clientName: clientName,
+            materials: job.materials,
+            status: .draft,
+            dueDate: nil
+        )
+        invoiceVM.add(invoice)
         createdInvoice = invoice
         showingInvoiceEditor = true
     }
