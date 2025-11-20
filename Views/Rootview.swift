@@ -4,8 +4,9 @@
 //
 //  Created by Curtis Bollinger on 11/18/25.
 //
-
 import SwiftUI
+
+// MARK: - Tabs
 
 enum AppTab: String, CaseIterable {
     case estimates = "Estimates"
@@ -14,14 +15,18 @@ enum AppTab: String, CaseIterable {
     case settings  = "Settings"
 }
 
+// MARK: - Layout helper
+
 private struct AdaptiveLayout {
     let contentWidth: CGFloat
     let horizontalPadding: CGFloat
 
-    init(containerSize: CGSize,
-         maxContentWidth: CGFloat = 860,
-         minPadding: CGFloat = 16,
-         minContentWidth: CGFloat = 320) {
+    init(
+        containerSize: CGSize,
+        maxContentWidth: CGFloat = 860,
+        minPadding: CGFloat = 16,
+        minContentWidth: CGFloat = 320
+    ) {
         let availableWidth = containerSize.width
 
         if availableWidth >= maxContentWidth + (minPadding * 2) {
@@ -35,13 +40,16 @@ private struct AdaptiveLayout {
     }
 }
 
+// MARK: - Root view
+
 struct RootView: View {
     @EnvironmentObject private var jobVM: JobViewModel
     @EnvironmentObject private var clientVM: ClientViewModel
+    @EnvironmentObject private var invoiceVM: InvoiceViewModel
+
     @State private var selectedTab: AppTab = .estimates
     @State private var showingAddJob = false
     @State private var invoiceSheetMode: AddEditInvoiceView.Mode?
-
 
     var body: some View {
         GeometryReader { geometry in
@@ -82,7 +90,7 @@ struct RootView: View {
         }
     }
 
-    // MARK: - Header with tabs + buttons
+    // MARK: Header
 
     private func headerBar(availableWidth: CGFloat) -> some View {
         ViewThatFits(in: .horizontal) {
@@ -138,7 +146,7 @@ struct RootView: View {
             }
 
             Button {
-                // later: quick action / AI tools, whatever
+                // future: AI / quick actions
             } label: {
                 Image(systemName: "paintbrush.pointed.fill")
                     .font(.headline)
@@ -182,7 +190,7 @@ struct RootView: View {
         .frame(maxWidth: width)
     }
 
-    // MARK: - Hero card at top
+    // MARK: Hero card
 
     @ViewBuilder
     private var heroCard: some View {
@@ -214,7 +222,7 @@ struct RootView: View {
         }
     }
 
-    // MARK: - Tab content
+    // MARK: Tab content
 
     @ViewBuilder
     private var contentForSelectedTab: some View {
@@ -232,7 +240,7 @@ struct RootView: View {
         }
     }
 
-    // MARK: - Background colors
+    // MARK: Background
 
     private func backgroundColors(for tab: AppTab) -> [Color] {
         switch tab {
@@ -294,6 +302,7 @@ struct HeroCardView: View {
         )
     }
 }
+
 // MARK: - Estimates tab
 
 struct EstimatesTabView: View {
@@ -323,7 +332,7 @@ struct EstimatesTabView: View {
             }
 
             if vm.jobs.isEmpty {
-                Text("No estimates yet. Tap the + button (coming soon) to add your first job.")
+                Text("No estimates yet. Tap the + button to add your first job.")
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.7))
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -336,7 +345,6 @@ struct EstimatesTabView: View {
         .scrollContentBackground(.hidden)
     }
 }
-
 
 struct EstimateJobCard: View {
     let job: Job
@@ -367,7 +375,7 @@ struct EstimateJobCard: View {
                 Spacer()
 
                 Button {
-                    // later: open job detail
+                    // reserved for quick actions
                 } label: {
                     ZStack {
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -418,6 +426,7 @@ struct EstimateJobCard: View {
         )
     }
 }
+
 // MARK: - Invoices tab
 
 struct InvoicesTabView: View {
@@ -460,6 +469,8 @@ struct InvoicesTabView: View {
     }
 }
 
+// MARK: - Clients tab (NEW COMPACT LIST)
+
 // MARK: - Clients tab
 
 struct ClientsTabView: View {
@@ -468,20 +479,28 @@ struct ClientsTabView: View {
 
     var body: some View {
         List {
-            ForEach($clientVM.clients) { $client in
-                ClientEditableCard(client: $client)
-                    .listRowInsets(rowInsets)
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            withAnimation {
-                                clientVM.delete(client.wrappedValue)
-                            }
-                        } label: {
-                            Label("Delete", systemImage: "trash")
+            // one row per client
+            ForEach(clientVM.clients.indices, id: \.self) { index in
+                let client = clientVM.clients[index]
+
+                NavigationLink {
+                    ClientDetailView(client: $clientVM.clients[index])
+                } label: {
+                    ClientRowCard(client: client)
+                }
+                .listRowInsets(rowInsets)
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        withAnimation {
+                            let clientToDelete = clientVM.clients[index]
+                            clientVM.delete(clientToDelete)
                         }
+                    } label: {
+                        Label("Delete", systemImage: "trash")
                     }
+                }
             }
 
             if clientVM.clients.isEmpty {
@@ -493,43 +512,14 @@ struct ClientsTabView: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
             }
-
-            addClientButton
-                .listRowInsets(rowInsets)
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
     }
-
-    private var addClientButton: some View {
-        Button {
-            withAnimation {
-                clientVM.add()
-            }
-        } label: {
-            HStack {
-                Image(systemName: "person.badge.plus")
-                    .font(.headline)
-                Text("Add client")
-                    .font(.headline.weight(.semibold))
-            }
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(Color.white.opacity(0.08))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 1)
-                    )
-            )
-        }
-        .buttonStyle(.plain)
-    }
 }
+
+
+// MARK: - Invoice card
 
 private struct InvoiceCard: View {
     let invoice: Invoice
@@ -602,61 +592,58 @@ private extension Invoice.InvoiceStatus {
     }
 }
 
-private struct ClientEditableCard: View {
-    @Binding var client: Client
+// MARK: - Client editable card & helpers (DETAIL SCREEN)
+
+private struct ClientRowCard: View {
+    let client: Client
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            header
+        HStack(spacing: 12) {
+            ClientAvatar(initials: client.initials)
 
-            Divider().overlay(Color.white.opacity(0.15))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(client.name.isEmpty ? "New client" : client.name)
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.white)
 
-            ClientInfoTile(
-                title: "Address",
-                prompt: "123 Main St · City, ST",
-                systemImage: "mappin.and.ellipse",
-                text: $client.address,
-                capitalization: .sentences
-            )
+                if !client.company.isEmpty {
+                    Text(client.company)
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.8))
+                }
 
-            HStack(spacing: 12) {
-                ClientInfoTile(
-                    title: "Phone",
-                    prompt: "(555) 123-4567",
-                    systemImage: "phone.fill",
-                    text: $client.phone,
-                    capitalization: .never,
-                    keyboardType: .phonePad
-                )
-
-                ClientInfoTile(
-                    title: "Email",
-                    prompt: "hello@example.com",
-                    systemImage: "envelope.fill",
-                    text: $client.email,
-                    capitalization: .never,
-                    keyboardType: .emailAddress
-                )
+                if !client.address.isEmpty {
+                    Text(client.address)
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.7))
+                        .lineLimit(1)
+                }
             }
 
-            ClientInfoTile(
-                title: "Notes",
-                prompt: "Reminders, preferences, etc.",
-                systemImage: "note.text",
-                text: $client.notes,
-                capitalization: .sentences,
-                disableAutocorrection: false
-            )
+            Spacer()
 
-            ClientJobTile(jobCount: $client.jobCount, summary: client.jobSummary)
+            VStack(alignment: .trailing, spacing: 4) {
+                if !client.phone.isEmpty {
+                    Image(systemName: "phone.fill")
+                        .font(.footnote)
+                        .foregroundColor(.white.opacity(0.7))
+                }
+
+                Text(client.jobSummary)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.85))
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 8)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(Capsule())
+            }
         }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(Color.white.opacity(0.05))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
                         .stroke(Color.white.opacity(0.12), lineWidth: 1)
                 )
         )
@@ -731,75 +718,75 @@ private struct ClientInfoTile: View {
     }
 }
 
-private struct ClientJobTile: View {
-    @Binding var jobCount: Int
-    let summary: String
+// Detail screen
+struct ClientDetailView: View {
+    @Binding var client: Client
 
     var body: some View {
-        Stepper(value: $jobCount, in: 0...999) {
-            HStack {
-                Label("Projects", systemImage: "briefcase.fill")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.white)
-
-                Spacer()
-
-                Text(summary)
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.white.opacity(0.85))
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 10)
-                    .background(Color.white.opacity(0.08))
-                    .clipShape(Capsule())
+        ScrollView {
+            VStack(spacing: 16) {
+                ClientEditableCard(client: $client)
             }
+            .padding(.horizontal, 24)
+            .padding(.top, 24)
         }
-        .padding(14)
+        .navigationTitle(client.name.isEmpty ? "New Client" : client.name)
+        .navigationBarTitleDisplayMode(.inline)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.white.opacity(0.05))
+            LinearGradient(
+                colors: [
+                    Color(red: 0.08, green: 0.40, blue: 0.50),
+                    Color(red: 0.16, green: 0.18, blue: 0.40)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
         )
     }
 }
 
-private extension ClientEditableCard {
-    var header: some View {
-        HStack(alignment: .top, spacing: 14) {
+// Compact row in list
+private struct ClientSummaryRow: View {
+    let client: Client
+
+    var body: some View {
+        HStack(spacing: 16) {
             ClientAvatar(initials: client.initials)
 
-            VStack(alignment: .leading, spacing: 6) {
-                TextField("Client name", text: $client.name)
-                    .textInputAutocapitalization(.words)
-                    .autocorrectionDisabled()
+            VStack(alignment: .leading, spacing: 4) {
+                Text(client.name.isEmpty ? "New client" : client.name)
                     .font(.headline.weight(.semibold))
                     .foregroundColor(.white)
 
-                TextField("Company", text: $client.company)
-                    .textInputAutocapitalization(.words)
-                    .autocorrectionDisabled()
-                    .font(.subheadline)
-                    .foregroundColor(.white.opacity(0.9))
+                if !client.company.isEmpty {
+                    Text(client.company)
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.85))
+                }
 
-                Text(client.jobSummary)
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.white.opacity(0.85))
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 10)
-                    .background(Color.white.opacity(0.08))
-                    .clipShape(Capsule())
+                if !client.address.isEmpty {
+                    Text(client.address)
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.7))
+                }
             }
 
             Spacer()
 
-            Image(systemName: "ellipsis")
-                .font(.headline.weight(.semibold))
-                .foregroundColor(.white.opacity(0.8))
-                .padding(10)
-                .background(Color.white.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            if !client.phone.isEmpty {
+                Image(systemName: "phone.fill")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.9))
+            }
         }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Color.white.opacity(0.06))
+        )
     }
 }
-
 // MARK: - Settings tab
 
 struct SettingsTabView: View {
@@ -838,4 +825,3 @@ struct SettingsTabView: View {
         )
     }
 }
-
