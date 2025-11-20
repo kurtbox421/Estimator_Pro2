@@ -14,6 +14,7 @@ struct AddEditJobView: View {
 
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var vm: JobViewModel
+    @EnvironmentObject private var clientVM: ClientViewModel
 
     let mode: Mode
 
@@ -21,6 +22,7 @@ struct AddEditJobView: View {
     @State private var category: String
     @State private var labourHours: String
     @State private var laborRate: String
+    @State private var selectedClientId: UUID?
 
     // MARK: - Init
 
@@ -33,11 +35,13 @@ struct AddEditJobView: View {
             _category = State(initialValue: "")
             _labourHours = State(initialValue: "")
             _laborRate = State(initialValue: "")
+            _selectedClientId = State(initialValue: nil)
         case .edit(let job):
             _name = State(initialValue: job.name)
             _category = State(initialValue: job.category)
             _labourHours = State(initialValue: String(job.laborHours))
             _laborRate = State(initialValue: String(job.laborRate))
+            _selectedClientId = State(initialValue: job.clientId)
         }
     }
 
@@ -59,6 +63,14 @@ struct AddEditJobView: View {
                 Section(header: Text("Job info")) {
                     TextField("Job Name", text: $name)
                     TextField("Category (optional)", text: $category)
+
+                    Picker("Client", selection: $selectedClientId) {
+                        Text("Unassigned").tag(UUID?.none)
+                        ForEach(clientVM.clients) { client in
+                            Text(client.name.isEmpty ? "New client" : client.name)
+                                .tag(Optional(client.id))
+                        }
+                    }
                 }
 
                 Section(header: Text("Labor (optional)")) {
@@ -132,7 +144,9 @@ struct AddEditJobView: View {
                 name: trimmedName,
                 category: trimmedCategory,
                 laborHours: h,
-                laborRate: r
+                laborRate: r,
+                materials: [],
+                clientId: selectedClientId
             )
             vm.add(job)
 
@@ -142,6 +156,7 @@ struct AddEditJobView: View {
             updated.category = trimmedCategory
             updated.laborHours = h
             updated.laborRate = r
+            updated.clientId = selectedClientId
             vm.update(updated)
         }
 

@@ -15,6 +15,7 @@ struct Job: Identifiable, Codable {
     var laborRate: Double
     var materials: [Material]
     var dateCreated: Date
+    var clientId: UUID?
 
     var laborCost: Double { laborHours * laborRate }
     var materialCost: Double { materials.map { $0.cost }.reduce(0, +) }
@@ -26,7 +27,8 @@ struct Job: Identifiable, Codable {
         category: String,
         laborHours: Double,
         laborRate: Double,
-        materials: [Material] = []
+        materials: [Material] = [],
+        clientId: UUID? = nil
     ) {
         self.id = id
         self.name = name
@@ -35,6 +37,7 @@ struct Job: Identifiable, Codable {
         self.laborRate = laborRate
         self.materials = materials
         self.dateCreated = Date()
+        self.clientId = clientId
     }
 }
 

@@ -42,6 +42,14 @@ class JobViewModel: ObservableObject {
         }
     }
 
+    func jobs(for client: Client) -> [Job] {
+        jobs.filter { $0.clientId == client.id }
+    }
+
+    func jobCount(for client: Client) -> Int {
+        jobs(for: client).count
+    }
+
     // MARK: - Persistence
 
     private func saveJobs() {
