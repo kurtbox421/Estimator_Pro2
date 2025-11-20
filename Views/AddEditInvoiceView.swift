@@ -13,6 +13,7 @@ struct AddEditInvoiceView: View {
     let mode: Mode
 
     @State private var title: String
+    @State private var selectedClientId: UUID?
     @State private var clientName: String
     @State private var amount: String
     @State private var status: Invoice.InvoiceStatus
@@ -26,6 +27,7 @@ struct AddEditInvoiceView: View {
         switch mode {
         case .add:
             _title = State(initialValue: "")
+            _selectedClientId = State(initialValue: nil)
             _clientName = State(initialValue: "")
             _amount = State(initialValue: "")
             _status = State(initialValue: .draft)
@@ -33,6 +35,7 @@ struct AddEditInvoiceView: View {
             _dueDate = State(initialValue: Date())
         case .edit(let invoice):
             _title = State(initialValue: invoice.title)
+            _selectedClientId = State(initialValue: invoice.clientId)
             _clientName = State(initialValue: invoice.clientName)
             _amount = State(initialValue: String(invoice.amount))
             _status = State(initialValue: invoice.status)
@@ -56,7 +59,7 @@ struct AddEditInvoiceView: View {
             Form {
                 Section(header: Text("Invoice details")) {
                     TextField("Title", text: $title)
-                    Picker("Client", selection: clientSelectionBinding) {
+                    Picker("Client", selection: $selectedClientId) {
                         Text(clientName.isEmpty ? "Unassigned" : clientName)
                             .tag(UUID?.none)
 
@@ -115,29 +118,22 @@ struct AddEditInvoiceView: View {
                     .disabled(!isValid)
             }
         }
+        .onChange(of: selectedClientId) { newValue in
+            guard let id = newValue, let client = clientVM.clients.first(where: { $0.id == id }) else {
+                clientName = ""
+                return
+            }
+            clientName = client.name
+        }
         .sheet(isPresented: $isPresentingNewClientSheet) {
             NavigationView {
                 NewClientSheet { newClient in
                     clientName = newClient.name
+                    selectedClientId = newClient.id
                 }
                 .environmentObject(clientVM)
             }
         }
-    }
-
-    private var clientSelectionBinding: Binding<UUID?> {
-        Binding(
-            get: {
-                clientVM.clients.first(where: { $0.name == clientName })?.id
-            },
-            set: { newValue in
-                if let id = newValue, let client = clientVM.clients.first(where: { $0.id == id }) {
-                    clientName = client.name
-                } else {
-                    clientName = ""
-                }
-            }
-        )
     }
 
     private var modeTitle: String {
@@ -166,6 +162,7 @@ struct AddEditInvoiceView: View {
         case .add:
             let invoice = Invoice(
                 title: trimmedTitle,
+                clientId: selectedClientId,
                 clientName: trimmedClient,
                 amount: amountValue,
                 status: status,
@@ -176,6 +173,7 @@ struct AddEditInvoiceView: View {
         case .edit(let existing):
             var updated = existing
             updated.title = trimmedTitle
+            updated.clientId = selectedClientId
             updated.clientName = trimmedClient
             updated.amount = amountValue
             updated.status = status

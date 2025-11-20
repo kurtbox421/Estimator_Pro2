@@ -9,11 +9,15 @@ import SwiftUI
 
 struct JobDetailView: View {
     @EnvironmentObject private var vm: JobViewModel
+    @EnvironmentObject private var invoiceVM: InvoiceViewModel
+    @EnvironmentObject private var clientVM: ClientViewModel
 
     private let jobID: Job.ID
     @State private var job: Job
     @State private var showingAddMaterial = false
     @State private var editingMaterial: Material?
+    @State private var createdInvoice: Invoice?
+    @State private var showingInvoiceEditor = false
 
     init(job: Job) {
         jobID = job.id
@@ -80,6 +84,27 @@ struct JobDetailView: View {
                                     .foregroundColor(.orange)
                             }
                         }
+
+                        Button(action: convertToInvoice) {
+                            HStack {
+                                Image(systemName: "doc.text.fill")
+                                    .imageScale(.medium)
+                                Text("Convert to Invoice")
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.orange.opacity(0.85), Color.pink.opacity(0.75)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .foregroundColor(.white)
+                            .cornerRadius(16)
+                        }
+                        .buttonStyle(.plain)
                     }
                     .padding(20)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -221,6 +246,15 @@ struct JobDetailView: View {
                 updateMaterial(updatedMaterial)
             }
         }
+        .sheet(isPresented: $showingInvoiceEditor) {
+            if let createdInvoice {
+                NavigationView {
+                    AddEditInvoiceView(mode: .edit(createdInvoice))
+                        .environmentObject(invoiceVM)
+                        .environmentObject(clientVM)
+                }
+            }
+        }
         .onAppear(perform: syncJobWithViewModel)
         .onReceive(vm.$jobs) { _ in
             syncJobWithViewModel()
@@ -242,6 +276,13 @@ struct JobDetailView: View {
     private func syncJobWithViewModel() {
         guard let updatedJob = vm.jobs.first(where: { $0.id == jobID }) else { return }
         job = updatedJob
+    }
+
+    private func convertToInvoice() {
+        let clientName = clientVM.clients.first(where: { $0.id == job.clientId })?.name ?? "Unassigned"
+        let invoice = invoiceVM.createInvoice(from: job, clientName: clientName)
+        createdInvoice = invoice
+        showingInvoiceEditor = true
     }
 }
 
