@@ -916,40 +916,46 @@ struct BrandingLogoView: View {
 
 // MARK: - Estimate defaults
 
-private struct SavedMaterial: Identifiable, Codable, Equatable {
-    var id = UUID()
-    var name: String
-    var price: Double
-}
-
 struct EstimateDefaultsView: View {
-    @State private var materials: [SavedMaterial] = []
+    @EnvironmentObject private var settingsManager: SettingsManager
     @State private var newName: String = ""
     @State private var newPrice: String = ""
-    private let storageKey = "estimateDefaultsMaterials"
 
     var body: some View {
         List {
             Section("Common materials") {
-                if materials.isEmpty {
+                if settingsManager.commonMaterials.isEmpty {
                     Text("Add materials you use all the time (e.g., \"1/2\" drywall sheet\", \"Cement mix\").")
                         .font(.footnote)
                         .foregroundColor(.secondary)
                         .listRowBackground(Color.clear)
                 } else {
-                    ForEach($materials) { $material in
+                    ForEach(Array(settingsManager.commonMaterials.enumerated()), id: \.element.id) { index, _ in
                         HStack(spacing: 12) {
-                            TextField("Material", text: $material.name)
+                            TextField(
+                                "Material",
+                                text: Binding(
+                                    get: { settingsManager.commonMaterials[index].name },
+                                    set: { settingsManager.updateMaterialName(at: index, name: $0) }
+                                )
+                            )
 
                             Spacer()
 
-                            TextField("Price", value: $material.price, format: .number)
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
-                                .frame(width: 110)
+                            TextField(
+                                "Price",
+                                value: Binding(
+                                    get: { settingsManager.commonMaterials[index].price },
+                                    set: { settingsManager.updateMaterialPrice(at: index, price: $0) }
+                                ),
+                                format: .number
+                            )
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 110)
                         }
                     }
-                    .onDelete(perform: deleteMaterials)
+                    .onDelete(perform: settingsManager.deleteMaterials)
                 }
             }
 
@@ -978,10 +984,6 @@ struct EstimateDefaultsView: View {
         .scrollContentBackground(.hidden)
         .listRowBackground(Color.clear)
         .navigationTitle("Estimate defaults")
-        .onAppear(perform: loadMaterials)
-        .onChange(of: materials) { _ in
-            saveMaterials()
-        }
     }
 
     private var canAddMaterial: Bool {
@@ -993,26 +995,9 @@ struct EstimateDefaultsView: View {
         let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let priceValue = Double(newPrice), !trimmedName.isEmpty else { return }
 
-        let material = SavedMaterial(name: trimmedName, price: priceValue)
-        materials.append(material)
+        settingsManager.addMaterial(name: trimmedName, price: priceValue)
         newName = ""
         newPrice = ""
-    }
-
-    private func deleteMaterials(at offsets: IndexSet) {
-        materials.remove(atOffsets: offsets)
-    }
-
-    private func loadMaterials() {
-        guard let data = UserDefaults.standard.data(forKey: storageKey) else { return }
-        if let decoded = try? JSONDecoder().decode([SavedMaterial].self, from: data) {
-            materials = decoded
-        }
-    }
-
-    private func saveMaterials() {
-        guard let data = try? JSONEncoder().encode(materials) else { return }
-        UserDefaults.standard.set(data, forKey: storageKey)
     }
 }
 
