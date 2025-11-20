@@ -23,6 +23,7 @@ struct AddEditJobView: View {
     @State private var labourHours: String
     @State private var laborRate: String
     @State private var selectedClientId: UUID?
+    @State private var isPresentingNewClientSheet = false
 
     // MARK: - Init
 
@@ -70,6 +71,14 @@ struct AddEditJobView: View {
                             Text(client.name.isEmpty ? "New client" : client.name)
                                 .tag(Optional(client.id))
                         }
+
+                        Divider()
+
+                        Button {
+                            isPresentingNewClientSheet = true
+                        } label: {
+                            Label("New client…", systemImage: "person.badge.plus")
+                        }
                     }
                 }
 
@@ -91,6 +100,14 @@ struct AddEditJobView: View {
                 }
             }
             .scrollContentBackground(.hidden)
+        }
+        .sheet(isPresented: $isPresentingNewClientSheet) {
+            NavigationView {
+                NewClientSheet { newClient in
+                    selectedClientId = newClient.id
+                }
+                .environmentObject(clientVM)
+            }
         }
         .navigationTitle(modeTitle)
         .navigationBarTitleDisplayMode(.inline)
@@ -161,5 +178,65 @@ struct AddEditJobView: View {
         }
 
         dismiss()
+    }
+}
+
+struct NewClientSheet: View {
+    @EnvironmentObject private var clientVM: ClientViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var name: String = ""
+    @State private var company: String = ""
+    @State private var address: String = ""
+    @State private var phone: String = ""
+    @State private var email: String = ""
+    @State private var notes: String = ""
+
+    let onSave: (Client) -> Void
+
+    var body: some View {
+        Form {
+            Section("Basic info") {
+                TextField("Client name", text: $name)
+                    .textInputAutocapitalization(.words)
+                TextField("Company", text: $company)
+                    .textInputAutocapitalization(.words)
+            }
+
+            Section("Contact") {
+                TextField("Address", text: $address)
+                TextField("Phone", text: $phone)
+                    .keyboardType(.phonePad)
+                TextField("Email", text: $email)
+                    .keyboardType(.emailAddress)
+                    .textInputAutocapitalization(.never)
+            }
+
+            Section("Notes") {
+                TextField("Notes", text: $notes, axis: .vertical)
+            }
+        }
+        .navigationTitle("New Client")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    let newClient = clientVM.addClient(
+                        name: name.trimmingCharacters(in: .whitespaces),
+                        company: company,
+                        address: address,
+                        phone: phone,
+                        email: email,
+                        notes: notes
+                    )
+                    onSave(newClient)
+                    dismiss()
+                }
+                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
     }
 }

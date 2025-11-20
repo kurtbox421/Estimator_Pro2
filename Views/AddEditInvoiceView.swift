@@ -8,6 +8,7 @@ struct AddEditInvoiceView: View {
 
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var invoiceVM: InvoiceViewModel
+    @EnvironmentObject private var clientVM: ClientViewModel
 
     let mode: Mode
 
@@ -17,6 +18,7 @@ struct AddEditInvoiceView: View {
     @State private var status: Invoice.InvoiceStatus
     @State private var includeDueDate: Bool
     @State private var dueDate: Date
+    @State private var isPresentingNewClientSheet = false
 
     init(mode: Mode) {
         self.mode = mode
@@ -54,7 +56,23 @@ struct AddEditInvoiceView: View {
             Form {
                 Section(header: Text("Invoice details")) {
                     TextField("Title", text: $title)
-                    TextField("Client Name", text: $clientName)
+                    Picker("Client", selection: clientSelectionBinding) {
+                        Text(clientName.isEmpty ? "Unassigned" : clientName)
+                            .tag(UUID?.none)
+
+                        ForEach(clientVM.clients) { client in
+                            Text(client.name.isEmpty ? "New client" : client.name)
+                                .tag(Optional(client.id))
+                        }
+
+                        Divider()
+
+                        Button {
+                            isPresentingNewClientSheet = true
+                        } label: {
+                            Label("New client…", systemImage: "person.badge.plus")
+                        }
+                    }
                 }
 
                 Section(header: Text("Billing")) {
@@ -97,6 +115,29 @@ struct AddEditInvoiceView: View {
                     .disabled(!isValid)
             }
         }
+        .sheet(isPresented: $isPresentingNewClientSheet) {
+            NavigationView {
+                NewClientSheet { newClient in
+                    clientName = newClient.name
+                }
+                .environmentObject(clientVM)
+            }
+        }
+    }
+
+    private var clientSelectionBinding: Binding<UUID?> {
+        Binding(
+            get: {
+                clientVM.clients.first(where: { $0.name == clientName })?.id
+            },
+            set: { newValue in
+                if let id = newValue, let client = clientVM.clients.first(where: { $0.id == id }) {
+                    clientName = client.name
+                } else {
+                    clientName = ""
+                }
+            }
+        )
     }
 
     private var modeTitle: String {
