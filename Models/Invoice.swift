@@ -25,9 +25,7 @@ struct Invoice: Identifiable, Codable {
     var status: InvoiceStatus
     var dueDate: Date?
 
-    var amount: Double {
-        materials.reduce(0) { $0 + $1.total }
-    }
+    var amount: Double { materials.reduce(0) { $0 + $1.total } }
 
     init(
         id: UUID = UUID(),
