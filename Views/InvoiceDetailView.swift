@@ -2,28 +2,26 @@ import SwiftUI
 
 struct InvoiceDetailView: View {
     @EnvironmentObject var jobVM: JobViewModel
-    @EnvironmentObject var invoiceVM: InvoiceViewModel
     @EnvironmentObject var clientVM: ClientViewModel
 
-    let invoiceID: Invoice.ID
+    @ObservedObject var invoiceVM: InvoiceViewModel
+    let invoice: Invoice
 
-    @State private var invoice: Invoice
     @State private var isShowingEditSheet = false
+    @State private var isPresentingMaterialSheet = false
     @State private var editingMaterialIndex: Int?
-    @State private var showingMaterialSheet = false
-
-    init(invoice: Invoice) {
-        invoiceID = invoice.id
-        _invoice = State(initialValue: invoice)
-    }
 
     private var client: Client? {
-        guard let clientID = invoice.clientID else { return nil }
+        guard let clientID = currentInvoice.clientID else { return nil }
         return clientVM.clients.first(where: { $0.id == clientID })
     }
 
     private var formattedAmount: String {
-        invoice.amount.formatted(.currency(code: Locale.current.currency?.identifier ?? "USD"))
+        currentInvoice.amount.formatted(.currency(code: Locale.current.currency?.identifier ?? "USD"))
+    }
+
+    private var currentInvoice: Invoice {
+        invoiceVM.invoices.first(where: { $0.id == invoice.id }) ?? invoice
     }
 
     var body: some View {
@@ -52,7 +50,7 @@ struct InvoiceDetailView: View {
                 .padding(.vertical, 20)
             }
         }
-        .navigationTitle(invoice.title)
+        .navigationTitle(currentInvoice.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -63,39 +61,35 @@ struct InvoiceDetailView: View {
         }
         .sheet(isPresented: $isShowingEditSheet) {
             NavigationView {
-                AddEditInvoiceView(mode: .edit(invoice))
+                AddEditInvoiceView(mode: .edit(currentInvoice))
             }
             .environmentObject(invoiceVM)
             .environmentObject(clientVM)
         }
-        .sheet(isPresented: $showingMaterialSheet) {
+        .sheet(isPresented: $isPresentingMaterialSheet) {
             if let index = editingMaterialIndex {
                 AddMaterialView(
-                    mode: .editInInvoice(invoice: invoice, index: index),
+                    mode: .editInInvoice(invoice: currentInvoice, index: index),
                     jobVM: jobVM,
                     invoiceVM: invoiceVM
                 )
             } else {
                 AddMaterialView(
-                    mode: .addToInvoice(invoice: invoice),
+                    mode: .addToInvoice(invoice: currentInvoice),
                     jobVM: jobVM,
                     invoiceVM: invoiceVM
                 )
             }
         }
-        .onAppear(perform: syncInvoiceWithViewModel)
-        .onReceive(invoiceVM.$invoices) { _ in
-            syncInvoiceWithViewModel()
-        }
     }
 
     private var headerCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(invoice.title)
+            Text(currentInvoice.title)
                 .font(.title2.bold())
                 .foregroundColor(.white)
 
-            Text(client?.name ?? invoice.clientName)
+            Text(client?.name ?? currentInvoice.clientName)
                 .font(.subheadline)
                 .foregroundColor(.white.opacity(0.85))
 
@@ -117,18 +111,18 @@ struct InvoiceDetailView: View {
                     Text("Status")
                         .font(.caption)
                         .foregroundColor(.white.opacity(0.7))
-                    Text(invoice.status.displayName)
+                    Text(currentInvoice.status.displayName)
                         .font(.caption.weight(.semibold))
                         .padding(.vertical, 6)
                         .padding(.horizontal, 12)
-                        .background(invoice.status.pillColor)
+                        .background(currentInvoice.status.pillColor)
                         .clipShape(Capsule())
                         .foregroundColor(.white)
                 }
 
                 Spacer()
 
-                if let dueDate = invoice.dueDate {
+                if let dueDate = currentInvoice.dueDate {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Due date")
                             .font(.caption)
@@ -172,7 +166,7 @@ struct InvoiceDetailView: View {
                     Text("Materials")
                         .font(.headline)
                         .foregroundColor(.white)
-                    Text("\(invoice.materials.count) items")
+                    Text("\(currentInvoice.materials.count) items")
                         .font(.caption)
                         .foregroundColor(.white.opacity(0.7))
                 }
@@ -181,7 +175,7 @@ struct InvoiceDetailView: View {
 
                 Button {
                     editingMaterialIndex = nil
-                    showingMaterialSheet = true
+                    isPresentingMaterialSheet = true
                 } label: {
                     Label("Add", systemImage: "plus")
                         .font(.caption.bold())
@@ -193,23 +187,23 @@ struct InvoiceDetailView: View {
                 }
             }
 
-            if invoice.materials.isEmpty {
+            if currentInvoice.materials.isEmpty {
                 Text("No materials listed for this invoice.")
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.75))
             } else {
-                ForEach(invoice.materials.indices, id: \.self) { index in
-                    let material = invoice.materials[index]
+                ForEach(currentInvoice.materials.indices, id: \.self) { index in
+                    let material = currentInvoice.materials[index]
                     MaterialRow(material: material)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button("Edit") {
                                 editingMaterialIndex = index
-                                showingMaterialSheet = true
+                                isPresentingMaterialSheet = true
                             }
                             .tint(.blue)
 
                             Button(role: .destructive) {
-                                invoiceVM.removeMaterial(at: index, in: invoice)
+                                invoiceVM.removeMaterial(from: currentInvoice, at: index)
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
@@ -238,11 +232,11 @@ struct InvoiceDetailView: View {
                 .foregroundColor(.white)
 
             clientDetailRow
-            detailRow(title: "Status", value: invoice.status.displayName)
+            detailRow(title: "Status", value: currentInvoice.status.displayName)
             detailRow(title: "Amount", value: formattedAmount)
             detailRow(
                 title: "Due date",
-                value: invoice.dueDate.map { invoiceDueDateFormatter.string(from: $0) } ?? "Not set"
+                value: currentInvoice.dueDate.map { invoiceDueDateFormatter.string(from: $0) } ?? "Not set"
             )
         }
         .padding(20)
@@ -266,7 +260,7 @@ struct InvoiceDetailView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 4) {
-                Text(client?.name ?? invoice.clientName)
+                Text(client?.name ?? currentInvoice.clientName)
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(.white)
 
@@ -310,10 +304,6 @@ struct InvoiceDetailView: View {
         .padding(.vertical, 4)
     }
 
-    private func syncInvoiceWithViewModel() {
-        guard let updatedInvoice = invoiceVM.invoices.first(where: { $0.id == invoiceID }) else { return }
-        invoice = updatedInvoice
-    }
 }
 
 private struct MaterialRow: View {

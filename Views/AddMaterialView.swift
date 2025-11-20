@@ -122,9 +122,9 @@ struct AddMaterialView: View {
         case .edit(let job, let index):
             jobVM.update(job, replacingMaterialAt: index, with: material)
         case .addToInvoice(let invoice):
-            invoiceVM.addMaterial(material, to: invoice)
+            invoiceVM.addMaterial(to: invoice, material: material)
         case .editInInvoice(let invoice, let index):
-            invoiceVM.update(invoice, replacingMaterialAt: index, with: material)
+            invoiceVM.updateMaterial(in: invoice, at: index, with: material)
         }
 
         dismiss()
