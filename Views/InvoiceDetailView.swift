@@ -195,6 +195,7 @@ struct InvoiceDetailView: View {
                 ForEach(currentInvoice.materials.indices, id: \.self) { index in
                     let material = currentInvoice.materials[index]
                     MaterialRow(material: material)
+                        .contentShape(Rectangle())
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button("Edit") {
                                 editingMaterialIndex = index

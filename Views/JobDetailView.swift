@@ -182,6 +182,7 @@ struct JobDetailView: View {
                                         .font(.subheadline.bold())
                                         .foregroundColor(.white)
                                 }
+                                .contentShape(Rectangle())
                                 .padding(.vertical, 6)
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                     Button("Edit") {
