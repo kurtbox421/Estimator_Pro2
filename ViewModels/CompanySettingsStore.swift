@@ -11,6 +11,13 @@ struct CompanySettings: Codable {
     var companyPhone: String
     var companyEmail: String
 
+    private enum CodingKeys: String, CodingKey {
+        case companyName
+        case companyAddress
+        case companyPhone
+        case companyEmail
+    }
+
     static let empty = CompanySettings(companyName: "", companyAddress: "", companyPhone: "", companyEmail: "")
 }
 
