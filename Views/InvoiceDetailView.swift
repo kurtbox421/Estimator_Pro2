@@ -190,26 +190,33 @@ struct InvoiceDetailView: View {
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.75))
             } else {
-                ForEach(currentInvoice.materials.indices, id: \.self) { index in
-                    let material = currentInvoice.materials[index]
-                    MaterialRow(material: material)
-                        .contentShape(Rectangle())
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button("Edit") {
-                                editingMaterialIndex = index
-                                isPresentingMaterialSheet = true
-                            }
-                            .tint(.blue)
+                List {
+                    ForEach(currentInvoice.materials.indices, id: \.self) { index in
+                        let material = currentInvoice.materials[index]
+                        MaterialRow(material: material)
+                            .contentShape(Rectangle())
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button("Edit") {
+                                    editingMaterialIndex = index
+                                    isPresentingMaterialSheet = true
+                                }
+                                .tint(.blue)
 
-                            Button(role: .destructive) {
-                                invoiceVM.removeMaterial(from: currentInvoice, at: index)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
+                                Button(role: .destructive) {
+                                    invoiceVM.removeMaterial(from: currentInvoice, at: index)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
                             }
-                        }
-
-                    Divider().background(Color.white.opacity(0.15))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                    }
                 }
+                .listStyle(.plain)
+                .scrollDisabled(true)
+                .scrollContentBackground(.hidden)
+                .frame(maxHeight: CGFloat(currentInvoice.materials.count) * 68)
+                .background(Color.clear)
             }
         }
         .padding(20)
