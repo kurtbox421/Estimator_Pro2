@@ -39,5 +39,16 @@ struct Job: Identifiable, Codable {
         self.dateCreated = Date()
         self.clientId = clientId
     }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case category
+        case laborHours
+        case laborRate
+        case materials
+        case dateCreated
+        case clientId
+    }
 }
 

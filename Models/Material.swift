@@ -32,5 +32,12 @@ struct Material: Identifiable, Codable {
         self.quantity = quantity
         self.unitCost = unitCost
     }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case quantity
+        case unitCost
+    }
 }
 

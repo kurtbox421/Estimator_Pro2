@@ -8,6 +8,16 @@ struct Client: Identifiable, Codable, Equatable {
     var phone: String = ""
     var email: String = ""
     var notes: String = ""
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case company
+        case address
+        case phone
+        case email
+        case notes
+    }
 }
 
 extension Client {
