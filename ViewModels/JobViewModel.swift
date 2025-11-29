@@ -87,6 +87,27 @@ class JobViewModel: ObservableObject {
         jobs(for: client).count
     }
 
+    func applyGeneratedMaterials(_ generated: [GeneratedMaterial], to job: Job?) {
+        guard let job, !generated.isEmpty else { return }
+
+        let newMaterials: [Material] = generated.map { gm in
+            Material(
+                id: UUID(),
+                name: gm.name,
+                quantity: gm.quantity,
+                unitCost: gm.unitCost
+            )
+        }
+
+        if let index = jobs.firstIndex(where: { $0.id == job.id }) {
+            var updatedJob = jobs[index]
+            updatedJob.materials.append(contentsOf: newMaterials)
+
+            jobs[index] = updatedJob
+            sortJobs()
+        }
+    }
+
     // MARK: - Persistence
 
     private func saveJobs() {

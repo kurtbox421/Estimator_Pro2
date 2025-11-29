@@ -51,6 +51,8 @@ struct RootView: View {
     @State private var selectedTab: AppTab = .estimates
     @State private var showingAddJob = false
     @State private var invoiceSheetMode: AddEditInvoiceView.Mode?
+    @State private var showingMaterialGenerator = false
+    @State private var generatorTargetJob: Job? = nil
 
     var body: some View {
         GeometryReader { geometry in
@@ -88,6 +90,12 @@ struct RootView: View {
             NavigationView {
                 AddEditInvoiceView(mode: mode)
             }
+        }
+        .sheet(isPresented: $showingMaterialGenerator) {
+            MaterialGeneratorView(
+                job: generatorTargetJob,
+                jobVM: jobVM
+            )
         }
     }
 
@@ -147,7 +155,8 @@ struct RootView: View {
             }
 
             Button {
-                // future: AI / quick actions
+                generatorTargetJob = nil
+                showingMaterialGenerator = true
             } label: {
                 Image(systemName: "paintbrush.pointed.fill")
                     .font(.headline)
