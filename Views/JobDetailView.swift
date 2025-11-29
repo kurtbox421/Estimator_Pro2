@@ -256,6 +256,24 @@ struct JobDetailView: View {
         }
         .contentShape(Rectangle())
         .padding(.vertical, 6)
+        .onTapGesture {
+            editingMaterialIndex = index
+            showingMaterialSheet = true
+        }
+        .contextMenu {
+            Button {
+                editingMaterialIndex = index
+                showingMaterialSheet = true
+            } label: {
+                Label("Edit", systemImage: "pencil")
+            }
+
+            Button(role: .destructive) {
+                vm.removeMaterial(at: index, in: job)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button("Edit") {
                 editingMaterialIndex = index
