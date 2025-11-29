@@ -21,11 +21,12 @@ final class PersistenceService {
         decoder.dateDecodingStrategy = .iso8601
         self.decoder = decoder
 
-        directoryURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        self.directoryURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
     }
 
     // MARK: - Loading
 
+    /// Loads and decodes a value of type `T` from the given file, if it exists.
     func load<T: Decodable>(_ type: T.Type, from fileName: String) -> T? {
         let url = fileURL(for: fileName)
         guard fileManager.fileExists(atPath: url.path) else { return nil }
@@ -41,12 +42,15 @@ final class PersistenceService {
 
     // MARK: - Saving
 
+    /// Encodes and saves a value of type `T` to the given file.
     func save<T: Encodable>(_ value: T, to fileName: String) {
         let url = fileURL(for: fileName)
 
         do {
             let data = try encoder.encode(value)
-            try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true, attributes: nil)
+            try fileManager.createDirectory(at: directoryURL,
+                                            withIntermediateDirectories: true,
+                                            attributes: nil)
             try data.write(to: url, options: .atomic)
         } catch {
             print("[PersistenceService] Failed to save \(fileName): \(error)")
@@ -55,7 +59,13 @@ final class PersistenceService {
 
     // MARK: - Migration helpers
 
-    func migrateFromUserDefaults<T: Decodable>(key: String, fileName: String, as type: T.Type) -> T? {
+    /// Migrates a value previously stored in `UserDefaults` (as Data) into a file on disk.
+    /// Type `T` must be codable because it is both decoded and then re-encoded.
+    func migrateFromUserDefaults<T: Codable>(
+        key: String,
+        fileName: String,
+        as type: T.Type
+    ) -> T? {
         guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
 
         do {
@@ -72,6 +82,7 @@ final class PersistenceService {
     // MARK: - Helpers
 
     private func fileURL(for fileName: String) -> URL {
-        directoryURL.appendingPathComponent(fileName)
+        return directoryURL.appendingPathComponent(fileName)
     }
 }
+
