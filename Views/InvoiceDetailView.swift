@@ -7,9 +7,8 @@ struct InvoiceDetailView: View {
     @ObservedObject var invoiceVM: InvoiceViewModel
     let invoice: Invoice
 
-    @State private var isShowingEditSheet = false
-    @State private var isPresentingMaterialSheet = false
     @State private var editingMaterialIndex: Int?
+    @State private var showingMaterialSheet = false
 
     private var client: Client? {
         guard let clientID = currentInvoice.clientID else { return nil }
@@ -50,21 +49,7 @@ struct InvoiceDetailView: View {
         }
         .navigationTitle(currentInvoice.title)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Edit") {
-                    isShowingEditSheet = true
-                }
-            }
-        }
-        .sheet(isPresented: $isShowingEditSheet) {
-            NavigationView {
-                AddEditInvoiceView(mode: .edit(currentInvoice))
-            }
-            .environmentObject(invoiceVM)
-            .environmentObject(clientVM)
-        }
-        .sheet(isPresented: $isPresentingMaterialSheet) {
+        .sheet(isPresented: $showingMaterialSheet) {
             if let index = editingMaterialIndex {
                 AddMaterialView(
                     mode: .editInInvoice(invoice: currentInvoice, index: index),
@@ -173,7 +158,7 @@ struct InvoiceDetailView: View {
 
                 Button {
                     editingMaterialIndex = nil
-                    isPresentingMaterialSheet = true
+                    showingMaterialSheet = true
                 } label: {
                     Label("Add", systemImage: "plus")
                         .font(.caption.bold())
@@ -191,23 +176,7 @@ struct InvoiceDetailView: View {
                     .foregroundColor(.white.opacity(0.75))
             } else {
                 ForEach(currentInvoice.materials.indices, id: \.self) { index in
-                    let material = currentInvoice.materials[index]
-                    MaterialRow(material: material)
-                        .contentShape(Rectangle())
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button("Edit") {
-                                editingMaterialIndex = index
-                                isPresentingMaterialSheet = true
-                            }
-                            .tint(.blue)
-
-                            Button(role: .destructive) {
-                                invoiceVM.removeMaterial(from: currentInvoice, at: index)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-
+                    materialRow(for: index)
                     Divider().background(Color.white.opacity(0.15))
                 }
             }
@@ -303,28 +272,41 @@ struct InvoiceDetailView: View {
         .padding(.vertical, 4)
     }
 
-}
+    private func materialRow(for index: Int) -> some View {
+        let material = currentInvoice.materials[index]
 
-private struct MaterialRow: View {
-    let material: Material
-
-    var body: some View {
-        HStack {
+        return HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(material.name)
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(.white)
-                Text("\(material.quantity, specifier: "%.2f") × \(material.unitCost.currencyFormatted)")
+
+                Text("\(String(format: "%.2f", material.quantity)) × \(material.unitCost.formatted(.currency(code: "USD")))")
                     .font(.caption)
                     .foregroundColor(.white.opacity(0.75))
             }
 
             Spacer()
 
-            Text(material.total.currencyFormatted)
+            Text(material.total.formatted(.currency(code: "USD")))
                 .font(.subheadline.bold())
                 .foregroundColor(.white)
         }
+        .contentShape(Rectangle())
         .padding(.vertical, 6)
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button("Edit") {
+                editingMaterialIndex = index
+                showingMaterialSheet = true
+            }
+            .tint(.blue)
+
+            Button(role: .destructive) {
+                invoiceVM.removeMaterial(from: currentInvoice, at: index)
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
     }
+
 }
