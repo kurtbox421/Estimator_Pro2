@@ -1,6 +1,9 @@
 import Foundation
 
-private let invoicesStorageKey = "EstimatorPro_Invoices"
+private enum InvoiceStorage {
+    static let userDefaultsKey = "EstimatorPro_Invoices"
+    static let fileName = "invoices.json"
+}
 
 class InvoiceViewModel: ObservableObject {
     @Published var invoices: [Invoice] = [] {
@@ -9,38 +12,11 @@ class InvoiceViewModel: ObservableObject {
         }
     }
 
-    init() {
-        if !loadInvoices() {
-            invoices = [
-                Invoice(
-                    title: "Kitchen Remodel",
-                    clientName: "Maria Sanchez",
-                    materials: [
-                        Material(name: "Cabinetry", quantity: 12, unitCost: 150),
-                        Material(name: "Tile", quantity: 80, unitCost: 4.25)
-                    ],
-                    status: .draft
-                ),
-                Invoice(
-                    title: "Patio Extension",
-                    clientName: "Johnny Appleseed",
-                    materials: [
-                        Material(name: "Pavers", quantity: 150, unitCost: 3.5),
-                        Material(name: "Sand", quantity: 20, unitCost: 15)
-                    ],
-                    status: .sent
-                ),
-                Invoice(
-                    title: "Basement Finish",
-                    clientName: "Harper Logistics",
-                    materials: [
-                        Material(name: "Drywall", quantity: 60, unitCost: 18),
-                        Material(name: "Paint", quantity: 15, unitCost: 32)
-                    ],
-                    status: .overdue
-                )
-            ]
-        }
+    private let persistence: PersistenceService
+
+    init(persistence: PersistenceService = .shared) {
+        self.persistence = persistence
+        loadInvoices()
     }
 
     // MARK: - CRUD
@@ -106,26 +82,51 @@ class InvoiceViewModel: ObservableObject {
     // MARK: - Persistence
 
     private func saveInvoices() {
-        do {
-            let data = try JSONEncoder().encode(invoices)
-            UserDefaults.standard.set(data, forKey: invoicesStorageKey)
-        } catch {
-            print("Failed to save invoices: \(error)")
-        }
+        persistence.save(invoices, to: InvoiceStorage.fileName)
     }
 
-    @discardableResult
-    private func loadInvoices() -> Bool {
-        guard let data = UserDefaults.standard.data(forKey: invoicesStorageKey) else { return false }
-        do {
-            let decoded = try JSONDecoder().decode([Invoice].self, from: data)
-            invoices = decoded
+    private func loadInvoices() {
+        if let stored: [Invoice] = persistence.load([Invoice].self, from: InvoiceStorage.fileName) {
+            invoices = stored
             sortInvoices()
-            return true
-        } catch {
-            print("Failed to load invoices: \(error)")
-            return false
+            return
         }
+
+        if let migrated: [Invoice] = persistence.migrateFromUserDefaults(key: InvoiceStorage.userDefaultsKey, fileName: InvoiceStorage.fileName, as: [Invoice].self) {
+            invoices = migrated
+            sortInvoices()
+            return
+        }
+
+        invoices = [
+            Invoice(
+                title: "Kitchen Remodel",
+                clientName: "Maria Sanchez",
+                materials: [
+                    Material(name: "Cabinetry", quantity: 12, unitCost: 150),
+                    Material(name: "Tile", quantity: 80, unitCost: 4.25)
+                ],
+                status: .draft
+            ),
+            Invoice(
+                title: "Patio Extension",
+                clientName: "Johnny Appleseed",
+                materials: [
+                    Material(name: "Pavers", quantity: 150, unitCost: 3.5),
+                    Material(name: "Sand", quantity: 20, unitCost: 15)
+                ],
+                status: .sent
+            ),
+            Invoice(
+                title: "Basement Finish",
+                clientName: "Harper Logistics",
+                materials: [
+                    Material(name: "Drywall", quantity: 60, unitCost: 18),
+                    Material(name: "Paint", quantity: 15, unitCost: 32)
+                ],
+                status: .overdue
+            )
+        ]
     }
 
     private func sortInvoices() {

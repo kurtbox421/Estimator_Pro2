@@ -1,6 +1,11 @@
 import Foundation
 import Combine
 
+private enum SettingsStorage {
+    static let userDefaultsKey = "estimateDefaultsMaterials"
+    static let fileName = "commonMaterials.json"
+}
+
 final class SettingsManager: ObservableObject {
     @Published var commonMaterials: [SavedMaterial] = [] {
         didSet {
@@ -8,9 +13,10 @@ final class SettingsManager: ObservableObject {
         }
     }
 
-    private let storageKey = "estimateDefaultsMaterials"
+    private let persistence: PersistenceService
 
-    init() {
+    init(persistence: PersistenceService = .shared) {
+        self.persistence = persistence
         loadMaterials()
     }
 
@@ -51,14 +57,20 @@ final class SettingsManager: ObservableObject {
     }
 
     private func loadMaterials() {
-        guard let data = UserDefaults.standard.data(forKey: storageKey) else { return }
-        if let decoded = try? JSONDecoder().decode([SavedMaterial].self, from: data) {
-            commonMaterials = decoded
+        if let stored: [SavedMaterial] = persistence.load([SavedMaterial].self, from: SettingsStorage.fileName) {
+            commonMaterials = stored
+            return
         }
+
+        if let migrated: [SavedMaterial] = persistence.migrateFromUserDefaults(key: SettingsStorage.userDefaultsKey, fileName: SettingsStorage.fileName, as: [SavedMaterial].self) {
+            commonMaterials = migrated
+            return
+        }
+
+        commonMaterials = []
     }
 
     private func saveMaterials() {
-        guard let data = try? JSONEncoder().encode(commonMaterials) else { return }
-        UserDefaults.standard.set(data, forKey: storageKey)
+        persistence.save(commonMaterials, to: SettingsStorage.fileName)
     }
 }

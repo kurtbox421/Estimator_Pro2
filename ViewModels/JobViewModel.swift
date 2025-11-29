@@ -7,7 +7,10 @@
 
 import Foundation
 
-private let jobsStorageKey = "EstimatorPro_Jobs"
+private enum JobStorage {
+    static let userDefaultsKey = "EstimatorPro_Jobs"
+    static let fileName = "jobs.json"
+}
 
 class JobViewModel: ObservableObject {
     @Published var jobs: [Job] = [] {
@@ -16,7 +19,10 @@ class JobViewModel: ObservableObject {
         }
     }
 
-    init() {
+    private let persistence: PersistenceService
+
+    init(persistence: PersistenceService = .shared) {
+        self.persistence = persistence
         loadJobs()
     }
 
@@ -84,23 +90,23 @@ class JobViewModel: ObservableObject {
     // MARK: - Persistence
 
     private func saveJobs() {
-        do {
-            let data = try JSONEncoder().encode(jobs)
-            UserDefaults.standard.set(data, forKey: jobsStorageKey)
-        } catch {
-            print("Failed to save jobs: \(error)")
-        }
+        persistence.save(jobs, to: JobStorage.fileName)
     }
 
     private func loadJobs() {
-        guard let data = UserDefaults.standard.data(forKey: jobsStorageKey) else { return }
-        do {
-            let decoded = try JSONDecoder().decode([Job].self, from: data)
-            jobs = decoded
+        if let stored: [Job] = persistence.load([Job].self, from: JobStorage.fileName) {
+            jobs = stored
             sortJobs()
-        } catch {
-            print("Failed to load jobs: \(error)")
+            return
         }
+
+        if let migrated: [Job] = persistence.migrateFromUserDefaults(key: JobStorage.userDefaultsKey, fileName: JobStorage.fileName, as: [Job].self) {
+            jobs = migrated
+            sortJobs()
+            return
+        }
+
+        jobs = []
     }
 
     private func sortJobs() {

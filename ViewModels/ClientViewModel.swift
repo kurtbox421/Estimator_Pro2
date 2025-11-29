@@ -1,6 +1,9 @@
 import Foundation
 
-private let clientsStorageKey = "EstimatorPro_Clients"
+private enum ClientStorage {
+    static let userDefaultsKey = "EstimatorPro_Clients"
+    static let fileName = "clients.json"
+}
 
 final class ClientViewModel: ObservableObject {
     @Published var clients: [Client] = [] {
@@ -9,7 +12,10 @@ final class ClientViewModel: ObservableObject {
         }
     }
 
-    init() {
+    private let persistence: PersistenceService
+
+    init(persistence: PersistenceService = .shared) {
+        self.persistence = persistence
         loadClients()
     }
 
@@ -51,25 +57,20 @@ final class ClientViewModel: ObservableObject {
     }
 
     private func saveClients() {
-        do {
-            let data = try JSONEncoder().encode(clients)
-            UserDefaults.standard.set(data, forKey: clientsStorageKey)
-        } catch {
-            print("Failed to save clients: \(error)")
-        }
+        persistence.save(clients, to: ClientStorage.fileName)
     }
 
     private func loadClients() {
-        guard let data = UserDefaults.standard.data(forKey: clientsStorageKey) else {
-            clients = Client.sampleData
+        if let stored: [Client] = persistence.load([Client].self, from: ClientStorage.fileName) {
+            clients = stored
             return
         }
 
-        do {
-            clients = try JSONDecoder().decode([Client].self, from: data)
-        } catch {
-            print("Failed to load clients: \(error)")
-            clients = Client.sampleData
+        if let migrated: [Client] = persistence.migrateFromUserDefaults(key: ClientStorage.userDefaultsKey, fileName: ClientStorage.fileName, as: [Client].self) {
+            clients = migrated
+            return
         }
+
+        clients = Client.sampleData
     }
 }
