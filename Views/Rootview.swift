@@ -814,6 +814,14 @@ struct SettingsTabView: View {
                 .listRowSeparator(.hidden)
 
                 NavigationLink {
+                    ImportDataView()
+                } label: {
+                    SettingRow(icon: "square.and.arrow.down.on.square", title: "Import from other apps")
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+
+                NavigationLink {
                     PrivacyPolicyView()
                 } label: {
                     SettingRow(icon: "lock.fill", title: "Privacy & security")
