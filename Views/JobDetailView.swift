@@ -4,52 +4,77 @@
 //
 //  Created by Curtis Bollinger on 11/18/25.
 //
+
 import SwiftUI
+import UIKit
 
 struct JobDetailView: View {
     @EnvironmentObject private var vm: JobViewModel
     @EnvironmentObject private var invoiceVM: InvoiceViewModel
     @EnvironmentObject private var clientVM: ClientViewModel
-    
+
     private let jobID: Job.ID
     @State private var job: Job
     @State private var editingMaterialIndex: Int?
     @State private var showingMaterialSheet = false
     @State private var createdInvoice: Invoice?
     @State private var showingInvoiceEditor = false
-    
+
     // Labor editor state
     @State private var showingLaborEditor = false
     @State private var laborHoursText = ""
     @State private var laborRateText = ""
-    
+
     init(job: Job) {
         self.jobID = job.id
         _job = State(initialValue: job)
     }
-    
-    // MARK: - Body
-    
+
     var body: some View {
-        ZStack {
-            background
-            
-            List {
-                // SUMMARY
-                Section {
-                    summaryCard
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets())
-                }
-                
-                // MATERIALS
-                Section(header: materialsHeader) {
-                    materialsList
-                }
+        ScrollView {
+            VStack(spacing: 24) {
+                EstimateSummaryCard(job: job, editLaborAction: showLaborEditor)
+
+                EstimateDocumentCard(
+                    job: job,
+                    previewAction: previewEstimate,
+                    convertAction: convertToInvoice
+                )
+
+                EstimateCustomerCard(client: client(for: job))
+
+                EstimateQuickActionsCard(client: client(for: job), callAction: callClient, textAction: textClient, followUpAction: followUpClient)
+
+                MaterialsSection(
+                    materials: job.materials,
+                    addAction: {
+                        editingMaterialIndex = nil
+                        showingMaterialSheet = true
+                    },
+                    editAction: { index in
+                        editingMaterialIndex = index
+                        showingMaterialSheet = true
+                    },
+                    deleteAction: { index in
+                        vm.removeMaterial(at: index, in: job)
+                    }
+                )
             }
-            .listStyle(.insetGrouped)
-            .scrollContentBackground(.hidden)
+            .padding(.horizontal, 24)
+            .padding(.top, 24)
+            .padding(.bottom, 32)
         }
+        .background(
+            LinearGradient(
+                colors: [
+                    Color(red: 0.49, green: 0.38, blue: 1.0),
+                    Color(red: 0.25, green: 0.28, blue: 0.60)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+        )
         .navigationTitle("Estimate")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingMaterialSheet) {
@@ -84,215 +109,105 @@ struct JobDetailView: View {
             syncJobWithViewModel()
         }
     }
-    
-    // MARK: - Background
-    
-    private var background: some View {
-        LinearGradient(
-            colors: [
-                Color(red: 0.10, green: 0.18, blue: 0.32),
-                Color(red: 0.05, green: 0.30, blue: 0.38)
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
+
+    // MARK: - Helpers
+
+    private func client(for job: Job) -> Client? {
+        guard let clientId = job.clientId else { return nil }
+        return clientVM.clients.first(where: { $0.id == clientId })
+    }
+
+    private func showLaborEditor() {
+        laborHoursText = String(format: "%.2f", job.laborHours)
+        laborRateText = String(format: "%.2f", job.laborRate)
+        showingLaborEditor = true
+    }
+
+    // MARK: - Materials editing
+
+    private func saveLabor() {
+        let hoursString = laborHoursText.replacingOccurrences(of: ",", with: ".")
+        let rateString = laborRateText.replacingOccurrences(of: ",", with: ".")
+
+        guard let hours = Double(hoursString),
+              let rate = Double(rateString) else {
+            showingLaborEditor = false
+            return
+        }
+
+        var updated = job
+        updated.laborHours = hours
+        updated.laborRate = rate
+
+        vm.update(updated)
+        job = updated
+        showingLaborEditor = false
+    }
+
+    private func syncJobWithViewModel() {
+        guard let updatedJob = vm.jobs.first(where: { $0.id == jobID }) else { return }
+        job = updatedJob
+    }
+
+    private func previewEstimate() {
+        // TODO: Hook up to existing estimate preview functionality if available
+    }
+
+    private func convertToInvoice() {
+        let clientName = clientVM.clients.first(where: { $0.id == job.clientId })?.name ?? "Unassigned"
+
+        // Start with the existing materials from the estimate
+        var invoiceMaterials = job.materials
+
+        // If there is labor, add it as a separate line item
+        if job.laborHours > 0 && job.laborRate > 0 {
+            let laborMaterial = Material(
+                id: UUID(),
+                name: "Labor",
+                quantity: job.laborHours,
+                unitCost: job.laborRate
+                // add any extra Material fields you have (notes/url/etc) with sensible defaults
+            )
+            invoiceMaterials.append(laborMaterial)
+        }
+
+        let invoice = Invoice(
+            id: UUID(),
+            title: job.name,
+            clientID: job.clientId,
+            clientName: clientName,
+            materials: invoiceMaterials,
+            status: .draft,
+            dueDate: nil
         )
-        .ignoresSafeArea()
+
+        invoiceVM.add(invoice)
+        createdInvoice = invoice
+        showingInvoiceEditor = true
     }
-    
-    private var cardBackground: some View {
-        RoundedRectangle(cornerRadius: 28, style: .continuous)
-            .fill(Color.white.opacity(0.06))
-            .background(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(0.02),
-                                Color.black.opacity(0.40)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
-            )
+
+    // MARK: - Quick Actions
+
+    private func callClient() {
+        guard let phone = client(for: job)?.phone,
+              let url = URL(string: "tel://\(phone.filter(\"0123456789\".contains))") else { return }
+        UIApplication.shared.open(url)
     }
-    
-    // MARK: - Summary card
-    
-    private var summaryCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(job.name)
-                .font(.title2.bold())
-                .foregroundColor(.white)
-            
-            Text(job.category)
-                .font(.subheadline)
-                .foregroundColor(.white.opacity(0.8))
-            
-            Divider().background(Color.white.opacity(0.2))
-            
-            HStack {
-                // LABOR (tappable)
-                Button {
-                    laborHoursText = String(format: "%.2f", job.laborHours)
-                    laborRateText  = String(format: "%.2f", job.laborRate)
-                    showingLaborEditor = true
-                } label: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Labor")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.7))
-                        Text(job.laborCost.formatted(.currency(code: "USD")))
-                            .font(.headline)
-                            .foregroundColor(.white)
-                        if job.laborHours > 0 && job.laborRate > 0 {
-                            Text("\(String(format: "%.2f", job.laborHours)) hrs @ \(job.laborRate.formatted(.currency(code: "USD")))/hr")
-                                .font(.caption2)
-                                .foregroundColor(.white.opacity(0.7))
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
-                
-                Spacer()
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Materials")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
-                    Text(job.materialCost.formatted(.currency(code: "USD")))
-                        .font(.headline)
-                        .foregroundColor(.white)
-                }
-                
-                Spacer()
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Total")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
-                    Text(job.total.formatted(.currency(code: "USD")))
-                        .font(.title3.bold())
-                        .foregroundColor(.orange)
-                }
-            }
-            
-            Button(action: convertToInvoice) {
-                HStack {
-                    Image(systemName: "doc.text.fill")
-                        .imageScale(.medium)
-                    Text("Convert to Invoice")
-                        .font(.subheadline.weight(.semibold))
-                }
-                .padding(.vertical, 12)
-                .frame(maxWidth: .infinity)
-                .background(
-                    LinearGradient(
-                        colors: [
-                            Color.orange.opacity(0.85),
-                            Color.pink.opacity(0.75)
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .foregroundColor(.white)
-                .cornerRadius(16)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(20)
-        .background(cardBackground)
-        .padding(.horizontal, 24)
+
+    private func textClient() {
+        guard let phone = client(for: job)?.phone,
+              let url = URL(string: "sms:\(phone.filter(\"0123456789\".contains))") else { return }
+        UIApplication.shared.open(url)
     }
-    
-    // MARK: - Materials section
-    
-    private var materialsHeader: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Materials")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                Text("\(job.materials.count) items")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.7))
-            }
-            
-            Spacer()
-            
-            Button {
-                editingMaterialIndex = nil
-                showingMaterialSheet = true
-            } label: {
-                Label("Add", systemImage: "plus")
-                    .font(.caption.bold())
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 10)
-                    .background(Color.white.opacity(0.16))
-                    .clipShape(Capsule())
-                    .foregroundColor(.white)
-            }
-        }
+
+    private func followUpClient() {
+        guard let email = client(for: job)?.email,
+              let url = URL(string: "mailto:\(email)") else { return }
+        UIApplication.shared.open(url)
     }
-    
-    private var materialsList: some View {
-        Group {
-            if job.materials.isEmpty {
-                Text("No materials added yet. Use the Add button to start building your estimate.")
-                    .font(.subheadline)
-                    .foregroundColor(.white.opacity(0.75))
-            } else {
-                ForEach(job.materials.indices, id: \.self) { index in
-                    materialRow(for: index)
-                        .listRowBackground(Color.clear)
-                }
-            }
-        }
-    }
-    
-    private func materialRow(for index: Int) -> some View {
-        let material = job.materials[index]
-        
-        return HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(material.name)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.white)
-                
-                Text("\(String(format: "%.2f", material.quantity)) × \(material.unitCost.formatted(.currency(code: "USD")))")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.75))
-            }
-            
-            Spacer()
-            
-            Text(material.cost.formatted(.currency(code: "USD")))
-                .font(.subheadline.bold())
-                .foregroundColor(.white)
-        }
-        .contentShape(Rectangle())
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button("Edit") {
-                editingMaterialIndex = index
-                showingMaterialSheet = true
-            }
-            .tint(.blue)
-            
-            Button(role: .destructive) {
-                vm.removeMaterial(at: index, in: job)
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
-        }
-    }
-    
+
     // MARK: - Labor editor sheet
-    
+
     private var laborEditorSheet: some View {
         NavigationView {
             Form {
@@ -325,63 +240,379 @@ struct JobDetailView: View {
             }
         }
     }
-    
-    private func saveLabor() {
-        let hoursString = laborHoursText.replacingOccurrences(of: ",", with: ".")
-        let rateString  = laborRateText.replacingOccurrences(of: ",", with: ".")
-        
-        guard let hours = Double(hoursString),
-              let rate  = Double(rateString) else {
-            showingLaborEditor = false
-            return
+}
+
+// MARK: - Cards
+
+private struct EstimateSummaryCard: View {
+    let job: Job
+    let editLaborAction: () -> Void
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 32, style: .continuous)
+                .fill(Color.white.opacity(0.10))
+                .background(
+                    RoundedRectangle(cornerRadius: 32, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.18),
+                                    Color.white.opacity(0.05)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 32, style: .continuous)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                )
+
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(job.name)
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+
+                        if !job.category.isEmpty {
+                            Text(job.category)
+                                .font(.subheadline)
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+
+                        HStack(spacing: 8) {
+                            Label("Estimate", systemImage: "doc.text")
+                                .font(.caption.weight(.semibold))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.white.opacity(0.16))
+                                )
+                                .foregroundColor(.white)
+
+                            Button(action: editLaborAction) {
+                                Label("Edit Labor", systemImage: "wrench.and.screwdriver")
+                                    .font(.caption.weight(.semibold))
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(
+                                Capsule()
+                                    .fill(Color.white.opacity(0.16))
+                            )
+                            .foregroundColor(.white)
+                        }
+                    }
+
+                    Spacer()
+
+                    VStack(spacing: 6) {
+                        Text("\(job.materials.count)")
+                            .font(.title2.bold())
+                            .foregroundColor(.white)
+                        Text("Materials")
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.8))
+
+                        Divider().background(Color.white.opacity(0.2))
+
+                        Text("0")
+                            .font(.title2.bold())
+                            .foregroundColor(.white)
+                        Text("Tools")
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+                    .padding(14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .fill(Color.white.opacity(0.15))
+                    )
+                }
+
+                HStack {
+                    Text(job.total.formatted(.currency(code: "USD")))
+                        .font(.system(size: 26, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white)
+                    Spacer()
+                }
+                .padding(.top, 8)
+            }
+            .padding(20)
         }
-        
-        var updated = job
-        updated.laborHours = hours
-        updated.laborRate  = rate
-        
-        vm.update(updated)
-        job = updated
-        showingLaborEditor = false
-    }
-    
-    // MARK: - Logic
-    
-    private func syncJobWithViewModel() {
-        guard let updatedJob = vm.jobs.first(where: { $0.id == jobID }) else { return }
-        job = updatedJob
-    }
-    
-    private func convertToInvoice() {
-        let clientName = clientVM.clients.first(where: { $0.id == job.clientId })?.name ?? "Unassigned"
-        
-        // Start with the existing materials from the estimate
-        var invoiceMaterials = job.materials
-        
-        // If there is labor, add it as a separate line item
-        if job.laborHours > 0 && job.laborRate > 0 {
-            let laborMaterial = Material(
-                id: UUID(),
-                name: "Labor",
-                quantity: job.laborHours,
-                unitCost: job.laborRate
-                // add any extra Material fields you have (notes/url/etc) with sensible defaults
-            )
-            invoiceMaterials.append(laborMaterial)
-        }
-        
-        let invoice = Invoice(
-            id: UUID(),
-            title: job.name,
-            clientID: job.clientId,
-            clientName: clientName,
-            materials: invoiceMaterials,
-            status: .draft,
-            dueDate: nil
-        )
-        
-        invoiceVM.add(invoice)
-        createdInvoice = invoice
-        showingInvoiceEditor = true
+        .frame(maxWidth: .infinity)
     }
 }
+
+private struct EstimateDocumentCard: View {
+    let job: Job
+    let previewAction: () -> Void
+    let convertAction: () -> Void
+
+    var body: some View {
+        RoundedCard {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Document")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.7))
+
+                Text("Estimate")
+                    .font(.title3.weight(.semibold))
+                    .foregroundColor(.white)
+
+                Text("This job is currently an estimate. Convert it to an invoice when the client is ready to move forward.")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.8))
+
+                HStack(spacing: 12) {
+                    Button(action: previewAction) {
+                        Label("Preview Estimate", systemImage: "doc.text.magnifyingglass")
+                    }
+                    .buttonStyle(PrimaryBlueButton())
+
+                    Button(action: convertAction) {
+                        Label("Convert to Invoice", systemImage: "doc.richtext")
+                    }
+                    .buttonStyle(PrimaryBlueButton())
+                }
+            }
+        }
+    }
+}
+
+private struct EstimateCustomerCard: View {
+    let client: Client?
+
+    var body: some View {
+        RoundedCard {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Customer")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.7))
+
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        customerLabel("Client")
+                        customerLabel("Name")
+                        customerLabel("Address")
+                        customerLabel("Phone")
+                        customerLabel("Email")
+                    }
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 10) {
+                        Text(client?.company.isEmpty == false ? client?.company ?? "—" : "Not Assigned")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.white)
+                        Text(client?.name ?? "—")
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                        Text(client?.address ?? "—")
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                        Text(client?.phone ?? "—")
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                        Text(client?.email ?? "—")
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                    }
+                }
+            }
+        }
+    }
+
+    private func customerLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.subheadline.weight(.semibold))
+            .foregroundColor(.white.opacity(0.7))
+    }
+}
+
+private struct EstimateQuickActionsCard: View {
+    let client: Client?
+    let callAction: () -> Void
+    let textAction: () -> Void
+    let followUpAction: () -> Void
+
+    var body: some View {
+        RoundedCard {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Quick Actions")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.7))
+
+                Button(action: callAction) {
+                    Label("Call \(client?.name.split(separator: " ").first.map(String.init) ?? "Client")", systemImage: "phone.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(GreenActionButton())
+
+                HStack(spacing: 12) {
+                    Button(action: textAction) {
+                        Label("Text", systemImage: "text.bubble")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(SecondaryPillButton())
+
+                    Button(action: followUpAction) {
+                        Label("Send Follow-up", systemImage: "envelope")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(SecondaryPillButton())
+                }
+            }
+        }
+    }
+}
+
+private struct MaterialsSection: View {
+    let materials: [Material]
+    let addAction: () -> Void
+    let editAction: (Int) -> Void
+    let deleteAction: (Int) -> Void
+
+    var body: some View {
+        RoundedCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Materials")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(.white.opacity(0.7))
+                        Text("\(materials.count) items")
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.6))
+                    }
+
+                    Spacer()
+
+                    Button(action: addAction) {
+                        Label("Add", systemImage: "plus")
+                            .font(.caption.bold())
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 10)
+                            .background(Color.white.opacity(0.16))
+                            .clipShape(Capsule())
+                            .foregroundColor(.white)
+                    }
+                }
+
+                if materials.isEmpty {
+                    Text("No materials added yet.")
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.7))
+                } else {
+                    ForEach(Array(materials.enumerated()), id: \.element.id) { index, material in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(material.name)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(.white)
+                                Text("\(String(format: "%.2f", material.quantity)) × \(material.unitCost.formatted(.currency(code: "USD")))")
+                                    .font(.footnote)
+                                    .foregroundColor(.white.opacity(0.7))
+                            }
+
+                            Spacer()
+
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text(material.cost.formatted(.currency(code: "USD")))
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                        .padding(.vertical, 6)
+                        .contextMenu {
+                            Button("Edit") {
+                                editAction(index)
+                            }
+
+                            Button(role: .destructive) {
+                                deleteAction(index)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+
+                        if material.id != materials.last?.id {
+                            Divider().overlay(Color.white.opacity(0.15))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Shared components
+
+private struct RoundedCard<Content: View>: View {
+    let content: () -> Content
+
+    init(@ViewBuilder content: @escaping () -> Content) {
+        self.content = content
+    }
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(Color.white.opacity(0.10))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                )
+
+            content()
+                .padding(20)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+struct PrimaryBlueButton: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.subheadline.weight(.semibold))
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.blue.opacity(configuration.isPressed ? 0.8 : 1.0))
+            )
+            .foregroundColor(.white)
+    }
+}
+
+struct GreenActionButton: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.subheadline.weight(.semibold))
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.green.opacity(configuration.isPressed ? 0.8 : 1.0))
+            )
+            .foregroundColor(.white)
+    }
+}
+
+struct SecondaryPillButton: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.subheadline.weight(.semibold))
+            .padding(.vertical, 10)
+            .background(
+                Capsule()
+                    .fill(Color.white.opacity(configuration.isPressed ? 0.18 : 0.14))
+            )
+            .foregroundColor(.white)
+    }
+}
+
