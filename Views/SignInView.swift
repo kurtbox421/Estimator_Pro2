@@ -32,7 +32,11 @@ struct SignInView: View {
                         case .success:
                             errorMessage = nil
                         case .failure(let error):
-                            errorMessage = error.localizedDescription
+                            let nsError = error as NSError
+                            print("AUTH SIGN-IN ERROR:", error)
+                            print("AUTH SIGN-IN NSERROR:", nsError)
+                            print("AUTH SIGN-IN USERINFO:", nsError.userInfo)
+                            errorMessage = nsError.localizedDescription
                         }
                     }
                 }
