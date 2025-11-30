@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct InvoiceDetailView: View {
     @EnvironmentObject var jobVM: JobViewModel
@@ -21,34 +22,35 @@ struct InvoiceDetailView: View {
         return clientVM.clients.first(where: { $0.id == clientID })
     }
 
-    private var formattedAmount: String {
-        currentInvoice.amount.currencyFormatted
-    }
-
     // MARK: - Body
 
     var body: some View {
-        ZStack {
-            background
-
-            List {
-                // HEADER (now includes invoice details)
-                Section {
-                    headerCard
-                        .listRowInsets(EdgeInsets())
-                        .listRowBackground(Color.clear)
-                }
-
-                // MATERIALS
-                Section(header: materialsHeader) {
-                    materialsList
-                }
-                .listRowBackground(Color.clear)
+        JobDocumentLayout(
+            summary: InvoiceSummaryCard(invoice: currentInvoice, client: client),
+            document: InvoiceDocumentCard(
+                invoice: currentInvoice,
+                previewAction: previewInvoice,
+                statusAction: markInvoiceAsSent
+            ),
+            customer: { EstimateCustomerCard(client: client) },
+            quickActions: {
+                EstimateQuickActionsCard(
+                    client: client,
+                    callAction: callClient,
+                    textAction: textClient,
+                    followUpAction: followUpClient
+                )
+            },
+            materials: {
+                MaterialsSection(
+                    materials: currentInvoice.materials,
+                    addAction: addMaterial,
+                    editAction: editMaterial,
+                    deleteAction: deleteMaterial
+                )
             }
-            .listStyle(.insetGrouped)
-            .scrollContentBackground(.hidden)
-        }
-        .navigationTitle(currentInvoice.title)
+        )
+        .navigationTitle("Invoice")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingMaterialSheet) {
             if let index = editingMaterialIndex {
@@ -67,123 +69,71 @@ struct InvoiceDetailView: View {
         }
     }
 
-    // MARK: - Background
+    // MARK: - Actions
 
-    private var background: some View {
-        LinearGradient(
-            colors: [
-                Color(red: 0.40, green: 0.15, blue: 0.12),
-                Color(red: 0.20, green: 0.35, blue: 0.24)
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .ignoresSafeArea()
+    private func addMaterial() {
+        editingMaterialIndex = nil
+        showingMaterialSheet = true
     }
 
-    // MARK: - Header card (combined)
+    private func editMaterial(_ index: Int) {
+        editingMaterialIndex = index
+        showingMaterialSheet = true
+    }
 
-    private var headerCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Title & short client line
-            Text(currentInvoice.title)
-                .font(.title2.bold())
-                .foregroundColor(.white)
+    private func deleteMaterial(_ index: Int) {
+        invoiceVM.removeMaterial(from: currentInvoice, at: index)
+    }
 
-            Text(client?.name ?? currentInvoice.clientName)
-                .font(.subheadline)
-                .foregroundColor(.white.opacity(0.85))
+    private func previewInvoice() {
+        // TODO: Hook up to invoice preview functionality
+    }
 
-            Divider().background(Color.white.opacity(0.25))
+    private func markInvoiceAsSent() {
+        var updatedInvoice = currentInvoice
+        updatedInvoice.status = updatedInvoice.status == .sent ? .draft : .sent
+        invoiceVM.update(updatedInvoice)
+    }
 
-            // Combined invoice details
-            HStack(alignment: .top, spacing: 16) {
-                // Left: full client details
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Client")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
+    private func callClient() {
+        guard let phone = client?.phone, !phone.isEmpty else { return }
 
-                    Text(client?.name ?? currentInvoice.clientName)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.white)
+        let digits = phone.filter("0123456789".contains)
+        guard let url = URL(string: "tel://\(digits)") else { return }
+        UIApplication.shared.open(url)
+    }
 
-                    if let client {
-                        if !client.company.isEmpty {
-                            Text(client.company)
-                                .font(.footnote)
-                                .foregroundColor(.white.opacity(0.85))
-                        }
-                        if !client.address.isEmpty {
-                            Text(client.address)
-                                .font(.footnote)
-                                .foregroundColor(.white.opacity(0.85))
-                        }
-                        if !client.phone.isEmpty {
-                            Text(client.phone)
-                                .font(.footnote)
-                                .foregroundColor(.white.opacity(0.85))
-                        }
-                        if !client.email.isEmpty {
-                            Text(client.email)
-                                .font(.footnote)
-                                .foregroundColor(.white.opacity(0.85))
-                        }
-                    }
-                }
+    private func textClient() {
+        guard let phone = client?.phone, !phone.isEmpty else { return }
 
-                Spacer()
+        let digits = phone.filter("0123456789".contains)
+        guard let url = URL(string: "sms:\(digits)") else { return }
+        UIApplication.shared.open(url)
+    }
 
-                // Right: status, amount, due date
-                VStack(alignment: .trailing, spacing: 8) {
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Text("Status")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.7))
-                        Text(currentInvoice.status.displayName)
-                            .font(.caption.weight(.semibold))
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 12)
-                            .background(currentInvoice.status.pillColor)
-                            .clipShape(Capsule())
-                            .foregroundColor(.white)
-                    }
+    private func followUpClient() {
+        guard let email = client?.email, !email.isEmpty, let url = URL(string: "mailto:\(email)") else { return }
+        UIApplication.shared.open(url)
+    }
+}
 
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Text("Amount")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.7))
-                        Text(formattedAmount)
-                            .font(.headline)
-                            .foregroundColor(.white)
-                    }
+// MARK: - Cards
 
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Text("Due date")
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.7))
-                        Text(
-                            currentInvoice.dueDate.map { Formatters.invoiceDueDate.string(from: $0) }
-                            ?? "Not set"
-                        )
-                        .font(.subheadline)
-                        .foregroundColor(.white)
-                    }
-                }
-            }
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.white.opacity(0.06))
+private struct InvoiceSummaryCard: View {
+    let invoice: Invoice
+    let client: Client?
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 32, style: .continuous)
+                .fill(Color.white.opacity(0.10))
                 .background(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    RoundedRectangle(cornerRadius: 32, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    Color.white.opacity(0.02),
-                                    Color.black.opacity(0.40)
+                                    Color.white.opacity(0.18),
+                                    Color.white.opacity(0.05)
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
@@ -191,109 +141,118 @@ struct InvoiceDetailView: View {
                         )
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 32, style: .continuous)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 1)
                 )
-        )
-    }
 
-    // MARK: - Materials
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(invoice.title)
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
 
-    private var materialsHeader: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Materials")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                Text("\(currentInvoice.materials.count) items")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.7))
-            }
+                        let clientName = client?.name ?? invoice.clientName
+                        if !clientName.isEmpty {
+                            Text(clientName)
+                                .font(.subheadline)
+                                .foregroundColor(.white.opacity(0.8))
+                        }
 
-            Spacer()
+                        HStack(spacing: 8) {
+                            Label("Invoice", systemImage: "doc.text")
+                                .font(.caption.weight(.semibold))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.white.opacity(0.16))
+                                )
+                                .foregroundColor(.white)
 
-            Button {
-                editingMaterialIndex = nil
-                showingMaterialSheet = true
-            } label: {
-                Label("Add", systemImage: "plus")
-                    .font(.caption.bold())
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 10)
-                    .background(Color.white.opacity(0.16))
-                    .clipShape(Capsule())
-                    .foregroundColor(.white)
-            }
-        }
-    }
+                            Text(invoice.status.displayName)
+                                .font(.caption.weight(.semibold))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.white.opacity(0.16))
+                                )
+                                .foregroundColor(.white)
+                        }
+                    }
 
-    private var materialsList: some View {
-        Group {
-            if currentInvoice.materials.isEmpty {
-                Text("No materials listed for this invoice.")
-                    .font(.subheadline)
-                    .foregroundColor(.white.opacity(0.75))
-                    .listRowBackground(Color.clear)
-            } else {
-                ForEach(currentInvoice.materials.indices, id: \.self) { index in
-                    materialRow(for: index)
-                        .listRowBackground(Color.clear)
+                    Spacer()
+
+                    VStack(spacing: 6) {
+                        Text("\(invoice.materials.count)")
+                            .font(.title2.bold())
+                            .foregroundColor(.white)
+                        Text("Materials")
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.8))
+
+                        Divider().background(Color.white.opacity(0.2))
+
+                        Text("0")
+                            .font(.title2.bold())
+                            .foregroundColor(.white)
+                        Text("Tools")
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+                    .padding(14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            .fill(Color.white.opacity(0.15))
+                    )
                 }
+
+                HStack {
+                    Text(invoice.amount.formatted(.currency(code: "USD")))
+                        .font(.system(size: 26, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white)
+                    Spacer()
+                }
+                .padding(.top, 8)
             }
+            .padding(20)
         }
+        .frame(maxWidth: .infinity)
     }
+}
 
-    private func materialRow(for index: Int) -> some View {
-        let material = currentInvoice.materials[index]
+private struct InvoiceDocumentCard: View {
+    let invoice: Invoice
+    let previewAction: () -> Void
+    let statusAction: () -> Void
 
-        return HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(material.name)
-                    .font(.subheadline.weight(.semibold))
+    var body: some View {
+        RoundedCard {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Document")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.7))
+
+                Text("Invoice")
+                    .font(.title3.weight(.semibold))
                     .foregroundColor(.white)
 
-                Text("\(String(format: "%.2f", material.quantity)) × \(material.unitCost.formatted(.currency(code: "USD")))")
-                    .font(.caption)
-                    .foregroundColor(.white.opacity(0.75))
-            }
+                Text("This job is currently an invoice. Use the actions below to manage or share it with your client.")
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.8))
 
-            Spacer()
+                HStack(spacing: 12) {
+                    Button(action: previewAction) {
+                        Label("Preview Invoice", systemImage: "doc.text.magnifyingglass")
+                    }
+                    .buttonStyle(PrimaryBlueButton())
 
-            Text(material.total.formatted(.currency(code: "USD")))
-                .font(.subheadline.bold())
-                .foregroundColor(.white)
-        }
-        .contentShape(Rectangle())
-        .padding(.vertical, 6)
-        .onTapGesture {
-            editingMaterialIndex = index
-            showingMaterialSheet = true
-        }
-        .contextMenu {
-            Button {
-                editingMaterialIndex = index
-                showingMaterialSheet = true
-            } label: {
-                Label("Edit", systemImage: "pencil")
-            }
-
-            Button(role: .destructive) {
-                invoiceVM.removeMaterial(from: currentInvoice, at: index)
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
-        }
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button("Edit") {
-                editingMaterialIndex = index
-                showingMaterialSheet = true
-            }
-            .tint(.blue)
-
-            Button(role: .destructive) {
-                invoiceVM.removeMaterial(from: currentInvoice, at: index)
-            } label: {
-                Label("Delete", systemImage: "trash")
+                    Button(action: statusAction) {
+                        Label(invoice.status == .sent ? "Mark as Draft" : "Mark as Sent", systemImage: invoice.status == .sent ? "arrow.uturn.backward" : "paperplane.fill")
+                    }
+                    .buttonStyle(PrimaryBlueButton())
+                }
             }
         }
     }
