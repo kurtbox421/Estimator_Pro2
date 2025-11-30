@@ -49,7 +49,11 @@ struct SignUpView: View {
                         case .success:
                             errorMessage = nil
                         case .failure(let error):
-                            errorMessage = error.localizedDescription
+                            let nsError = error as NSError
+                            print("AUTH SIGN-UP ERROR:", error)
+                            print("AUTH SIGN-UP NSERROR:", nsError)
+                            print("AUTH SIGN-UP USERINFO:", nsError.userInfo)
+                            errorMessage = nsError.localizedDescription
                         }
                     }
                 }
