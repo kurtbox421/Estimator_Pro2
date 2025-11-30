@@ -4,12 +4,16 @@ import UIKit
 struct InvoiceDetailView: View {
     @EnvironmentObject var jobVM: JobViewModel
     @EnvironmentObject var clientVM: ClientViewModel
+    @EnvironmentObject private var companySettings: CompanySettingsStore
 
     @ObservedObject var invoiceVM: InvoiceViewModel
     let invoice: Invoice
 
     @State private var editingMaterialIndex: Int?
     @State private var showingMaterialSheet = false
+    @State private var pdfURL: URL?
+    @State private var showingPDFPreview = false
+    @State private var pdfError: String?
 
     // MARK: - Derived data
 
@@ -67,6 +71,32 @@ struct InvoiceDetailView: View {
                 )
             }
         }
+        .sheet(isPresented: $showingPDFPreview) {
+            if let url = pdfURL {
+                NavigationStack {
+                    InvoicePDFPreviewView(url: url)
+                        .navigationTitle("Invoice Preview")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarTrailing) {
+                                ShareLink(item: url) {
+                                    Image(systemName: "square.and.arrow.up")
+                                }
+                            }
+                        }
+                }
+            }
+        }
+        .alert("PDF Error", isPresented: Binding(
+            get: { pdfError != nil },
+            set: { newValue in
+                if !newValue { pdfError = nil }
+            }
+        )) {
+            Button("OK", role: .cancel) { pdfError = nil }
+        } message: {
+            Text(pdfError ?? "")
+        }
     }
 
     // MARK: - Actions
@@ -86,7 +116,17 @@ struct InvoiceDetailView: View {
     }
 
     private func previewInvoice() {
-        // TODO: Hook up to invoice preview functionality
+        do {
+            let url = try InvoicePDFGenerator.generate(
+                invoice: currentInvoice,
+                company: companySettings
+            )
+            pdfURL = url
+            pdfError = nil
+            showingPDFPreview = true
+        } catch {
+            pdfError = "Failed to generate PDF: \(error.localizedDescription)"
+        }
     }
 
     private func markInvoiceAsSent() {

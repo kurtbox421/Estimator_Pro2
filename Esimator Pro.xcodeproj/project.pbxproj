@@ -40,9 +40,11 @@
 		39B8DC962EDCE6D4005D0E08 /* AuthScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39B8DC952EDCE6D4005D0E08 /* AuthScreenView.swift */; };
 		39B8DCAE2EDCF57E005D0E08 /* JobDocumentLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39B8DCAD2EDCF57E005D0E08 /* JobDocumentLayout.swift */; };
 		39E0A0112F00000100000001 /* ImportDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39E0A0102F00000100000001 /* ImportDataView.swift */; };
-		AA02AA02AA02AA02AA02AA02 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA01AA01AA01AA01AA01AA01 /* SettingsManager.swift */; };
-		AA04AA04AA04AA04AA04AA04 /* SavedMaterial.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA03AA03AA03AA03AA03AA03 /* SavedMaterial.swift */; };
-		AA06AA06AA06AA06AA06AA06 /* CompanySettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA05AA05AA05AA05AA05AA05 /* CompanySettingsStore.swift */; };
+                AA02AA02AA02AA02AA02AA02 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA01AA01AA01AA01AA01AA01 /* SettingsManager.swift */; };
+                AA04AA04AA04AA04AA04AA04 /* SavedMaterial.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA03AA03AA03AA03AA03AA03 /* SavedMaterial.swift */; };
+                AA06AA06AA06AA06AA06AA06 /* CompanySettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA05AA05AA05AA05AA05AA05 /* CompanySettingsStore.swift */; };
+                AA07AA07AA07AA07AA07AA07 /* InvoicePDFPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA07AA07AA07AA07AA07AA06 /* InvoicePDFPreviewView.swift */; };
+                AA08AA08AA08AA08AA08AA08 /* InvoicePDFGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA08AA08AA08AA08AA08AA07 /* InvoicePDFGenerator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -75,10 +77,12 @@
 		39B8DC892EDCDB7C005D0E08 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
 		39B8DC952EDCE6D4005D0E08 /* AuthScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthScreenView.swift; sourceTree = "<group>"; };
 		39B8DCAD2EDCF57E005D0E08 /* JobDocumentLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobDocumentLayout.swift; sourceTree = "<group>"; };
-		39E0A0102F00000100000001 /* ImportDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportDataView.swift; sourceTree = "<group>"; };
-		AA01AA01AA01AA01AA01AA01 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
-		AA03AA03AA03AA03AA03AA03 /* SavedMaterial.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedMaterial.swift; sourceTree = "<group>"; };
-		AA05AA05AA05AA05AA05AA05 /* CompanySettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanySettingsStore.swift; sourceTree = "<group>"; };
+                39E0A0102F00000100000001 /* ImportDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportDataView.swift; sourceTree = "<group>"; };
+                AA01AA01AA01AA01AA01AA01 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
+                AA03AA03AA03AA03AA03AA03 /* SavedMaterial.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedMaterial.swift; sourceTree = "<group>"; };
+                AA05AA05AA05AA05AA05AA05 /* CompanySettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanySettingsStore.swift; sourceTree = "<group>"; };
+                AA07AA07AA07AA07AA07AA06 /* InvoicePDFPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoicePDFPreviewView.swift; sourceTree = "<group>"; };
+                AA08AA08AA08AA08AA08AA07 /* InvoicePDFGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoicePDFGenerator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -159,11 +163,12 @@
 				39B8DC892EDCDB7C005D0E08 /* SignUpView.swift */,
 				39B8DC862EDCDB6E005D0E08 /* AuthContainerView.swift */,
 				39B8DC802EDCD1B8005D0E08 /* NewClientForm.swift */,
-				39B8DC742EDB6FC4005D0E08 /* MaterialGeneratorView.swift */,
-				398D94012ECFCEFE00A168FC /* InvoiceDetailView.swift */,
-				398D93EB2ECFBAAE00A168FC /* ClientCardViews.swift */,
-				39A395222ECD7EFF00D5E76D /* AddEditInvoiceView.swift */,
-				39A3951C2ECD7EB500D5E76D /* SplashScreenView.swift */,
+                                39B8DC742EDB6FC4005D0E08 /* MaterialGeneratorView.swift */,
+                                398D94012ECFCEFE00A168FC /* InvoiceDetailView.swift */,
+                                AA07AA07AA07AA07AA07AA06 /* InvoicePDFPreviewView.swift */,
+                                398D93EB2ECFBAAE00A168FC /* ClientCardViews.swift */,
+                                39A395222ECD7EFF00D5E76D /* AddEditInvoiceView.swift */,
+                                39A3951C2ECD7EB500D5E76D /* SplashScreenView.swift */,
 				39A3950A2ECD75B200D5E76D /* Rootview.swift */,
 				39E0A0102F00000100000001 /* ImportDataView.swift */,
 				3969FD082ECD36E10005C1AE /* JobListView.swift */,
@@ -183,11 +188,12 @@
 		};
 		3969FD072ECD36970005C1AE /* Utilities */ = {
 			isa = PBXGroup;
-			children = (
-				39B8DC722EDB6F4D005D0E08 /* MaterialSuggestionEngine.swift */,
-				39B8DC702EDB6779005D0E08 /* Formatting.swift */,
-				39B8DC642EDB60C0005D0E08 /* Services */,
-			);
+                        children = (
+                                39B8DC722EDB6F4D005D0E08 /* MaterialSuggestionEngine.swift */,
+                                39B8DC702EDB6779005D0E08 /* Formatting.swift */,
+                                AA08AA08AA08AA08AA08AA07 /* InvoicePDFGenerator.swift */,
+                                39B8DC642EDB60C0005D0E08 /* Services */,
+                        );
 			path = Utilities;
 			sourceTree = "<group>";
 		};
@@ -295,16 +301,18 @@
 				39B8DC732EDB6F4D005D0E08 /* MaterialSuggestionEngine.swift in Sources */,
 				3969FD0D2ECD372A0005C1AE /* JobDetailView.swift in Sources */,
 				3969FD022ECD36190005C1AE /* JobViewModel.swift in Sources */,
-				39B8DC712EDB6779005D0E08 /* Formatting.swift in Sources */,
-				3969FD152ECD3F410005C1AE /* AddMaterialView.swift in Sources */,
-				39B8DC752EDB6FC4005D0E08 /* MaterialGeneratorView.swift in Sources */,
-				39B8DC872EDCDB6E005D0E08 /* AuthContainerView.swift in Sources */,
+                                39B8DC712EDB6779005D0E08 /* Formatting.swift in Sources */,
+                                AA08AA08AA08AA08AA08AA08 /* InvoicePDFGenerator.swift in Sources */,
+                                3969FD152ECD3F410005C1AE /* AddMaterialView.swift in Sources */,
+                                39B8DC752EDB6FC4005D0E08 /* MaterialGeneratorView.swift in Sources */,
+                                39B8DC872EDCDB6E005D0E08 /* AuthContainerView.swift in Sources */,
 				AA06AA06AA06AA06AA06AA06 /* CompanySettingsStore.swift in Sources */,
-				398D93D62ECE902900A168FC /* Client.swift in Sources */,
-				398D93D42ECE8FFC00A168FC /* ClientViewModel.swift in Sources */,
-				AA04AA04AA04AA04AA04AA04 /* SavedMaterial.swift in Sources */,
-				398D94022ECFCEFE00A168FC /* InvoiceDetailView.swift in Sources */,
-				3969FD002ECD35E60005C1AE /* Job.swift in Sources */,
+                                398D93D62ECE902900A168FC /* Client.swift in Sources */,
+                                398D93D42ECE8FFC00A168FC /* ClientViewModel.swift in Sources */,
+                                AA04AA04AA04AA04AA04AA04 /* SavedMaterial.swift in Sources */,
+                                398D94022ECFCEFE00A168FC /* InvoiceDetailView.swift in Sources */,
+                                AA07AA07AA07AA07AA07AA07 /* InvoicePDFPreviewView.swift in Sources */,
+                                3969FD002ECD35E60005C1AE /* Job.swift in Sources */,
 				39E0A0112F00000100000001 /* ImportDataView.swift in Sources */,
 				3969FD092ECD36E10005C1AE /* JobListView.swift in Sources */,
 				39A3951D2ECD7EB500D5E76D /* SplashScreenView.swift in Sources */,
