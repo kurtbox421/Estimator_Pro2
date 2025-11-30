@@ -189,22 +189,40 @@ struct JobDetailView: View {
     // MARK: - Quick Actions
 
     private func callClient() {
-        guard let phone = client(for: job)?.phone,
-              let url = URL(string: "tel://\(phone.filter(\"0123456789\".contains))") else { return }
+        guard
+            let phone = client(for: job)?.phone,
+            !phone.isEmpty
+        else { return }
+
+        // keep only digits for the tel:// URL
+        let digits = phone.filter("0123456789".contains)
+
+        guard let url = URL(string: "tel://\(digits)") else { return }
         UIApplication.shared.open(url)
     }
 
     private func textClient() {
-        guard let phone = client(for: job)?.phone,
-              let url = URL(string: "sms:\(phone.filter(\"0123456789\".contains))") else { return }
+        guard
+            let phone = client(for: job)?.phone,
+            !phone.isEmpty
+        else { return }
+
+        let digits = phone.filter("0123456789".contains)
+
+        guard let url = URL(string: "sms:\(digits)") else { return }
         UIApplication.shared.open(url)
     }
 
     private func followUpClient() {
-        guard let email = client(for: job)?.email,
-              let url = URL(string: "mailto:\(email)") else { return }
+        guard
+            let email = client(for: job)?.email,
+            !email.isEmpty,
+            let url = URL(string: "mailto:\(email)")
+        else { return }
+
         UIApplication.shared.open(url)
     }
+
 
     // MARK: - Labor editor sheet
 
