@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import FirebaseCore
 
 @main
 struct EstimatorProApp: App {
@@ -14,28 +15,42 @@ struct EstimatorProApp: App {
     @StateObject private var clientVM = ClientViewModel()
     @StateObject private var companySettings = CompanySettingsStore()
     @StateObject private var settingsManager = SettingsManager()
+    @StateObject private var session = SessionViewModel()
 
     @State private var showingSplash = true
+
+    init() {
+        FirebaseApp.configure()
+    }
 
     var body: some Scene {
         WindowGroup {
             ZStack {
-                NavigationStack {
-                    RootView()
+                if session.isLoading {
+                    SplashScreenView()
+                        .transition(.opacity)
+                        .zIndex(1)
+                } else if session.user == nil {
+                    AuthContainerView()
+                } else {
+                    NavigationStack {
+                        RootView()
+                    }
+                    .environmentObject(jobVM)
+                    .environmentObject(invoiceVM)
+                    .environmentObject(clientVM)
+                    .environmentObject(companySettings)
+                    .environmentObject(settingsManager)
                 }
-                .environmentObject(jobVM)
-                .environmentObject(invoiceVM)
-                .environmentObject(clientVM)
-                .environmentObject(companySettings)
-                .environmentObject(settingsManager)
 
-                if showingSplash {
+                if showingSplash && !session.isLoading {
                     SplashScreenView()
                         .transition(.opacity)
                         .zIndex(1)
                 }
             }
             .onAppear(perform: dismissSplashAfterDelay)
+            .environmentObject(session)
         }
     }
 

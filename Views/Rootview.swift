@@ -791,6 +791,8 @@ private struct ClientSummaryRow: View {
 // MARK: - Settings tab
 
 struct SettingsTabView: View {
+    @EnvironmentObject private var session: SessionViewModel
+
     var body: some View {
         NavigationStack {
             List {
@@ -825,6 +827,29 @@ struct SettingsTabView: View {
                 }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
+
+                Section {
+                    Button(role: .destructive) {
+                        session.signOut()
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.backward.circle.fill")
+                                .font(.headline)
+                                .frame(width: 32, height: 32)
+                                .background(Color.white.opacity(0.12))
+                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                .foregroundColor(.white)
+
+                            Text("Sign out")
+                                .font(.subheadline)
+                                .foregroundColor(.white)
+                        }
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
