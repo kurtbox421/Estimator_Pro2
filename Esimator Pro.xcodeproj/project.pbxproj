@@ -37,6 +37,7 @@
 		39B8DC8E2EDCDC1B005D0E08 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 39B8DC8D2EDCDC1B005D0E08 /* FirebaseAuth */; };
 		39B8DC902EDCDC1B005D0E08 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 39B8DC8F2EDCDC1B005D0E08 /* FirebaseFirestore */; };
 		39B8DC922EDCDC1B005D0E08 /* FirebaseFirestoreSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 39B8DC912EDCDC1B005D0E08 /* FirebaseFirestoreSwift */; };
+		39B8DC962EDCE6D4005D0E08 /* AuthScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39B8DC952EDCE6D4005D0E08 /* AuthScreenView.swift */; };
 		AA02AA02AA02AA02AA02AA02 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA01AA01AA01AA01AA01AA01 /* SettingsManager.swift */; };
 		AA04AA04AA04AA04AA04AA04 /* SavedMaterial.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA03AA03AA03AA03AA03AA03 /* SavedMaterial.swift */; };
 		AA06AA06AA06AA06AA06AA06 /* CompanySettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA05AA05AA05AA05AA05AA05 /* CompanySettingsStore.swift */; };
@@ -70,6 +71,7 @@
 		39B8DC862EDCDB6E005D0E08 /* AuthContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthContainerView.swift; sourceTree = "<group>"; };
 		39B8DC882EDCDB7C005D0E08 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
 		39B8DC892EDCDB7C005D0E08 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
+		39B8DC952EDCE6D4005D0E08 /* AuthScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthScreenView.swift; sourceTree = "<group>"; };
 		AA01AA01AA01AA01AA01AA01 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
 		AA03AA03AA03AA03AA03AA03 /* SavedMaterial.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedMaterial.swift; sourceTree = "<group>"; };
 		AA05AA05AA05AA05AA05AA05 /* CompanySettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanySettingsStore.swift; sourceTree = "<group>"; };
@@ -147,6 +149,7 @@
 		3969FD052ECD36830005C1AE /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				39B8DC952EDCE6D4005D0E08 /* AuthScreenView.swift */,
 				39B8DC882EDCDB7C005D0E08 /* SignInView.swift */,
 				39B8DC892EDCDB7C005D0E08 /* SignUpView.swift */,
 				39B8DC862EDCDB6E005D0E08 /* AuthContainerView.swift */,
@@ -298,6 +301,7 @@
 				3969FD002ECD35E60005C1AE /* Job.swift in Sources */,
 				3969FD092ECD36E10005C1AE /* JobListView.swift in Sources */,
 				39A3951D2ECD7EB500D5E76D /* SplashScreenView.swift in Sources */,
+				39B8DC962EDCE6D4005D0E08 /* AuthScreenView.swift in Sources */,
 				398D93EE2ECFC27900A168FC /* (null) in Sources */,
 				39A395232ECD7EFF00D5E76D /* AddEditInvoiceView.swift in Sources */,
 			);
