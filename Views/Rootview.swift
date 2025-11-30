@@ -53,6 +53,7 @@ struct RootView: View {
     @State private var invoiceSheetMode: AddEditInvoiceView.Mode?
     @State private var showingMaterialGenerator = false
     @State private var generatorTargetJob: Job? = nil
+    @State private var showingNewClientForm = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -96,6 +97,13 @@ struct RootView: View {
                 job: generatorTargetJob
             )
         }
+        .sheet(isPresented: $showingNewClientForm) {
+            NewClientForm { newClient in
+                clientVM.add(newClient)
+            }
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+        }
     }
 
     // MARK: Header
@@ -138,9 +146,7 @@ struct RootView: View {
                 case .invoices:
                     invoiceSheetMode = .add
                 case .clients:
-                    withAnimation {
-                        clientVM.add()
-                    }
+                    showingNewClientForm = true
                 case .settings:
                     break
                 }
