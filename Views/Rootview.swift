@@ -49,10 +49,10 @@ struct RootView: View {
     @EnvironmentObject private var invoiceVM: InvoiceViewModel
 
     @State private var selectedTab: AppTab = .estimates
-    @State private var showingAddJob = false
-    @State private var invoiceSheetMode: AddEditInvoiceView.Mode?
+    @State private var showingNewEstimate = false
+    @State private var showingNewInvoice = false
+    @State private var showingNewClient = false
     @State private var showingMaterialGenerator = false
-    @State private var showingNewClientForm = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -82,20 +82,20 @@ struct RootView: View {
                 .padding(.horizontal, layout.horizontalPadding)
             }
         }
-        .sheet(isPresented: $showingAddJob) {
+        .sheet(isPresented: $showingNewEstimate) {
             NavigationView {
                 AddEditJobView(mode: .add)
             }
         }
-        .sheet(item: $invoiceSheetMode) { mode in
+        .sheet(isPresented: $showingNewInvoice) {
             NavigationView {
-                AddEditInvoiceView(mode: mode)
+                AddEditInvoiceView(mode: .add)
             }
         }
         .sheet(isPresented: $showingMaterialGenerator) {
             MaterialGeneratorView()
         }
-        .sheet(isPresented: $showingNewClientForm) {
+        .sheet(isPresented: $showingNewClient) {
             NewClientForm { newClient in
                 clientVM.add(newClient)
             }
@@ -113,11 +113,43 @@ struct RootView: View {
 
                 Spacer(minLength: 12)
 
-                HStack(spacing: 8) {
-                    if selectedTab == .estimates {
-                        addButton
+                HStack(spacing: 12) {
+                    if selectedTab != .settings {
+                        Button {
+                            switch selectedTab {
+                            case .estimates:
+                                showingNewEstimate = true
+                            case .invoices:
+                                showingNewInvoice = true
+                            case .clients:
+                                showingNewClient = true
+                            case .settings:
+                                break
+                            }
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.system(size: 18, weight: .semibold))
+                                .padding(10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(Color.white.opacity(0.95))
+                                )
+                        }
+                    }
 
-                        materialGeneratorButton
+                    if selectedTab == .estimates {
+                        Button {
+                            showingMaterialGenerator = true
+                        } label: {
+                            Image(systemName: "wand.and.stars")
+                                .font(.system(size: 18, weight: .semibold))
+                                .padding(10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(Color.purple)
+                                )
+                                .foregroundColor(.white)
+                        }
                     }
                 }
             }
@@ -153,45 +185,6 @@ struct RootView: View {
         .background(
             Capsule().fill(Color(.systemGray5))
         )
-    }
-
-    private var addButton: some View {
-        Button {
-            switch selectedTab {
-            case .estimates:
-                showingAddJob = true
-            case .invoices:
-                invoiceSheetMode = .add
-            case .clients:
-                showingNewClientForm = true
-            case .settings:
-                break
-            }
-        } label: {
-            Image(systemName: "plus")
-                .font(.headline)
-                .padding(10)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color(.systemGray5))
-                )
-                .foregroundColor(.primary)
-        }
-    }
-
-    private var materialGeneratorButton: some View {
-        Button {
-            showingMaterialGenerator = true
-        } label: {
-            Image(systemName: "wand.and.stars")
-                .font(.headline)
-                .padding(10)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.purple)
-                )
-                .foregroundColor(.white)
-        }
     }
 
     // MARK: Hero card
