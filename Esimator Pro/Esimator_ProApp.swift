@@ -14,8 +14,8 @@ struct EstimatorProApp: App {
     @StateObject private var clientVM = ClientViewModel()
     @StateObject private var companySettings = CompanySettingsStore()
     @StateObject private var settingsManager = SettingsManager()
+
     @State private var showingSplash = true
-    @State private var splashOpacity = 1.0
 
     var body: some Scene {
         WindowGroup {
@@ -31,23 +31,22 @@ struct EstimatorProApp: App {
 
                 if showingSplash {
                     SplashScreenView()
-                        .opacity(splashOpacity)
                         .transition(.opacity)
                         .zIndex(1)
                 }
             }
-            .onAppear(perform: dismissSplashIfNeeded)
+            .onAppear(perform: dismissSplashAfterDelay)
         }
     }
 
-    private func dismissSplashIfNeeded() {
+    private func dismissSplashAfterDelay() {
         guard showingSplash else { return }
-        withAnimation(.easeInOut(duration: 1.0)) {
-            splashOpacity = 0
-        }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            showingSplash = false
+        // Keep splash fully visible for 2 seconds, then fade out over 1 second
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            withAnimation(.easeInOut(duration: 1.0)) {
+                showingSplash = false
+            }
         }
     }
 }
