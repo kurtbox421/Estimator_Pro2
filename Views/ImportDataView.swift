@@ -19,6 +19,7 @@ struct ImportDataView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Expected CSV headers:")
                     .font(.subheadline.weight(.semibold))
+
                 Text("Client Name, Company, Email, Phone, Address, City, State, Zip, Notes")
                     .font(.footnote)
                     .foregroundColor(.secondary)
@@ -51,11 +52,18 @@ struct ImportDataView: View {
         }
     }
 
-    private func handleImportResult(_ result: Result<URL, Error>) {
+    // NOTE: fileImporter gives Result<[URL], Error>
+    private func handleImportResult(_ result: Result<[URL], Error>) {
         switch result {
         case .failure(let error):
             importMessage = "Import failed: \(error.localizedDescription)"
-        case .success(let url):
+
+        case .success(let urls):
+            guard let url = urls.first else {
+                importMessage = "No file selected."
+                return
+            }
+
             do {
                 let data = try Data(contentsOf: url)
                 guard let text = String(data: data, encoding: .utf8) else {
@@ -63,14 +71,15 @@ struct ImportDataView: View {
                     return
                 }
 
-                let imported = parseClientsCSV(text: text)
-                if imported.isEmpty {
+                let importedClients = parseClientsCSV(text: text)
+
+                if importedClients.isEmpty {
                     importMessage = "No valid clients found in the file."
                 } else {
-                    for importedClient in imported {
-                        clientVM.addImportedClient(importedClient)
+                    for imported in importedClients {
+                        clientVM.addImportedClient(imported)
                     }
-                    importMessage = "Imported \(imported.count) clients."
+                    importMessage = "Imported \(importedClients.count) clients."
                 }
             } catch {
                 importMessage = "Import failed: \(error.localizedDescription)"
@@ -79,7 +88,9 @@ struct ImportDataView: View {
     }
 }
 
-private struct ImportedClient {
+// MARK: - Import model & parser
+
+struct ImportedClient {
     var name: String
     var company: String?
     var email: String?
@@ -122,6 +133,7 @@ private func parseClientsCSV(text: String) -> [ImportedClient] {
     let zipIndex      = index(for: "zip")
     let notesIndex    = index(for: "note")
 
+    // Need at least a name column
     guard let nameIndex else { return [] }
 
     for line in lines.dropFirst() {
@@ -156,6 +168,8 @@ private func parseClientsCSV(text: String) -> [ImportedClient] {
     return results
 }
 
+// MARK: - Mapping into real Client model
+
 extension ClientViewModel {
     func addImportedClient(_ imported: ImportedClient) {
         let formattedAddress = formatAddress(from: imported)
@@ -178,6 +192,7 @@ extension ClientViewModel {
         }
 
         var cityLineComponents: [String] = []
+
         if let city = imported.city, !city.isEmpty {
             cityLineComponents.append(city)
         }
