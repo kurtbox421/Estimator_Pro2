@@ -31,20 +31,23 @@ struct JobDetailView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                EstimateSummaryCard(job: job, editLaborAction: showLaborEditor)
-
-                EstimateDocumentCard(
-                    job: job,
-                    previewAction: previewEstimate,
-                    convertAction: convertToInvoice
+        JobDocumentLayout(
+            summary: EstimateSummaryCard(job: job, editLaborAction: showLaborEditor),
+            document: EstimateDocumentCard(
+                job: job,
+                previewAction: previewEstimate,
+                convertAction: convertToInvoice
+            ),
+            customer: { EstimateCustomerCard(client: client(for: job)) },
+            quickActions: {
+                EstimateQuickActionsCard(
+                    client: client(for: job),
+                    callAction: callClient,
+                    textAction: textClient,
+                    followUpAction: followUpClient
                 )
-
-                EstimateCustomerCard(client: client(for: job))
-
-                EstimateQuickActionsCard(client: client(for: job), callAction: callClient, textAction: textClient, followUpAction: followUpClient)
-
+            },
+            materials: {
                 MaterialsSection(
                     materials: job.materials,
                     addAction: {
@@ -60,20 +63,6 @@ struct JobDetailView: View {
                     }
                 )
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 24)
-            .padding(.bottom, 32)
-        }
-        .background(
-            LinearGradient(
-                colors: [
-                    Color(red: 0.49, green: 0.38, blue: 1.0),
-                    Color(red: 0.25, green: 0.28, blue: 0.60)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
         )
         .navigationTitle("Estimate")
         .navigationBarTitleDisplayMode(.inline)
@@ -402,7 +391,7 @@ private struct EstimateDocumentCard: View {
     }
 }
 
-private struct EstimateCustomerCard: View {
+struct EstimateCustomerCard: View {
     let client: Client?
 
     var body: some View {
@@ -452,7 +441,7 @@ private struct EstimateCustomerCard: View {
     }
 }
 
-private struct EstimateQuickActionsCard: View {
+struct EstimateQuickActionsCard: View {
     let client: Client?
     let callAction: () -> Void
     let textAction: () -> Void
@@ -489,7 +478,7 @@ private struct EstimateQuickActionsCard: View {
     }
 }
 
-private struct MaterialsSection: View {
+struct MaterialsSection: View {
     let materials: [Material]
     let addAction: () -> Void
     let editAction: (Int) -> Void
@@ -565,72 +554,6 @@ private struct MaterialsSection: View {
                 }
             }
         }
-    }
-}
-
-// MARK: - Shared components
-
-private struct RoundedCard<Content: View>: View {
-    let content: () -> Content
-
-    init(@ViewBuilder content: @escaping () -> Content) {
-        self.content = content
-    }
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color.white.opacity(0.10))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                )
-
-            content()
-                .padding(20)
-        }
-        .frame(maxWidth: .infinity)
-    }
-}
-
-struct PrimaryBlueButton: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.subheadline.weight(.semibold))
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.blue.opacity(configuration.isPressed ? 0.8 : 1.0))
-            )
-            .foregroundColor(.white)
-    }
-}
-
-struct GreenActionButton: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.subheadline.weight(.semibold))
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color.green.opacity(configuration.isPressed ? 0.8 : 1.0))
-            )
-            .foregroundColor(.white)
-    }
-}
-
-struct SecondaryPillButton: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.subheadline.weight(.semibold))
-            .padding(.vertical, 10)
-            .background(
-                Capsule()
-                    .fill(Color.white.opacity(configuration.isPressed ? 0.18 : 0.14))
-            )
-            .foregroundColor(.white)
     }
 }
 
