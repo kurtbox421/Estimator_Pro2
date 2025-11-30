@@ -3,6 +3,29 @@ import SwiftUI
 struct ClientEditableCard: View {
     @Binding var client: Client
     let jobCount: Int
+    let isEditing: Bool
+    let onEdit: () -> Void
+    let addressAction: () -> Void
+    let phoneAction: () -> Void
+    let emailAction: () -> Void
+
+    init(
+        client: Binding<Client>,
+        jobCount: Int,
+        isEditing: Bool = true,
+        onEdit: @escaping () -> Void = {},
+        addressAction: @escaping () -> Void = {},
+        phoneAction: @escaping () -> Void = {},
+        emailAction: @escaping () -> Void = {}
+    ) {
+        self._client = client
+        self.jobCount = jobCount
+        self.isEditing = isEditing
+        self.onEdit = onEdit
+        self.addressAction = addressAction
+        self.phoneAction = phoneAction
+        self.emailAction = emailAction
+    }
 
     var body: some View {
         let summary = Client.jobSummary(for: jobCount)
@@ -17,7 +40,9 @@ struct ClientEditableCard: View {
                 prompt: "123 Main St · City, ST",
                 systemImage: "mappin.and.ellipse",
                 text: $client.address,
-                capitalization: .sentences
+                capitalization: .sentences,
+                isEditable: isEditing,
+                action: isEditing ? nil : addressAction
             )
 
             HStack(spacing: 12) {
@@ -27,7 +52,9 @@ struct ClientEditableCard: View {
                     systemImage: "phone.fill",
                     text: $client.phone,
                     capitalization: .never,
-                    keyboardType: .phonePad
+                    keyboardType: .phonePad,
+                    isEditable: isEditing,
+                    action: isEditing ? nil : phoneAction
                 )
 
                 ClientInfoTile(
@@ -36,7 +63,9 @@ struct ClientEditableCard: View {
                     systemImage: "envelope.fill",
                     text: $client.email,
                     capitalization: .never,
-                    keyboardType: .emailAddress
+                    keyboardType: .emailAddress,
+                    isEditable: isEditing,
+                    action: isEditing ? nil : emailAction
                 )
             }
 
@@ -46,7 +75,8 @@ struct ClientEditableCard: View {
                 systemImage: "note.text",
                 text: $client.notes,
                 capitalization: .sentences,
-                disableAutocorrection: false
+                disableAutocorrection: false,
+                isEditable: isEditing
             )
 
             ClientJobTile(jobCount: jobCount, summary: summary)
@@ -98,6 +128,8 @@ struct ClientInfoTile: View {
     var capitalization: TextInputAutocapitalization = .words
     var keyboardType: UIKeyboardType = .default
     var disableAutocorrection: Bool = true
+    var isEditable: Bool = true
+    var action: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -112,16 +144,41 @@ struct ClientInfoTile: View {
                     .foregroundColor(.white.opacity(0.7))
             }
 
-            TextField(prompt, text: $text)
-                .textInputAutocapitalization(capitalization)
-                .autocorrectionDisabled(disableAutocorrection)
-                .keyboardType(keyboardType)
-                .font(.subheadline)
-                .foregroundColor(.white)
-                .padding(.vertical, 8)
-                .padding(.horizontal, 10)
-                .background(Color.white.opacity(0.06))
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            if isEditable {
+                TextField(prompt, text: $text)
+                    .textInputAutocapitalization(capitalization)
+                    .autocorrectionDisabled(disableAutocorrection)
+                    .keyboardType(keyboardType)
+                    .font(.subheadline)
+                    .foregroundColor(.white)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 10)
+                    .background(Color.white.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            } else {
+                Button {
+                    action?()
+                } label: {
+                    HStack(alignment: .top, spacing: 8) {
+                        Text(text.isEmpty ? prompt : text)
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if action != nil {
+                            Image(systemName: "arrow.up.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 10)
+                    .background(Color.white.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .disabled(action == nil)
+            }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -166,17 +223,27 @@ extension ClientEditableCard {
             ClientAvatar(initials: client.initials)
 
             VStack(alignment: .leading, spacing: 6) {
-                TextField("Client name", text: $client.name)
-                    .textInputAutocapitalization(.words)
-                    .autocorrectionDisabled()
-                    .font(.headline.weight(.semibold))
-                    .foregroundColor(.white)
+                if isEditing {
+                    TextField("Client name", text: $client.name)
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled()
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.white)
 
-                TextField("Company", text: $client.company)
-                    .textInputAutocapitalization(.words)
-                    .autocorrectionDisabled()
-                    .font(.subheadline)
-                    .foregroundColor(.white.opacity(0.9))
+                    TextField("Company", text: $client.company)
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled()
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.9))
+                } else {
+                    Text(client.name.isEmpty ? "Client name" : client.name)
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.white)
+
+                    Text(client.company.isEmpty ? "Company" : client.company)
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.9))
+                }
 
                 Text(summary)
                     .font(.caption.weight(.semibold))
@@ -189,12 +256,15 @@ extension ClientEditableCard {
 
             Spacer()
 
-            Image(systemName: "ellipsis")
-                .font(.headline.weight(.semibold))
-                .foregroundColor(.white.opacity(0.8))
-                .padding(10)
-                .background(Color.white.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            Button(action: onEdit) {
+                Image(systemName: "ellipsis")
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.8))
+                    .padding(10)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(.plain)
         }
     }
 }
