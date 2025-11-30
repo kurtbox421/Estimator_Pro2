@@ -854,7 +854,6 @@ struct SettingsTabView: View {
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .listRowBackground(Color.clear)
-            .navigationTitle("Settings")
         }
     }
 }
