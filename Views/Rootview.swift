@@ -114,9 +114,9 @@ struct RootView: View {
                 Spacer(minLength: 12)
 
                 HStack(spacing: 8) {
-                    addButton
-
                     if selectedTab == .estimates {
+                        addButton
+
                         materialGeneratorButton
                     }
                 }
