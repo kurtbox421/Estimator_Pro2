@@ -28,6 +28,7 @@
 		39B8DC712EDB6779005D0E08 /* Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39B8DC702EDB6779005D0E08 /* Formatting.swift */; };
 		39B8DC732EDB6F4D005D0E08 /* MaterialSuggestionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39B8DC722EDB6F4D005D0E08 /* MaterialSuggestionEngine.swift */; };
 		39B8DC752EDB6FC4005D0E08 /* MaterialGeneratorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39B8DC742EDB6FC4005D0E08 /* MaterialGeneratorView.swift */; };
+		39B8DC812EDCD1B8005D0E08 /* NewClientForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39B8DC802EDCD1B8005D0E08 /* NewClientForm.swift */; };
 		AA02AA02AA02AA02AA02AA02 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA01AA01AA01AA01AA01AA01 /* SettingsManager.swift */; };
 		AA04AA04AA04AA04AA04AA04 /* SavedMaterial.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA03AA03AA03AA03AA03AA03 /* SavedMaterial.swift */; };
 		AA06AA06AA06AA06AA06AA06 /* CompanySettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA05AA05AA05AA05AA05AA05 /* CompanySettingsStore.swift */; };
@@ -55,6 +56,7 @@
 		39B8DC702EDB6779005D0E08 /* Formatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatting.swift; sourceTree = "<group>"; };
 		39B8DC722EDB6F4D005D0E08 /* MaterialSuggestionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialSuggestionEngine.swift; sourceTree = "<group>"; };
 		39B8DC742EDB6FC4005D0E08 /* MaterialGeneratorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialGeneratorView.swift; sourceTree = "<group>"; };
+		39B8DC802EDCD1B8005D0E08 /* NewClientForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewClientForm.swift; sourceTree = "<group>"; };
 		AA01AA01AA01AA01AA01AA01 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
 		AA03AA03AA03AA03AA03AA03 /* SavedMaterial.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedMaterial.swift; sourceTree = "<group>"; };
 		AA05AA05AA05AA05AA05AA05 /* CompanySettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanySettingsStore.swift; sourceTree = "<group>"; };
@@ -127,6 +129,7 @@
 		3969FD052ECD36830005C1AE /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				39B8DC802EDCD1B8005D0E08 /* NewClientForm.swift */,
 				39B8DC742EDB6FC4005D0E08 /* MaterialGeneratorView.swift */,
 				398D94012ECFCEFE00A168FC /* InvoiceDetailView.swift */,
 				398D93EB2ECFBAAE00A168FC /* ClientCardViews.swift */,
@@ -243,6 +246,7 @@
 				39A395212ECD7EE400D5E76D /* Invoice.swift in Sources */,
 				39B8DC652EDB60C0005D0E08 /* PersistenceService.swift in Sources */,
 				398D93EC2ECFBAAE00A168FC /* ClientCardViews.swift in Sources */,
+				39B8DC812EDCD1B8005D0E08 /* NewClientForm.swift in Sources */,
 				3969FD0F2ECD37F10005C1AE /* Material.swift in Sources */,
 				39A3950B2ECD75B200D5E76D /* Rootview.swift in Sources */,
 				3969FD0B2ECD37000005C1AE /* AddEditJobView.swift in Sources */,
