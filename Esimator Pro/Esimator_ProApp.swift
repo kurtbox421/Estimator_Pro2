@@ -31,7 +31,7 @@ struct EstimatorProApp: App {
                         .transition(.opacity)
                         .zIndex(1)
                 } else if session.user == nil {
-                    AuthContainerView()
+                    AuthScreenView()
                 } else {
                     NavigationStack {
                         RootView()
