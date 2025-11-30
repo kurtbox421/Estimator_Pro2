@@ -93,8 +93,7 @@ struct RootView: View {
         }
         .sheet(isPresented: $showingMaterialGenerator) {
             MaterialGeneratorView(
-                job: generatorTargetJob,
-                jobVM: jobVM
+                job: generatorTargetJob
             )
         }
     }

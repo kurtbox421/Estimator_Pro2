@@ -2,72 +2,56 @@ import SwiftUI
 
 struct MaterialGeneratorView: View {
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var jobVM: JobViewModel
-    let job: Job?
+    @EnvironmentObject var jobVM: JobViewModel
+
+    /// If opened from a specific job, it will be preselected.
+    let preselectedJob: Job?
 
     @State private var descriptionText = ""
     @State private var suggestedMaterials: [GeneratedMaterial] = []
     @State private var isGenerating = false
 
+    @State private var selectedJobID: Job.ID?
+
+    // MARK: - Init
+
+    init(job: Job?) {
+        self.preselectedJob = job
+        _selectedJobID = State(initialValue: job?.id)
+    }
+
+    // MARK: - Body
+
     var body: some View {
         NavigationView {
             VStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Describe the job")
-                        .font(.headline)
-                    Text("Provide a quick summary so we can suggest materials.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-
-                    TextEditor(text: $descriptionText)
-                        .padding(12)
-                        .frame(minHeight: 160)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(Color(.secondarySystemBackground))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(Color.black.opacity(0.05), lineWidth: 1)
-                        )
-                }
-
-                Button {
-                    isGenerating = true
-                    generateMaterials()
-                    isGenerating = false
-                } label: {
-                    HStack {
-                        Image(systemName: "wand.and.stars")
-                        Text(isGenerating ? "Generating..." : "Generate materials")
-                    }
+                Text("Describe the job")
                     .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                TextEditor(text: $descriptionText)
+                    .padding(8)
+                    .frame(minHeight: 140)
                     .background(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 1.0, green: 0.17, blue: 0.60),
-                                Color(red: 0.90, green: 0.30, blue: 1.0)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.secondarySystemBackground))
                     )
-                    .foregroundColor(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                Button(action: generateMaterials) {
+                    if isGenerating {
+                        ProgressView()
+                    } else {
+                        Label("Generate materials", systemImage: "wand.and.stars")
+                    }
                 }
+                .buttonStyle(.borderedProminent)
                 .disabled(descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isGenerating)
 
-                if isGenerating {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle())
-                        .padding(.top, 4)
-                }
-
                 if !suggestedMaterials.isEmpty {
+                    targetJobPicker
+
                     List {
-                        Section(header: Text("Suggested materials")) {
+                        Section("Suggested materials") {
                             ForEach(suggestedMaterials) { material in
                                 HStack {
                                     VStack(alignment: .leading) {
@@ -81,40 +65,71 @@ struct MaterialGeneratorView: View {
                                     Text(material.estimatedTotal.formatted(.currency(code: "USD")))
                                         .font(.subheadline.bold())
                                 }
-                                .padding(.vertical, 6)
                             }
                         }
                     }
-                    .listStyle(.insetGrouped)
+                } else {
+                    Spacer()
                 }
-
-                Spacer()
             }
             .padding()
             .navigationTitle("Material generator")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") {
-                        dismiss()
-                    }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .confirmationAction) {
                     Button("Apply") {
-                        applyToJob()
+                        applyToSelectedJob()
                         dismiss()
                     }
-                    .disabled(suggestedMaterials.isEmpty || job == nil)
+                    .disabled(!canApply)
                 }
             }
         }
     }
 
-    private func generateMaterials() {
-        suggestedMaterials = MaterialSuggestionEngine.suggestMaterials(from: descriptionText)
+    // MARK: - Target selection
+
+    private var targetJobPicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Apply to estimate")
+                .font(.headline)
+
+            Picker("Estimate", selection: $selectedJobID) {
+                Text("Select estimate").tag(Optional<Job.ID>.none)
+                ForEach(jobVM.jobs) { job in
+                    Text(job.name).tag(Optional(job.id))
+                }
+            }
+        }
     }
 
-    private func applyToJob() {
-        jobVM.applyGeneratedMaterials(suggestedMaterials, to: job)
+    private var canApply: Bool {
+        !suggestedMaterials.isEmpty && selectedJobID != nil
+    }
+
+    // MARK: - Actions
+
+    private func generateMaterials() {
+        isGenerating = true
+        suggestedMaterials = MaterialSuggestionEngine.suggestMaterials(from: descriptionText)
+        isGenerating = false
+
+        // If no job selected yet but we have a preselected job, keep it.
+        if selectedJobID == nil {
+            selectedJobID = preselectedJob?.id
+        }
+    }
+
+    private func applyToSelectedJob() {
+        guard
+            let id = selectedJobID,
+            let targetJob = jobVM.jobs.first(where: { $0.id == id })
+        else { return }
+
+        jobVM.applyGeneratedMaterials(suggestedMaterials, to: targetJob)
     }
 }
