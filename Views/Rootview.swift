@@ -665,13 +665,25 @@ private struct ClientRowCard: View {
 struct ClientDetailView: View {
     @Binding var client: Client
     @EnvironmentObject private var jobVM: JobViewModel
+    @Environment(\.openURL) private var openURL
+
+    @State private var showingEditSheet = false
+    @State private var draftClient: Client = .init()
 
     var body: some View {
         let jobCount = jobVM.jobCount(for: client)
 
         ScrollView {
             VStack(spacing: 16) {
-                ClientEditableCard(client: $client, jobCount: jobCount)
+                ClientEditableCard(
+                    client: $client,
+                    jobCount: jobCount,
+                    isEditing: false,
+                    onEdit: openEditSheet,
+                    addressAction: openMaps,
+                    phoneAction: callClient,
+                    emailAction: emailClient
+                )
             }
             .padding(.horizontal, 24)
             .padding(.top, 24)
@@ -689,6 +701,60 @@ struct ClientDetailView: View {
             )
             .ignoresSafeArea()
         )
+        .sheet(isPresented: $showingEditSheet) {
+            NavigationStack {
+                ScrollView {
+                    VStack(spacing: 16) {
+                        ClientEditableCard(client: $draftClient, jobCount: jobCount)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 24)
+                }
+                .navigationTitle("Edit client")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { showingEditSheet = false }
+                    }
+
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") { saveEdits() }
+                    }
+                }
+            }
+        }
+    }
+
+    private func openEditSheet() {
+        draftClient = client
+        showingEditSheet = true
+    }
+
+    private func openMaps() {
+        guard !client.address.isEmpty else { return }
+        let query = client.address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        guard let url = URL(string: "https://www.google.com/maps/search/?api=1&query=\(query)") else { return }
+        openURL(url)
+    }
+
+    private func callClient() {
+        guard !client.phone.isEmpty else { return }
+        let digits = client.phone.filter { $0.isNumber }
+        guard !digits.isEmpty else { return }
+        guard let url = URL(string: "tel://\(digits)") else { return }
+        openURL(url)
+    }
+
+    private func emailClient() {
+        guard !client.email.isEmpty else { return }
+        let encoded = client.email.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? client.email
+        guard let url = URL(string: "mailto:\(encoded)") else { return }
+        openURL(url)
+    }
+
+    private func saveEdits() {
+        client = draftClient
+        showingEditSheet = false
     }
 }
 
