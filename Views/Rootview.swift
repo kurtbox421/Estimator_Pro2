@@ -52,7 +52,6 @@ struct RootView: View {
     @State private var showingAddJob = false
     @State private var invoiceSheetMode: AddEditInvoiceView.Mode?
     @State private var showingMaterialGenerator = false
-    @State private var generatorTargetJob: Job? = nil
     @State private var showingNewClientForm = false
 
     var body: some View {
@@ -68,7 +67,8 @@ struct RootView: View {
                 .ignoresSafeArea()
 
                 VStack(spacing: 16) {
-                    headerBar(availableWidth: layout.contentWidth)
+                    topBar
+                        .frame(maxWidth: layout.contentWidth, alignment: .center)
 
                     heroCard
                         .frame(maxWidth: layout.contentWidth, alignment: .center)
@@ -93,9 +93,7 @@ struct RootView: View {
             }
         }
         .sheet(isPresented: $showingMaterialGenerator) {
-            MaterialGeneratorView(
-                job: generatorTargetJob
-            )
+            MaterialGeneratorView()
         }
         .sheet(isPresented: $showingNewClientForm) {
             NewClientForm { newClient in
@@ -108,15 +106,26 @@ struct RootView: View {
 
     // MARK: Header
 
-    private func headerBar(availableWidth: CGFloat) -> some View {
-        ViewThatFits(in: .horizontal) {
-            headerHorizontal
-            headerStacked(width: availableWidth)
+    private var topBar: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                segmentedControl
+
+                Spacer(minLength: 12)
+
+                HStack(spacing: 8) {
+                    addButton
+
+                    if selectedTab == .estimates {
+                        materialGeneratorButton
+                    }
+                }
+            }
         }
     }
 
-    private var tabButtons: some View {
-        HStack(spacing: 10) {
+    private var segmentedControl: some View {
+        HStack(spacing: 8) {
             ForEach(AppTab.allCases, id: \.self) { tab in
                 Button {
                     selectedTab = tab
@@ -125,84 +134,64 @@ struct RootView: View {
                         .font(.subheadline.weight(.semibold))
                         .padding(.vertical, 8)
                         .padding(.horizontal, 14)
+                        .frame(maxWidth: .infinity)
                         .background(
                             Capsule()
                                 .fill(selectedTab == tab
-                                      ? Color.white.opacity(0.95)
-                                      : Color.black.opacity(0.25))
+                                      ? Color.white
+                                      : Color.clear)
                         )
-                        .foregroundColor(selectedTab == tab ? .black : .white)
+                        .foregroundColor(
+                            selectedTab == tab
+                            ? Color.accentColor
+                            : Color.primary
+                        )
                 }
             }
         }
+        .padding(6)
+        .background(
+            Capsule().fill(Color(.systemGray5))
+        )
     }
 
-    private var actionButtons: some View {
-        HStack(spacing: 10) {
-            Button {
-                switch selectedTab {
-                case .estimates:
-                    showingAddJob = true
-                case .invoices:
-                    invoiceSheetMode = .add
-                case .clients:
-                    showingNewClientForm = true
-                case .settings:
-                    break
-                }
-            } label: {
-                Image(systemName: "plus")
-                    .font(.headline)
-                    .padding(8)
-                    .background(Color.white.opacity(0.95))
-                    .clipShape(Circle())
-                    .foregroundColor(.black)
+    private var addButton: some View {
+        Button {
+            switch selectedTab {
+            case .estimates:
+                showingAddJob = true
+            case .invoices:
+                invoiceSheetMode = .add
+            case .clients:
+                showingNewClientForm = true
+            case .settings:
+                break
             }
-
-            Button {
-                generatorTargetJob = nil
-                showingMaterialGenerator = true
-            } label: {
-                Image(systemName: "paintbrush.pointed.fill")
-                    .font(.headline)
-                    .padding(8)
-                    .background(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 1.0, green: 0.17, blue: 0.60),
-                                Color(red: 0.90, green: 0.30, blue: 1.0)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .clipShape(Circle())
-                    .foregroundColor(.white)
-            }
+        } label: {
+            Image(systemName: "plus")
+                .font(.headline)
+                .padding(10)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color(.systemGray5))
+                )
+                .foregroundColor(.primary)
         }
     }
 
-    private var headerHorizontal: some View {
-        HStack {
-            tabButtons
-            Spacer(minLength: 16)
-            actionButtons
+    private var materialGeneratorButton: some View {
+        Button {
+            showingMaterialGenerator = true
+        } label: {
+            Image(systemName: "wand.and.stars")
+                .font(.headline)
+                .padding(10)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.purple)
+                )
+                .foregroundColor(.white)
         }
-    }
-
-    private func headerStacked(width: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                tabButtons
-                    .padding(.trailing)
-            }
-
-            HStack {
-                Spacer()
-                actionButtons
-            }
-        }
-        .frame(maxWidth: width)
     }
 
     // MARK: Hero card

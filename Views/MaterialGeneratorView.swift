@@ -15,7 +15,7 @@ struct MaterialGeneratorView: View {
 
     // MARK: - Init
 
-    init(job: Job?) {
+    init(job: Job? = nil) {
         self.preselectedJob = job
         _selectedJobID = State(initialValue: job?.id)
     }
