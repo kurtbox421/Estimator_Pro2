@@ -12,6 +12,7 @@ import FirebaseCore
 struct EstimatorProApp: App {
     @StateObject private var jobVM = JobViewModel()
     @StateObject private var invoiceVM = InvoiceViewModel()
+    @StateObject private var estimateVM = EstimateViewModel()
     @StateObject private var clientVM = ClientViewModel()
     @StateObject private var companySettings = CompanySettingsStore()
     @StateObject private var settingsManager = SettingsManager()
@@ -38,6 +39,7 @@ struct EstimatorProApp: App {
                     }
                     .environmentObject(jobVM)
                     .environmentObject(invoiceVM)
+                    .environmentObject(estimateVM)
                     .environmentObject(clientVM)
                     .environmentObject(companySettings)
                     .environmentObject(settingsManager)

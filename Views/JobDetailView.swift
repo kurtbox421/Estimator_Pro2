@@ -11,6 +11,7 @@ import UIKit
 struct JobDetailView: View {
     @EnvironmentObject private var vm: JobViewModel
     @EnvironmentObject private var invoiceVM: InvoiceViewModel
+    @EnvironmentObject private var estimateVM: EstimateViewModel
     @EnvironmentObject private var clientVM: ClientViewModel
     @EnvironmentObject private var companySettings: CompanySettingsStore
 
@@ -20,9 +21,6 @@ struct JobDetailView: View {
     @State private var showingMaterialSheet = false
     @State private var createdInvoice: Invoice?
     @State private var showingInvoiceEditor = false
-    @State private var pdfURL: URL?
-    @State private var exportError: String?
-    @State private var showingPDFPreview = false
 
     // Labor editor state
     @State private var showingLaborEditor = false
@@ -38,7 +36,7 @@ struct JobDetailView: View {
         JobDocumentLayout(
             summary: EstimateSummaryCard(job: job, editLaborAction: showLaborEditor),
             document: EstimateDocumentCard(
-                job: job,
+                estimate: currentEstimate,
                 previewAction: previewEstimate,
                 convertAction: convertToInvoice
             ),
@@ -97,19 +95,25 @@ struct JobDetailView: View {
         .sheet(isPresented: $showingLaborEditor) {
             laborEditorSheet
         }
-        .sheet(isPresented: $showingPDFPreview) {
-            if let url = pdfURL {
+        .sheet(isPresented: Binding(
+            get: { estimateVM.isShowingPreview },
+            set: { estimateVM.isShowingPreview = $0 }
+        )) {
+            if let url = estimateVM.previewURL {
                 PDFPreviewSheet(url: url)
             } else {
                 Text("No PDF available.")
             }
         }
-        .alert("Unable to generate PDF", isPresented: .constant(exportError != nil)) {
+        .alert("Unable to generate PDF", isPresented: Binding(
+            get: { estimateVM.previewError != nil },
+            set: { if !$0 { estimateVM.previewError = nil } }
+        )) {
             Button("OK", role: .cancel) {
-                exportError = nil
+                estimateVM.previewError = nil
             }
         } message: {
-            Text(exportError ?? "Unknown error")
+            Text(estimateVM.previewError ?? "Unknown error")
         }
         .onAppear(perform: syncJobWithViewModel)
         .onReceive(vm.$jobs) { _ in
@@ -157,20 +161,15 @@ struct JobDetailView: View {
     }
 
     private func previewEstimate() {
-        exportError = nil
-        do {
-            let url = try InvoicePDFRenderer.generateInvoicePDF(
-                for: job,
-                client: client(for: job),
-                company: companySettings.settings
-            )
-            pdfURL = url
-            showingPDFPreview = true
-        } catch {
-            exportError = error.localizedDescription
-            print("Failed to generate invoice PDF:", error)
-        }
+        guard let estimate = currentEstimate else { return }
+        estimateVM.preview(
+            estimate: estimate,
+            client: client(for: estimate),
+            company: companySettings.settings
+        )
     }
+
+    private var currentEstimate: Job? { job }
 
     private func convertToInvoice() {
         let clientName = clientVM.clients.first(where: { $0.id == job.clientId })?.name ?? "Unassigned"
@@ -387,7 +386,7 @@ private struct EstimateSummaryCard: View {
 }
 
 private struct EstimateDocumentCard: View {
-    let job: Job
+    let estimate: Job?
     let previewAction: () -> Void
     let convertAction: () -> Void
 
@@ -408,9 +407,10 @@ private struct EstimateDocumentCard: View {
 
                 HStack(spacing: 12) {
                     Button(action: previewAction) {
-                        Label("Preview Invoice", systemImage: "doc.text.magnifyingglass")
+                        Label("Preview Estimate", systemImage: "doc.text.magnifyingglass")
                     }
                     .buttonStyle(PrimaryBlueButton())
+                    .disabled(estimate == nil)
 
                     Button(action: convertAction) {
                         Label("Convert to Invoice", systemImage: "doc.richtext")
