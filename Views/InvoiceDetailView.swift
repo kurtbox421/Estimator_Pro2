@@ -2,25 +2,16 @@ import SwiftUI
 import UIKit
 
 struct InvoiceDetailView: View {
-    @EnvironmentObject var jobVM: JobViewModel
     @EnvironmentObject var clientVM: ClientViewModel
     @EnvironmentObject private var companySettings: CompanySettingsStore
 
     @ObservedObject var invoiceVM: InvoiceViewModel
-    let invoice: Invoice
-
-    @State private var editingMaterial: Material?
-    @State private var editingMaterialIndex: Int?
-    @State private var showingMaterialSheet = false
+    @Binding var invoice: Invoice
 
     // MARK: - Derived data
 
-    private var currentInvoice: Invoice {
-        invoiceVM.invoices.first(where: { $0.id == invoice.id }) ?? invoice
-    }
-
     private var client: Client? {
-        guard let clientID = currentInvoice.clientID else { return nil }
+        guard let clientID = invoice.clientID else { return nil }
         return clientVM.clients.first(where: { $0.id == clientID })
     }
 
@@ -28,9 +19,9 @@ struct InvoiceDetailView: View {
 
     var body: some View {
         JobDocumentLayout(
-            summary: InvoiceSummaryCard(invoice: currentInvoice, client: client),
+            summary: InvoiceSummaryCard(invoice: invoice, client: client),
             document: InvoiceDocumentCard(
-                invoice: currentInvoice,
+                invoice: invoice,
                 previewAction: handlePreviewInvoice,
                 statusAction: markInvoiceAsSent
             ),
@@ -44,28 +35,36 @@ struct InvoiceDetailView: View {
                 )
             },
             materials: {
-                MaterialsSection(
-                    materials: currentInvoice.materials,
-                    addAction: addMaterial,
-                    editAction: editMaterial,
-                    deleteAction: deleteMaterial
-                )
+                RoundedCard {
+                    Section(header: Text("Materials")) {
+                        ForEach($invoice.materials) { $material in
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    TextField("Description", text: $material.name)
+
+                                    Text("\(material.quantity, specifier: "%.2f") × \(material.unitCost, format: .currency(code: "USD"))")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer()
+
+                                Text(material.total, format: .currency(code: "USD"))
+                            }
+                            .swipeActions(edge: .trailing) {
+                                Button(role: .destructive) {
+                                    deleteMaterial(material)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
+                    }
+                }
             }
         )
         .navigationTitle("Invoice")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showingMaterialSheet) {
-            MaterialEditView(material: editingMaterial) { material in
-                if let index = editingMaterialIndex {
-                    invoiceVM.updateMaterial(in: currentInvoice, at: index, with: material)
-                } else {
-                    invoiceVM.addMaterial(to: currentInvoice, material: material)
-                }
-
-                clearMaterialEditingState()
-            }
-            .onDisappear(perform: clearMaterialEditingState)
-        }
         .sheet(isPresented: Binding(get: { invoiceVM.isShowingPreview }, set: { invoiceVM.isShowingPreview = $0 })) {
             if let url = invoiceVM.previewURL {
                 PDFPreviewSheet(url: url)
@@ -87,36 +86,19 @@ struct InvoiceDetailView: View {
 
     // MARK: - Actions
 
-    private func addMaterial() {
-        editingMaterial = Material(name: "", quantity: 1, unitCost: 0)
-        editingMaterialIndex = nil
-        showingMaterialSheet = true
-    }
-
-    private func editMaterial(_ index: Int) {
-        guard currentInvoice.materials.indices.contains(index) else { return }
-        editingMaterial = currentInvoice.materials[index]
-        editingMaterialIndex = index
-        showingMaterialSheet = true
-    }
-
-    private func deleteMaterial(_ index: Int) {
-        invoiceVM.removeMaterial(from: currentInvoice, at: index)
-    }
-
-    private func clearMaterialEditingState() {
-        editingMaterial = nil
-        editingMaterialIndex = nil
+    private func deleteMaterial(_ material: Material) {
+        if let index = invoice.materials.firstIndex(where: { $0.id == material.id }) {
+            invoice.materials.remove(at: index)
+        }
     }
 
     private func handlePreviewInvoice() {
-        invoiceVM.preview(invoice: currentInvoice, client: client, company: companySettings.settings)
+        invoiceVM.preview(invoice: invoice, client: client, company: companySettings.settings)
     }
 
     private func markInvoiceAsSent() {
-        var updatedInvoice = currentInvoice
-        updatedInvoice.status = updatedInvoice.status == .sent ? .draft : .sent
-        invoiceVM.update(updatedInvoice)
+        invoice.status = invoice.status == .sent ? .draft : .sent
+        invoiceVM.update(invoice)
     }
 
     private func callClient() {

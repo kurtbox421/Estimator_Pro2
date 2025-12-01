@@ -33,9 +33,9 @@ struct JobListView: View {
 
                     // Card-style list
                     List {
-                        ForEach(vm.jobs) { job in
-                            NavigationLink(destination: JobDetailView(job: job)) {
-                                JobRowView(job: job)
+                        ForEach($vm.jobs) { $job in
+                            NavigationLink(destination: EstimateDetailView(estimate: $job)) {
+                                JobRowView(job: job.wrappedValue)
                             }
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
