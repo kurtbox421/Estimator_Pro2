@@ -15,6 +15,7 @@ struct AddEditJobView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var vm: JobViewModel
     @EnvironmentObject private var clientVM: ClientViewModel
+    @EnvironmentObject private var settingsManager: SettingsManager
 
     let mode: Mode
 
@@ -110,10 +111,16 @@ struct AddEditJobView: View {
                     ForEach($materialDrafts) { $draft in
                         VStack(alignment: .leading, spacing: 4) {
                             TextField("Description", text: $draft.name)
+                                .onChange(of: draft.name) { _ in
+                                    applyCommonMaterialPriceIfNeeded(for: draft.id)
+                                }
 
                             HStack {
                                 TextField("Qty", text: $draft.quantity)
                                     .keyboardType(.decimalPad)
+                                    .onChange(of: draft.quantity) { _ in
+                                        applyCommonMaterialPriceIfNeeded(for: draft.id)
+                                    }
 
                                 TextField("Unit Cost", text: $draft.unitCost)
                                     .keyboardType(.decimalPad)
@@ -249,6 +256,18 @@ struct AddEditJobView: View {
         }
 
         dismiss()
+    }
+
+    private func applyCommonMaterialPriceIfNeeded(for draftID: UUID) {
+        guard let index = materialDrafts.firstIndex(where: { $0.id == draftID }) else { return }
+
+        let name = materialDrafts[index].name
+        guard let price = settingsManager.commonMaterialPrice(for: name),
+              !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+
+        if materialDrafts[index].unitCost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            materialDrafts[index].unitCost = String(format: "%.2f", price)
+        }
     }
 }
 
