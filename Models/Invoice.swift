@@ -1,6 +1,5 @@
 import Foundation
 
-@MainActor
 struct Invoice: Identifiable, Codable {
     enum InvoiceStatus: String, Codable, CaseIterable, Identifiable {
         case draft
@@ -11,8 +10,8 @@ struct Invoice: Identifiable, Codable {
 
         var displayName: String {
             switch self {
-            case .draft: return "Draft"
-            case .sent: return "Sent"
+            case .draft:   return "Draft"
+            case .sent:    return "Sent"
             case .overdue: return "Overdue"
             }
         }
@@ -26,16 +25,16 @@ struct Invoice: Identifiable, Codable {
     var materials: [Material]
     var status: InvoiceStatus
     var dueDate: Date?
-    
+
     var amount: Double {
         materials.reduce(into: 0) { $0 += $1.total }
     }
 
-
+    // MARK: - Designated init
 
     init(
         id: UUID = UUID(),
-        invoiceNumber: String = InvoiceNumberManager.shared.generateInvoiceNumber(),
+        invoiceNumber: String? = nil,
         title: String,
         clientID: UUID? = nil,
         clientName: String,
@@ -45,6 +44,7 @@ struct Invoice: Identifiable, Codable {
     ) {
         self.id = id
         self.invoiceNumber = invoiceNumber
+            ?? InvoiceNumberManager.shared.generateInvoiceNumber()
         self.title = title
         self.clientID = clientID
         self.clientName = clientName
@@ -52,6 +52,8 @@ struct Invoice: Identifiable, Codable {
         self.status = status
         self.dueDate = dueDate
     }
+
+    // MARK: - Convenience init from Job
 
     init(from job: Job, clientName: String) {
         self.init(
@@ -62,6 +64,8 @@ struct Invoice: Identifiable, Codable {
             status: .draft
         )
     }
+
+    // MARK: - Codable
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -77,13 +81,17 @@ struct Invoice: Identifiable, Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        id = try container.decode(UUID.self, forKey: .id)
-        invoiceNumber = try container.decodeIfPresent(String.self, forKey: .invoiceNumber) ?? InvoiceNumberManager.shared.generateInvoiceNumber()
-        title = try container.decode(String.self, forKey: .title)
-        clientID = try container.decodeIfPresent(UUID.self, forKey: .clientID)
-        clientName = try container.decode(String.self, forKey: .clientName)
-        materials = try container.decodeIfPresent([Material].self, forKey: .materials) ?? []
-        status = try container.decode(InvoiceStatus.self, forKey: .status)
-        dueDate = try container.decodeIfPresent(Date.self, forKey: .dueDate)
+        let decodedId = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        let decodedInvoiceNumber = try container.decodeIfPresent(String.self, forKey: .invoiceNumber)
+
+        self.id = decodedId
+        self.invoiceNumber = decodedInvoiceNumber
+            ?? InvoiceNumberManager.shared.generateInvoiceNumber()
+        self.title = try container.decode(String.self, forKey: .title)
+        self.clientID = try container.decodeIfPresent(UUID.self, forKey: .clientID)
+        self.clientName = try container.decode(String.self, forKey: .clientName)
+        self.materials = try container.decodeIfPresent([Material].self, forKey: .materials) ?? []
+        self.status = try container.decode(InvoiceStatus.self, forKey: .status)
+        self.dueDate = try container.decodeIfPresent(Date.self, forKey: .dueDate)
     }
 }
