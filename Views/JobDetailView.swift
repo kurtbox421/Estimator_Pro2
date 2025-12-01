@@ -38,6 +38,7 @@ struct EstimateDetailView: View {
             },
             document: EstimateDocumentCard(
                 estimate: estimate,
+                editAction: { showingJobEditor = true },
                 previewAction: previewEstimate,
                 convertAction: convertToInvoice
             ),
@@ -432,6 +433,7 @@ private struct EstimateSummaryCard: View {
 
 private struct EstimateDocumentCard: View {
     let estimate: Job?
+    let editAction: () -> Void
     let previewAction: () -> Void
     let convertAction: () -> Void
 
@@ -451,6 +453,12 @@ private struct EstimateDocumentCard: View {
                     .foregroundColor(.white.opacity(0.8))
 
                 HStack(spacing: 12) {
+                    Button(action: editAction) {
+                        Label("Edit Estimate", systemImage: "square.and.pencil")
+                    }
+                    .buttonStyle(PrimaryBlueButton())
+                    .disabled(estimate == nil)
+
                     Button(action: previewAction) {
                         Label("Preview Estimate", systemImage: "doc.text.magnifyingglass")
                     }
