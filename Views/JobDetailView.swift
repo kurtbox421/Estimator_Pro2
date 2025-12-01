@@ -503,7 +503,7 @@ struct EstimateCustomerCard: View {
                     Spacer()
 
                     VStack(alignment: .trailing, spacing: 10) {
-                        Text(client?.company.isEmpty == false ? client?.company ?? "—" : "Not Assigned")
+                        Text(clientDisplayName)
                             .font(.subheadline.weight(.semibold))
                             .foregroundColor(.white)
                         Text(client?.name ?? "—")
@@ -528,6 +528,22 @@ struct EstimateCustomerCard: View {
         Text(text)
             .font(.subheadline.weight(.semibold))
             .foregroundColor(.white.opacity(0.7))
+    }
+}
+
+extension EstimateCustomerCard {
+    private var clientDisplayName: String {
+        guard let client else { return "Not Assigned" }
+
+        if client.company.isEmpty == false {
+            return client.company
+        }
+
+        if client.name.isEmpty == false {
+            return client.name
+        }
+
+        return "Not Assigned"
     }
 }
 
