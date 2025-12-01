@@ -45,6 +45,8 @@
                 AA06AA06AA06AA06AA06AA06 /* CompanySettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA05AA05AA05AA05AA05AA05 /* CompanySettingsStore.swift */; };
                 AA07AA07AA07AA07AA07AA07 /* InvoicePDFPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA07AA07AA07AA07AA07AA06 /* InvoicePDFPreviewView.swift */; };
                 AA08AA08AA08AA08AA08AA08 /* InvoicePDFGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA08AA08AA08AA08AA08AA07 /* InvoicePDFGenerator.swift */; };
+                AA09AA09AA09AA09AA09AA09 /* InvoicePDFRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA09AA09AA09AA09AA09AA08 /* InvoicePDFRenderer.swift */; };
+                AA0AAA0AAA0AAA0AAA0AAA0 /* PDFPreviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0AAA0AAA0AAA0AAA0AAA0F /* PDFPreviewSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -83,6 +85,8 @@
                 AA05AA05AA05AA05AA05AA05 /* CompanySettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanySettingsStore.swift; sourceTree = "<group>"; };
                 AA07AA07AA07AA07AA07AA06 /* InvoicePDFPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoicePDFPreviewView.swift; sourceTree = "<group>"; };
                 AA08AA08AA08AA08AA08AA07 /* InvoicePDFGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoicePDFGenerator.swift; sourceTree = "<group>"; };
+                AA09AA09AA09AA09AA09AA08 /* InvoicePDFRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoicePDFRenderer.swift; sourceTree = "<group>"; };
+                AA0AAA0AAA0AAA0AAA0AAA0F /* PDFPreviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFPreviewSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -154,11 +158,12 @@
 			path = ViewModels;
 			sourceTree = "<group>";
 		};
-		3969FD052ECD36830005C1AE /* Views */ = {
-			isa = PBXGroup;
-			children = (
-				39B8DCAD2EDCF57E005D0E08 /* JobDocumentLayout.swift */,
-				39B8DC952EDCE6D4005D0E08 /* AuthScreenView.swift */,
+                3969FD052ECD36830005C1AE /* Views */ = {
+                        isa = PBXGroup;
+                        children = (
+                                AA0AAA0AAA0AAA0AAA0AAA0F /* PDFPreviewSheet.swift */,
+                                39B8DCAD2EDCF57E005D0E08 /* JobDocumentLayout.swift */,
+                                39B8DC952EDCE6D4005D0E08 /* AuthScreenView.swift */,
 				39B8DC882EDCDB7C005D0E08 /* SignInView.swift */,
 				39B8DC892EDCDB7C005D0E08 /* SignUpView.swift */,
 				39B8DC862EDCDB6E005D0E08 /* AuthContainerView.swift */,
@@ -186,9 +191,10 @@
 			path = Managers;
 			sourceTree = "<group>";
 		};
-		3969FD072ECD36970005C1AE /* Utilities */ = {
-			isa = PBXGroup;
+                3969FD072ECD36970005C1AE /* Utilities */ = {
+                        isa = PBXGroup;
                         children = (
+                                AA09AA09AA09AA09AA09AA08 /* InvoicePDFRenderer.swift */,
                                 39B8DC722EDB6F4D005D0E08 /* MaterialSuggestionEngine.swift */,
                                 39B8DC702EDB6779005D0E08 /* Formatting.swift */,
                                 AA08AA08AA08AA08AA08AA07 /* InvoicePDFGenerator.swift */,
@@ -301,9 +307,11 @@
 				39B8DC732EDB6F4D005D0E08 /* MaterialSuggestionEngine.swift in Sources */,
 				3969FD0D2ECD372A0005C1AE /* JobDetailView.swift in Sources */,
 				3969FD022ECD36190005C1AE /* JobViewModel.swift in Sources */,
-                                39B8DC712EDB6779005D0E08 /* Formatting.swift in Sources */,
-                                AA08AA08AA08AA08AA08AA08 /* InvoicePDFGenerator.swift in Sources */,
-                                3969FD152ECD3F410005C1AE /* AddMaterialView.swift in Sources */,
+                            39B8DC712EDB6779005D0E08 /* Formatting.swift in Sources */,
+                            AA09AA09AA09AA09AA09AA09 /* InvoicePDFRenderer.swift in Sources */,
+                            AA08AA08AA08AA08AA08AA08 /* InvoicePDFGenerator.swift in Sources */,
+                            AA0AAA0AAA0AAA0AAA0AAA0 /* PDFPreviewSheet.swift in Sources */,
+                            3969FD152ECD3F410005C1AE /* AddMaterialView.swift in Sources */,
                                 39B8DC752EDB6FC4005D0E08 /* MaterialGeneratorView.swift in Sources */,
                                 39B8DC872EDCDB6E005D0E08 /* AuthContainerView.swift in Sources */,
 				AA06AA06AA06AA06AA06AA06 /* CompanySettingsStore.swift in Sources */,

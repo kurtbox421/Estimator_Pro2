@@ -21,6 +21,7 @@ struct JobDetailView: View {
     @State private var createdInvoice: Invoice?
     @State private var showingInvoiceEditor = false
     @State private var pdfURL: URL?
+    @State private var exportError: String?
     @State private var showingPDFPreview = false
 
     // Labor editor state
@@ -98,12 +99,17 @@ struct JobDetailView: View {
         }
         .sheet(isPresented: $showingPDFPreview) {
             if let url = pdfURL {
-                NavigationStack {
-                    InvoicePDFPreviewView(url: url)
-                        .navigationTitle("Estimate Preview")
-                        .navigationBarTitleDisplayMode(.inline)
-                }
+                PDFPreviewSheet(url: url)
+            } else {
+                Text("No PDF available.")
             }
+        }
+        .alert("Unable to generate PDF", isPresented: .constant(exportError != nil)) {
+            Button("OK", role: .cancel) {
+                exportError = nil
+            }
+        } message: {
+            Text(exportError ?? "Unknown error")
         }
         .onAppear(perform: syncJobWithViewModel)
         .onReceive(vm.$jobs) { _ in
@@ -151,12 +157,24 @@ struct JobDetailView: View {
     }
 
     private func previewEstimate() {
-        let snapshot = makeSnapshot()
+        exportError = nil
         do {
-            let url = try InvoicePDFGenerator.generate(snapshot: snapshot)
+            let company = CompanySettings(
+                companyName: companySettings.companyName,
+                companyAddress: companySettings.companyAddress,
+                companyPhone: companySettings.companyPhone,
+                companyEmail: companySettings.companyEmail
+            )
+
+            let url = try InvoicePDFRenderer.generateInvoicePDF(
+                for: job,
+                client: client(for: job),
+                company: company
+            )
             pdfURL = url
             showingPDFPreview = true
         } catch {
+            exportError = error.localizedDescription
             print("PDF generation error:", error)
         }
     }
@@ -230,51 +248,6 @@ struct JobDetailView: View {
 
         UIApplication.shared.open(url)
     }
-
-    private func makeSnapshot() -> InvoicePDFSnapshot {
-        let companyInfo = InvoicePDFSnapshot.CompanyInfo(
-            name: companySettings.companyName,
-            lines: [
-                companySettings.companyAddress,
-                "Phone: \(companySettings.companyPhone)",
-                "Email: \(companySettings.companyEmail)"
-            ],
-            logo: nil
-        )
-
-        let estimateClient = client(for: job)
-        let clientName = estimateClient?.name ?? job.name
-        let clientLines = [
-            estimateClient?.address ?? "",
-            estimateClient.map { "Phone: \($0.phone)" } ?? "",
-            estimateClient.map { "Email: \($0.email)" } ?? ""
-        ]
-
-        let clientInfo = InvoicePDFSnapshot.ClientInfo(
-            title: "Bill To",
-            name: clientName,
-            lines: clientLines
-        )
-
-        let materialItems: [InvoicePDFSnapshot.LineItem] = job.materials.map { material in
-            InvoicePDFSnapshot.LineItem(
-                name: material.name,
-                quantity: material.quantity,
-                unitCost: material.unitCost,
-                lineTotal: material.total
-            )
-        }
-
-        return InvoicePDFSnapshot(
-            title: "Estimate",
-            date: job.dateCreated,
-            company: companyInfo,
-            client: clientInfo,
-            materialsTitle: "Materials",
-            materials: materialItems
-        )
-    }
-
 
     // MARK: - Labor editor sheet
 
@@ -440,7 +413,7 @@ private struct EstimateDocumentCard: View {
 
                 HStack(spacing: 12) {
                     Button(action: previewAction) {
-                        Label("Preview Estimate", systemImage: "doc.text.magnifyingglass")
+                        Label("Preview Invoice", systemImage: "doc.text.magnifyingglass")
                     }
                     .buttonStyle(PrimaryBlueButton())
 

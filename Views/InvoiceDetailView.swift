@@ -12,6 +12,7 @@ struct InvoiceDetailView: View {
     @State private var editingMaterialIndex: Int?
     @State private var showingMaterialSheet = false
     @State private var pdfURL: URL?
+    @State private var exportError: String?
     @State private var showingPDFPreview = false
 
     // MARK: - Derived data
@@ -72,12 +73,17 @@ struct InvoiceDetailView: View {
         }
         .sheet(isPresented: $showingPDFPreview) {
             if let url = pdfURL {
-                NavigationStack {
-                    InvoicePDFPreviewView(url: url)
-                        .navigationTitle("Invoice Preview")
-                        .navigationBarTitleDisplayMode(.inline)
-                }
+                PDFPreviewSheet(url: url)
+            } else {
+                Text("No PDF available.")
             }
+        }
+        .alert("Unable to generate PDF", isPresented: .constant(exportError != nil)) {
+            Button("OK", role: .cancel) {
+                exportError = nil
+            }
+        } message: {
+            Text(exportError ?? "Unknown error")
         }
     }
 
@@ -98,66 +104,26 @@ struct InvoiceDetailView: View {
     }
 
     private func handlePreviewInvoice() {
-        let snapshot = makeSnapshot()
+        exportError = nil
         do {
-            let url = try InvoicePDFGenerator.generate(snapshot: snapshot)
+            let company = CompanySettings(
+                companyName: companySettings.companyName,
+                companyAddress: companySettings.companyAddress,
+                companyPhone: companySettings.companyPhone,
+                companyEmail: companySettings.companyEmail
+            )
+
+            let url = try InvoicePDFRenderer.generateInvoicePDF(
+                for: currentInvoice,
+                client: client,
+                company: company
+            )
             pdfURL = url
             showingPDFPreview = true
         } catch {
+            exportError = error.localizedDescription
             print("PDF generation error:", error)
         }
-    }
-
-    private func makeSnapshot() -> InvoicePDFSnapshot {
-        let companyInfo = InvoicePDFSnapshot.CompanyInfo(
-            name: companySettings.companyName,
-            lines: [
-                companySettings.companyAddress,
-                "Phone: \(companySettings.companyPhone)",
-                "Email: \(companySettings.companyEmail)"
-            ],
-            logo: nil
-        )
-
-        let clientName = client?.name ?? currentInvoice.clientName
-        let clientLines: [String]
-        if let client {
-            clientLines = [
-                client.address,
-                "Phone: \(client.phone)",
-                "Email: \(client.email)"
-            ]
-        } else {
-            clientLines = [
-                "",
-                "",
-                ""
-            ]
-        }
-
-        let clientInfo = InvoicePDFSnapshot.ClientInfo(
-            title: "Bill To",
-            name: clientName,
-            lines: clientLines
-        )
-
-        let materialItems: [InvoicePDFSnapshot.LineItem] = currentInvoice.materials.map { material in
-            InvoicePDFSnapshot.LineItem(
-                name: material.name,
-                quantity: material.quantity,
-                unitCost: material.unitCost,
-                lineTotal: material.total
-            )
-        }
-
-        return InvoicePDFSnapshot(
-            title: "Invoice",
-            date: currentInvoice.dueDate ?? Date(),
-            company: companyInfo,
-            client: clientInfo,
-            materialsTitle: "Materials",
-            materials: materialItems
-        )
     }
 
     private func markInvoiceAsSent() {
