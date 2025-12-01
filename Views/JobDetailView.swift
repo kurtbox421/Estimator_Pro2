@@ -18,6 +18,7 @@ struct EstimateDetailView: View {
     @Binding var estimate: Job
     @State private var createdInvoice: Invoice?
     @State private var showingInvoiceEditor = false
+    @State private var showingJobEditor = false
 
     // Labor editor state
     @State private var showingLaborEditor = false
@@ -26,7 +27,15 @@ struct EstimateDetailView: View {
 
     var body: some View {
         JobDocumentLayout(
-            summary: EstimateSummaryCard(job: estimate, editLaborAction: showLaborEditor),
+            summary: VStack(spacing: 12) {
+                EstimateSummaryCard(job: estimate, editLaborAction: showLaborEditor)
+                EditDocumentCard(
+                    title: "Edit Job",
+                    subtitle: "Update the basics and labor details for this job.",
+                    buttonTitle: "Edit Job",
+                    action: { showingJobEditor = true }
+                )
+            },
             document: EstimateDocumentCard(
                 estimate: estimate,
                 previewAction: previewEstimate,
@@ -113,6 +122,13 @@ struct EstimateDetailView: View {
         )
         .navigationTitle("Estimate")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingJobEditor) {
+            NavigationView {
+                AddEditJobView(mode: .edit(estimate))
+                    .environmentObject(vm)
+                    .environmentObject(clientVM)
+            }
+        }
         .sheet(isPresented: $showingInvoiceEditor) {
             if let createdInvoice {
                 NavigationView {
@@ -533,6 +549,32 @@ struct EstimateQuickActionsCard: View {
                     }
                     .buttonStyle(SecondaryPillButton())
                 }
+            }
+        }
+    }
+}
+
+struct EditDocumentCard: View {
+    let title: String
+    let subtitle: String
+    let buttonTitle: String
+    let action: () -> Void
+
+    var body: some View {
+        RoundedCard {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(title)
+                    .font(.title3.weight(.semibold))
+                    .foregroundColor(.white)
+
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.8))
+
+                Button(action: action) {
+                    Label(buttonTitle, systemImage: "square.and.pencil")
+                }
+                .buttonStyle(PrimaryBlueButton())
             }
         }
     }
