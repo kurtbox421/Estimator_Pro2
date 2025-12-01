@@ -9,6 +9,7 @@ struct InvoiceDetailView: View {
     @ObservedObject var invoiceVM: InvoiceViewModel
     let invoice: Invoice
 
+    @State private var editingMaterial: Material?
     @State private var editingMaterialIndex: Int?
     @State private var showingMaterialSheet = false
 
@@ -54,19 +55,16 @@ struct InvoiceDetailView: View {
         .navigationTitle("Invoice")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingMaterialSheet) {
-            if let index = editingMaterialIndex {
-                AddMaterialView(
-                    mode: .editInInvoice(invoice: currentInvoice, index: index),
-                    jobVM: jobVM,
-                    invoiceVM: invoiceVM
-                )
-            } else {
-                AddMaterialView(
-                    mode: .addToInvoice(invoice: currentInvoice),
-                    jobVM: jobVM,
-                    invoiceVM: invoiceVM
-                )
+            MaterialEditView(material: editingMaterial) { material in
+                if let index = editingMaterialIndex {
+                    invoiceVM.updateMaterial(in: currentInvoice, at: index, with: material)
+                } else {
+                    invoiceVM.addMaterial(to: currentInvoice, material: material)
+                }
+
+                clearMaterialEditingState()
             }
+            .onDisappear(perform: clearMaterialEditingState)
         }
         .sheet(isPresented: Binding(get: { invoiceVM.isShowingPreview }, set: { invoiceVM.isShowingPreview = $0 })) {
             if let url = invoiceVM.previewURL {
@@ -90,17 +88,25 @@ struct InvoiceDetailView: View {
     // MARK: - Actions
 
     private func addMaterial() {
+        editingMaterial = Material(name: "", quantity: 1, unitCost: 0)
         editingMaterialIndex = nil
         showingMaterialSheet = true
     }
 
     private func editMaterial(_ index: Int) {
+        guard currentInvoice.materials.indices.contains(index) else { return }
+        editingMaterial = currentInvoice.materials[index]
         editingMaterialIndex = index
         showingMaterialSheet = true
     }
 
     private func deleteMaterial(_ index: Int) {
         invoiceVM.removeMaterial(from: currentInvoice, at: index)
+    }
+
+    private func clearMaterialEditingState() {
+        editingMaterial = nil
+        editingMaterialIndex = nil
     }
 
     private func handlePreviewInvoice() {
