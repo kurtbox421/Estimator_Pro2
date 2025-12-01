@@ -33,6 +33,7 @@ struct EstimateDetailView: View {
             document: EstimateDocumentCard(
                 estimate: estimate,
                 previewAction: previewEstimate,
+                editAction: editEstimate,
                 convertAction: convertToInvoice
             ),
             customer: { EstimateCustomerCard(client: client(for: estimate)) },
