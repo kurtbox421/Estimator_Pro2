@@ -42,26 +42,57 @@ struct InvoiceDetailView: View {
             },
             materials: {
                 RoundedCard {
-                    Section(header: Text("Materials")) {
-                        ForEach($invoice.materials) { $material in
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    TextField("Description", text: $material.name)
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack(alignment: .center) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Materials")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundColor(.white.opacity(0.7))
 
-                                    Text("\(material.quantity, specifier: "%.2f") × \(material.unitCost, format: .currency(code: "USD"))")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                Text("\(invoice.materials.count) items")
+                                    .font(.caption2)
+                                    .foregroundColor(.white.opacity(0.6))
+                            }
+
+                            Spacer()
+                        }
+
+                        if invoice.materials.isEmpty {
+                            Text("No materials added yet.")
+                                .font(.subheadline)
+                                .foregroundColor(.white.opacity(0.7))
+                        } else {
+                            ForEach($invoice.materials) { $material in
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack(alignment: .firstTextBaseline) {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            TextField("Description", text: $material.name)
+                                                .font(.subheadline.weight(.semibold))
+                                                .foregroundColor(.white)
+
+                                            Text("\(material.quantity, specifier: "%.2f") × \(material.unitCost, format: .currency(code: "USD"))")
+                                                .font(.caption)
+                                                .foregroundColor(.white.opacity(0.7))
+                                        }
+
+                                        Spacer()
+
+                                        Text(material.total, format: .currency(code: "USD"))
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundColor(.white)
+                                    }
+                                }
+                                .padding(.vertical, 6)
+                                .swipeActions(edge: .trailing) {
+                                    Button(role: .destructive) {
+                                        deleteMaterial(material)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
                                 }
 
-                                Spacer()
-
-                                Text(material.total, format: .currency(code: "USD"))
-                            }
-                            .swipeActions(edge: .trailing) {
-                                Button(role: .destructive) {
-                                    deleteMaterial(material)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
+                                if material.id != invoice.materials.last?.id {
+                                    Divider().overlay(Color.white.opacity(0.15))
                                 }
                             }
                         }
