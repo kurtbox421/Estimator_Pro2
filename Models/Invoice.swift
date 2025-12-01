@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 struct Invoice: Identifiable, Codable {
     enum InvoiceStatus: String, Codable, CaseIterable, Identifiable {
         case draft
@@ -18,6 +19,7 @@ struct Invoice: Identifiable, Codable {
     }
 
     var id: UUID
+    var invoiceNumber: String
     var title: String
     var clientID: UUID?
     var clientName: String
@@ -33,6 +35,7 @@ struct Invoice: Identifiable, Codable {
 
     init(
         id: UUID = UUID(),
+        invoiceNumber: String = InvoiceNumberManager.shared.generateInvoiceNumber(),
         title: String,
         clientID: UUID? = nil,
         clientName: String,
@@ -41,6 +44,7 @@ struct Invoice: Identifiable, Codable {
         dueDate: Date? = nil
     ) {
         self.id = id
+        self.invoiceNumber = invoiceNumber
         self.title = title
         self.clientID = clientID
         self.clientName = clientName
@@ -61,6 +65,7 @@ struct Invoice: Identifiable, Codable {
 
     private enum CodingKeys: String, CodingKey {
         case id
+        case invoiceNumber
         case title
         case clientID
         case clientName
@@ -73,6 +78,7 @@ struct Invoice: Identifiable, Codable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
         id = try container.decode(UUID.self, forKey: .id)
+        invoiceNumber = try container.decodeIfPresent(String.self, forKey: .invoiceNumber) ?? InvoiceNumberManager.shared.generateInvoiceNumber()
         title = try container.decode(String.self, forKey: .title)
         clientID = try container.decodeIfPresent(UUID.self, forKey: .clientID)
         clientName = try container.decode(String.self, forKey: .clientName)

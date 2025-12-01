@@ -192,6 +192,7 @@ struct JobDetailView: View {
 
         let invoice = Invoice(
             id: UUID(),
+            invoiceNumber: InvoiceNumberManager.shared.generateInvoiceNumber(),
             title: job.name,
             clientID: job.clientId,
             clientName: clientName,
