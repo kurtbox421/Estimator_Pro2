@@ -98,16 +98,66 @@ struct InvoiceDetailView: View {
     }
 
     private func handlePreviewInvoice() {
+        let snapshot = makeSnapshot()
         do {
-            let url = try InvoicePDFGenerator.generate(
-                invoice: invoice,
-                company: companySettings
-            )
+            let url = try InvoicePDFGenerator.generate(snapshot: snapshot)
             pdfURL = url
             showingPDFPreview = true
         } catch {
             print("PDF generation error:", error)
         }
+    }
+
+    private func makeSnapshot() -> InvoicePDFSnapshot {
+        let companyInfo = InvoicePDFSnapshot.CompanyInfo(
+            name: companySettings.companyName,
+            lines: [
+                companySettings.companyAddress,
+                "Phone: \(companySettings.companyPhone)",
+                "Email: \(companySettings.companyEmail)"
+            ],
+            logo: nil
+        )
+
+        let clientName = client?.name ?? currentInvoice.clientName
+        let clientLines: [String]
+        if let client {
+            clientLines = [
+                client.address,
+                "Phone: \(client.phone)",
+                "Email: \(client.email)"
+            ]
+        } else {
+            clientLines = [
+                "",
+                "",
+                ""
+            ]
+        }
+
+        let clientInfo = InvoicePDFSnapshot.ClientInfo(
+            title: "Bill To",
+            name: clientName,
+            lines: clientLines
+        )
+
+        let materialItems: [InvoicePDFSnapshot.LineItem] = currentInvoice.materials.map { material in
+            InvoicePDFSnapshot.LineItem(
+                name: material.name,
+                quantity: material.quantity,
+                unitCost: material.unitCost,
+                lineTotal: material.total
+            )
+        }
+
+        return InvoicePDFSnapshot(
+            title: "Invoice",
+            date: currentInvoice.dueDate ?? Date(),
+            company: companyInfo,
+            client: clientInfo,
+            materialsTitle: "Materials",
+            materials: materialItems
+        )
     }
 
     private func markInvoiceAsSent() {
