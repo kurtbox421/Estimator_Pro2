@@ -43,36 +43,70 @@ struct EstimateDetailView: View {
             },
             materials: {
                 RoundedCard {
-                    Section(header: Text("Materials")) {
-                        ForEach($estimate.materials) { $material in
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    TextField("Description", text: $material.name)
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack(alignment: .center) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Materials")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundColor(.white.opacity(0.7))
 
-                                    Text("\(material.quantity, specifier: "%.2f") × \(material.unitCost, format: .currency(code: "USD"))")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                Text("\(estimate.materials.count) items")
+                                    .font(.caption2)
+                                    .foregroundColor(.white.opacity(0.6))
+                            }
+
+                            Spacer()
+
+                            Button(action: addMaterial) {
+                                Label("Add Material", systemImage: "plus")
+                                    .font(.caption.weight(.semibold))
+                                    .padding(.vertical, 6)
+                                    .padding(.horizontal, 10)
+                                    .background(Color.white.opacity(0.16))
+                                    .clipShape(Capsule())
+                                    .foregroundColor(.white)
+                            }
+                        }
+
+                        if estimate.materials.isEmpty {
+                            Text("No materials added yet.")
+                                .font(.subheadline)
+                                .foregroundColor(.white.opacity(0.7))
+                        } else {
+                            ForEach($estimate.materials) { $material in
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack(alignment: .firstTextBaseline) {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            TextField("Description", text: $material.name)
+                                                .font(.subheadline.weight(.semibold))
+                                                .foregroundColor(.white)
+
+                                            Text("\(material.quantity, specifier: "%.2f") × \(material.unitCost, format: .currency(code: "USD"))")
+                                                .font(.caption)
+                                                .foregroundColor(.white.opacity(0.7))
+                                        }
+
+                                        Spacer()
+
+                                        Text(material.total, format: .currency(code: "USD"))
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundColor(.white)
+                                    }
+                                }
+                                .padding(.vertical, 6)
+                                .swipeActions(edge: .trailing) {
+                                    Button(role: .destructive) {
+                                        deleteMaterial(material)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
                                 }
 
-                                Spacer()
-
-                                Text(material.total, format: .currency(code: "USD"))
-                            }
-                            .swipeActions(edge: .trailing) {
-                                Button(role: .destructive) {
-                                    deleteMaterial(material)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
+                                if material.id != estimate.materials.last?.id {
+                                    Divider().overlay(Color.white.opacity(0.15))
                                 }
                             }
                         }
-                    }
-
-                    Button {
-                        addMaterial()
-                    } label: {
-                        Label("Add Material", systemImage: "plus")
-                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
             }
