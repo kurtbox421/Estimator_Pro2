@@ -307,12 +307,12 @@ struct EstimatesTabView: View {
     var body: some View {
         List {
             // iterate jobs with index + value
-            ForEach(Array(vm.jobs.enumerated()), id: \.element.id) { index, job in
+            ForEach($vm.jobs) { $job in
                 NavigationLink {
                     // pass a binding to this job
-                    EstimateDetailView(estimate: $vm.jobs[index])
+                    EstimateDetailView(estimate: $job)
                 } label: {
-                    EstimateJobCard(job: job)
+                    EstimateJobCard(job: $job.wrappedValue)
                 }
                 .listRowInsets(rowInsets)
                 .listRowSeparator(.hidden)
@@ -320,7 +320,7 @@ struct EstimatesTabView: View {
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(role: .destructive) {
                         withAnimation {
-                            vm.delete(job)
+                            vm.delete($job.wrappedValue)
                         }
                     } label: {
                         Label("Delete", systemImage: "trash")
