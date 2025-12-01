@@ -533,6 +533,10 @@ private struct InvoiceCard: View {
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.85))
 
+                Text("Invoice #: \(invoice.invoiceNumber)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.8))
+
                 if let dueDate = invoice.dueDate {
                     Text("Due \(dueDate, formatter: Formatters.invoiceDueDate)")
                         .font(.caption)

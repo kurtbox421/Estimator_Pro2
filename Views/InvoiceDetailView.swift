@@ -189,6 +189,10 @@ private struct InvoiceSummaryCard: View {
                                 .foregroundColor(.white.opacity(0.8))
                         }
 
+                        Text("Invoice #: \(invoice.invoiceNumber)")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(.white.opacity(0.85))
+
                         HStack(spacing: 8) {
                             Label("Invoice", systemImage: "doc.text")
                                 .font(.caption.weight(.semibold))

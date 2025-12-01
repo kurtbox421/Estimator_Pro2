@@ -28,6 +28,7 @@ struct InvoicePDFRenderer {
     static func generateInvoicePDF(for invoice: Invoice,
                                    client: Client? = nil,
                                    company: CompanySettings) throws -> URL {
+        let invoiceNumber = invoice.invoiceNumber
         let lineItems = invoice.materials.map { material in
             InvoiceLineItem(description: material.name, amount: material.total)
         }
@@ -35,7 +36,7 @@ struct InvoicePDFRenderer {
         return try renderPDF(
             title: "Invoice",
             subtitle: invoice.title,
-            invoiceNumber: invoice.id.uuidString,
+            invoiceNumber: invoiceNumber,
             client: client,
             company: company,
             lineItems: lineItems,
