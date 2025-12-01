@@ -306,11 +306,11 @@ struct EstimatesTabView: View {
 
     var body: some View {
         List {
-            ForEach(vm.jobs) { job in
+            ForEach($vm.jobs) { $job in
                 NavigationLink {
-                    JobDetailView(job: job)
+                    EstimateDetailView(estimate: $job)
                 } label: {
-                    EstimateJobCard(job: job)
+                    EstimateJobCard(job: job.wrappedValue)
                 }
                 .listRowInsets(rowInsets)
                 .listRowSeparator(.hidden)
@@ -318,7 +318,7 @@ struct EstimatesTabView: View {
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(role: .destructive) {
                         withAnimation {
-                            vm.delete(job)
+                            vm.delete(job.wrappedValue)
                         }
                     } label: {
                         Label("Delete", systemImage: "trash")
@@ -430,24 +430,24 @@ struct InvoicesTabView: View {
 
     var body: some View {
         List {
-            ForEach(invoiceVM.invoices) { invoice in
+            ForEach($invoiceVM.invoices) { $invoice in
                 NavigationLink {
-                    InvoiceDetailView(invoiceVM: invoiceVM, invoice: invoice)
+                    InvoiceDetailView(invoiceVM: invoiceVM, invoice: $invoice)
                 } label: {
-                    InvoiceCard(invoice: invoice)
+                    InvoiceCard(invoice: invoice.wrappedValue)
                 }
                 .listRowInsets(rowInsets)
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        withAnimation {
-                            invoiceVM.delete(invoice)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            withAnimation {
+                                invoiceVM.delete(invoice.wrappedValue)
+                            }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
                         }
-                    } label: {
-                        Label("Delete", systemImage: "trash")
                     }
-                }
             }
 
             if invoiceVM.invoices.isEmpty {

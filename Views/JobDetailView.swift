@@ -8,18 +8,14 @@
 import SwiftUI
 import UIKit
 
-struct JobDetailView: View {
+struct EstimateDetailView: View {
     @EnvironmentObject private var vm: JobViewModel
     @EnvironmentObject private var invoiceVM: InvoiceViewModel
     @EnvironmentObject private var estimateVM: EstimateViewModel
     @EnvironmentObject private var clientVM: ClientViewModel
     @EnvironmentObject private var companySettings: CompanySettingsStore
 
-    private let jobID: Job.ID
-    @State private var job: Job
-    @State private var editingMaterial: Material?
-    @State private var editingMaterialIndex: Int?
-    @State private var showingMaterialSheet = false
+    @Binding var estimate: Job
     @State private var createdInvoice: Invoice?
     @State private var showingInvoiceEditor = false
 
@@ -28,55 +24,61 @@ struct JobDetailView: View {
     @State private var laborHoursText = ""
     @State private var laborRateText = ""
 
-    init(job: Job) {
-        self.jobID = job.id
-        _job = State(initialValue: job)
-    }
-
     var body: some View {
         JobDocumentLayout(
-            summary: EstimateSummaryCard(job: job, editLaborAction: showLaborEditor),
+            summary: EstimateSummaryCard(job: estimate, editLaborAction: showLaborEditor),
             document: EstimateDocumentCard(
-                estimate: currentEstimate,
+                estimate: estimate,
                 previewAction: previewEstimate,
                 convertAction: convertToInvoice
             ),
-            customer: { EstimateCustomerCard(client: client(for: job)) },
+            customer: { EstimateCustomerCard(client: client(for: estimate)) },
             quickActions: {
                 EstimateQuickActionsCard(
-                    client: client(for: job),
+                    client: client(for: estimate),
                     callAction: callClient,
                     textAction: textClient,
                     followUpAction: followUpClient
                 )
             },
             materials: {
-                MaterialsSection(
-                    materials: job.materials,
-                    addAction: addMaterial,
-                    editAction: editMaterial,
-                    deleteAction: deleteMaterial
-                )
+                RoundedCard {
+                    Section(header: Text("Materials")) {
+                        ForEach($estimate.materials) { $material in
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    TextField("Description", text: $material.name)
+
+                                    Text("\(material.quantity, specifier: "%.2f") × \(material.unitCost, format: .currency(code: "USD"))")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                Spacer()
+
+                                Text(material.total, format: .currency(code: "USD"))
+                            }
+                            .swipeActions(edge: .trailing) {
+                                Button(role: .destructive) {
+                                    deleteMaterial(material)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
+                    }
+
+                    Button {
+                        addMaterial()
+                    } label: {
+                        Label("Add Material", systemImage: "plus")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
             }
         )
         .navigationTitle("Estimate")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showingMaterialSheet) {
-            MaterialEditView(material: editingMaterial) { material in
-                if let index = editingMaterialIndex {
-                    if job.materials.indices.contains(index) {
-                        job.materials[index] = material
-                    }
-                    vm.update(job, replacingMaterialAt: index, with: material)
-                } else {
-                    job.materials.append(material)
-                    vm.addMaterial(material, to: job)
-                }
-
-                clearMaterialEditingState()
-            }
-            .onDisappear(perform: clearMaterialEditingState)
-        }
         .sheet(isPresented: $showingInvoiceEditor) {
             if let createdInvoice {
                 NavigationView {
@@ -109,10 +111,6 @@ struct JobDetailView: View {
         } message: {
             Text(estimateVM.previewError ?? "Unknown error")
         }
-        .onAppear(perform: syncJobWithViewModel)
-        .onReceive(vm.$jobs) { _ in
-            syncJobWithViewModel()
-        }
     }
 
     // MARK: - Helpers
@@ -123,36 +121,24 @@ struct JobDetailView: View {
     }
 
     private func showLaborEditor() {
-        laborHoursText = String(format: "%.2f", job.laborHours)
-        laborRateText = String(format: "%.2f", job.laborRate)
+        laborHoursText = String(format: "%.2f", estimate.laborHours)
+        laborRateText = String(format: "%.2f", estimate.laborRate)
         showingLaborEditor = true
     }
 
     // MARK: - Materials editing
 
     private func addMaterial() {
-        editingMaterial = Material(name: "", quantity: 1, unitCost: 0)
-        editingMaterialIndex = nil
-        showingMaterialSheet = true
+        let newMaterial = Material(name: "", quantity: 1, unitCost: 0)
+        estimate.materials.append(newMaterial)
+        vm.update(estimate)
     }
 
-    private func editMaterial(_ index: Int) {
-        guard job.materials.indices.contains(index) else { return }
-        editingMaterial = job.materials[index]
-        editingMaterialIndex = index
-        showingMaterialSheet = true
-    }
-
-    private func deleteMaterial(_ index: Int) {
-        vm.removeMaterial(at: index, in: job)
-        if job.materials.indices.contains(index) {
-            job.materials.remove(at: index)
+    private func deleteMaterial(_ material: Material) {
+        if let index = estimate.materials.firstIndex(where: { $0.id == material.id }) {
+            estimate.materials.remove(at: index)
+            vm.update(estimate)
         }
-    }
-
-    private func clearMaterialEditingState() {
-        editingMaterial = nil
-        editingMaterialIndex = nil
     }
 
     private func saveLabor() {
@@ -165,22 +151,14 @@ struct JobDetailView: View {
             return
         }
 
-        var updated = job
-        updated.laborHours = hours
-        updated.laborRate = rate
+        estimate.laborHours = hours
+        estimate.laborRate = rate
 
-        vm.update(updated)
-        job = updated
+        vm.update(estimate)
         showingLaborEditor = false
     }
 
-    private func syncJobWithViewModel() {
-        guard let updatedJob = vm.jobs.first(where: { $0.id == jobID }) else { return }
-        job = updatedJob
-    }
-
     private func previewEstimate() {
-        guard let estimate = currentEstimate else { return }
         estimateVM.preview(
             estimate: estimate,
             client: client(for: estimate),
@@ -188,21 +166,19 @@ struct JobDetailView: View {
         )
     }
 
-    private var currentEstimate: Job? { job }
-
     private func convertToInvoice() {
-        let clientName = clientVM.clients.first(where: { $0.id == job.clientId })?.name ?? "Unassigned"
+        let clientName = clientVM.clients.first(where: { $0.id == estimate.clientId })?.name ?? "Unassigned"
 
         // Start with the existing materials from the estimate
-        var invoiceMaterials = job.materials
+        var invoiceMaterials = estimate.materials
 
         // If there is labor, add it as a separate line item
-        if job.laborHours > 0 && job.laborRate > 0 {
+        if estimate.laborHours > 0 && estimate.laborRate > 0 {
             let laborMaterial = Material(
                 id: UUID(),
                 name: "Labor",
-                quantity: job.laborHours,
-                unitCost: job.laborRate
+                quantity: estimate.laborHours,
+                unitCost: estimate.laborRate
                 // add any extra Material fields you have (notes/url/etc) with sensible defaults
             )
             invoiceMaterials.append(laborMaterial)
@@ -211,8 +187,8 @@ struct JobDetailView: View {
         let invoice = Invoice(
             id: UUID(),
             invoiceNumber: InvoiceNumberManager.shared.generateInvoiceNumber(),
-            title: job.name,
-            clientID: job.clientId,
+            title: estimate.name,
+            clientID: estimate.clientId,
             clientName: clientName,
             materials: invoiceMaterials,
             status: .draft,
@@ -220,7 +196,7 @@ struct JobDetailView: View {
         )
 
         invoiceVM.add(invoice)
-        vm.delete(job)
+        vm.delete(estimate)
         createdInvoice = invoice
         showingInvoiceEditor = true
     }
@@ -229,7 +205,7 @@ struct JobDetailView: View {
 
     private func callClient() {
         guard
-            let phone = client(for: job)?.phone,
+            let phone = client(for: estimate)?.phone,
             !phone.isEmpty
         else { return }
 
@@ -242,7 +218,7 @@ struct JobDetailView: View {
 
     private func textClient() {
         guard
-            let phone = client(for: job)?.phone,
+            let phone = client(for: estimate)?.phone,
             !phone.isEmpty
         else { return }
 
@@ -254,7 +230,7 @@ struct JobDetailView: View {
 
     private func followUpClient() {
         guard
-            let email = client(for: job)?.email,
+            let email = client(for: estimate)?.email,
             !email.isEmpty,
             let url = URL(string: "mailto:\(email)")
         else { return }
