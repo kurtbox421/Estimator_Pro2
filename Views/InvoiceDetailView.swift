@@ -11,9 +11,6 @@ struct InvoiceDetailView: View {
 
     @State private var editingMaterialIndex: Int?
     @State private var showingMaterialSheet = false
-    @State private var pdfURL: URL?
-    @State private var exportError: String?
-    @State private var showingPDFPreview = false
 
     // MARK: - Derived data
 
@@ -71,19 +68,22 @@ struct InvoiceDetailView: View {
                 )
             }
         }
-        .sheet(isPresented: $showingPDFPreview) {
-            if let url = pdfURL {
+        .sheet(isPresented: Binding(get: { invoiceVM.isShowingPreview }, set: { invoiceVM.isShowingPreview = $0 })) {
+            if let url = invoiceVM.previewURL {
                 PDFPreviewSheet(url: url)
             } else {
                 Text("No PDF available.")
             }
         }
-        .alert("Unable to generate PDF", isPresented: .constant(exportError != nil)) {
+        .alert(
+            "Unable to generate PDF",
+            isPresented: Binding(get: { invoiceVM.previewError != nil }, set: { if !$0 { invoiceVM.previewError = nil } })
+        ) {
             Button("OK", role: .cancel) {
-                exportError = nil
+                invoiceVM.previewError = nil
             }
         } message: {
-            Text(exportError ?? "Unknown error")
+            Text(invoiceVM.previewError ?? "Unknown error")
         }
     }
 
@@ -104,19 +104,7 @@ struct InvoiceDetailView: View {
     }
 
     private func handlePreviewInvoice() {
-        exportError = nil
-        do {
-            let url = try InvoicePDFRenderer.generateInvoicePDF(
-                for: currentInvoice,
-                client: client,
-                company: companySettings.settings
-            )
-            pdfURL = url
-            showingPDFPreview = true
-        } catch {
-            exportError = error.localizedDescription
-            print("Failed to generate invoice PDF:", error)
-        }
+        invoiceVM.preview(invoice: currentInvoice, client: client, company: companySettings.settings)
     }
 
     private func markInvoiceAsSent() {
