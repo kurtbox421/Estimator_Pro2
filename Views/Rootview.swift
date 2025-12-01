@@ -306,11 +306,13 @@ struct EstimatesTabView: View {
 
     var body: some View {
         List {
-            ForEach($vm.jobs) { $job in
+            // iterate jobs with index + value
+            ForEach(Array(vm.jobs.enumerated()), id: \.element.id) { index, job in
                 NavigationLink {
-                    EstimateDetailView(estimate: $job)
+                    // pass a binding to this job
+                    EstimateDetailView(estimate: $vm.jobs[index])
                 } label: {
-                    EstimateJobCard(job: job.wrappedValue)
+                    EstimateJobCard(job: job)
                 }
                 .listRowInsets(rowInsets)
                 .listRowSeparator(.hidden)
@@ -318,7 +320,7 @@ struct EstimatesTabView: View {
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(role: .destructive) {
                         withAnimation {
-                            vm.delete(job.wrappedValue)
+                            vm.delete(job)
                         }
                     } label: {
                         Label("Delete", systemImage: "trash")
@@ -329,15 +331,12 @@ struct EstimatesTabView: View {
             if vm.jobs.isEmpty {
                 Text("No estimates yet. Tap the + button to add your first job.")
                     .font(.subheadline)
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(.white.opacity(0.77))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .listRowInsets(rowInsets)
                     .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
             }
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
     }
 }
 
@@ -430,24 +429,27 @@ struct InvoicesTabView: View {
 
     var body: some View {
         List {
-            ForEach($invoiceVM.invoices) { $invoice in
+            ForEach(invoiceVM.invoices.indices, id: \.self) { index in
+                let invoiceBinding = $invoiceVM.invoices[index]
+                let invoice = invoiceBinding.wrappedValue
+
                 NavigationLink {
-                    InvoiceDetailView(invoiceVM: invoiceVM, invoice: $invoice)
+                    InvoiceDetailView(invoice: invoiceBinding)
                 } label: {
-                    InvoiceCard(invoice: invoice.wrappedValue)
+                    InvoiceCard(invoice: invoice)
                 }
                 .listRowInsets(rowInsets)
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            withAnimation {
-                                invoiceVM.delete(invoice.wrappedValue)
-                            }
-                        } label: {
-                            Label("Delete", systemImage: "trash")
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    Button(role: .destructive) {
+                        withAnimation {
+                            invoiceVM.delete(invoice)
                         }
+                    } label: {
+                        Label("Delete", systemImage: "trash")
                     }
+                }
             }
 
             if invoiceVM.invoices.isEmpty {
@@ -464,6 +466,7 @@ struct InvoicesTabView: View {
         .scrollContentBackground(.hidden)
     }
 }
+
 
 // MARK: - Clients tab (NEW COMPACT LIST)
 

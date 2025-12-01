@@ -2,10 +2,14 @@ import SwiftUI
 import UIKit
 
 struct InvoiceDetailView: View {
+    // MARK: - Environment
+
     @EnvironmentObject var clientVM: ClientViewModel
+    @EnvironmentObject var invoiceVM: InvoiceViewModel
     @EnvironmentObject private var companySettings: CompanySettingsStore
 
-    @ObservedObject var invoiceVM: InvoiceViewModel
+    // MARK: - Binding
+
     @Binding var invoice: Invoice
 
     // MARK: - Derived data
@@ -25,7 +29,9 @@ struct InvoiceDetailView: View {
                 previewAction: handlePreviewInvoice,
                 statusAction: markInvoiceAsSent
             ),
-            customer: { EstimateCustomerCard(client: client) },
+            customer: {
+                EstimateCustomerCard(client: client)
+            },
             quickActions: {
                 EstimateQuickActionsCard(
                     client: client,
@@ -39,7 +45,7 @@ struct InvoiceDetailView: View {
                     Section(header: Text("Materials")) {
                         ForEach($invoice.materials) { $material in
                             HStack {
-                                VStack(alignment: .leading) {
+                                VStack(alignment: .leading, spacing: 4) {
                                     TextField("Description", text: $material.name)
 
                                     Text("\(material.quantity, specifier: "%.2f") × \(material.unitCost, format: .currency(code: "USD"))")
@@ -65,7 +71,12 @@ struct InvoiceDetailView: View {
         )
         .navigationTitle("Invoice")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: Binding(get: { invoiceVM.isShowingPreview }, set: { invoiceVM.isShowingPreview = $0 })) {
+        .sheet(
+            isPresented: Binding(
+                get: { invoiceVM.isShowingPreview },
+                set: { invoiceVM.isShowingPreview = $0 }
+            )
+        ) {
             if let url = invoiceVM.previewURL {
                 PDFPreviewSheet(url: url)
             } else {
@@ -74,7 +85,10 @@ struct InvoiceDetailView: View {
         }
         .alert(
             "Unable to generate PDF",
-            isPresented: Binding(get: { invoiceVM.previewError != nil }, set: { if !$0 { invoiceVM.previewError = nil } })
+            isPresented: Binding(
+                get: { invoiceVM.previewError != nil },
+                set: { if !$0 { invoiceVM.previewError = nil } }
+            )
         ) {
             Button("OK", role: .cancel) {
                 invoiceVM.previewError = nil
@@ -103,7 +117,6 @@ struct InvoiceDetailView: View {
 
     private func callClient() {
         guard let phone = client?.phone, !phone.isEmpty else { return }
-
         let digits = phone.filter("0123456789".contains)
         guard let url = URL(string: "tel://\(digits)") else { return }
         UIApplication.shared.open(url)
@@ -111,14 +124,18 @@ struct InvoiceDetailView: View {
 
     private func textClient() {
         guard let phone = client?.phone, !phone.isEmpty else { return }
-
         let digits = phone.filter("0123456789".contains)
         guard let url = URL(string: "sms:\(digits)") else { return }
         UIApplication.shared.open(url)
     }
 
     private func followUpClient() {
-        guard let email = client?.email, !email.isEmpty, let url = URL(string: "mailto:\(email)") else { return }
+        guard
+            let email = client?.email,
+            !email.isEmpty,
+            let url = URL(string: "mailto:\(email)")
+        else { return }
+
         UIApplication.shared.open(url)
     }
 }
@@ -253,15 +270,16 @@ private struct InvoiceDocumentCard: View {
                     .foregroundColor(.white.opacity(0.8))
 
                 HStack(spacing: 12) {
-                    Button {
-                        previewAction()
-                    } label: {
+                    Button(action: previewAction) {
                         Label("Preview Invoice", systemImage: "doc.text.magnifyingglass")
                     }
                     .buttonStyle(.borderedProminent)
 
                     Button(action: statusAction) {
-                        Label(invoice.status == .sent ? "Mark as Draft" : "Mark as Sent", systemImage: invoice.status == .sent ? "arrow.uturn.backward" : "paperplane.fill")
+                        Label(
+                            invoice.status == .sent ? "Mark as Draft" : "Mark as Sent",
+                            systemImage: invoice.status == .sent ? "arrow.uturn.backward" : "paperplane.fill"
+                        )
                     }
                     .buttonStyle(PrimaryBlueButton())
                 }
