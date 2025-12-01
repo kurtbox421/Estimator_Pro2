@@ -18,7 +18,6 @@ struct EstimateDetailView: View {
     @Binding var estimate: Job
     @State private var createdInvoice: Invoice?
     @State private var showingInvoiceEditor = false
-    @State private var showingJobEditor = false
 
     // Labor editor state
     @State private var showingLaborEditor = false
@@ -29,16 +28,9 @@ struct EstimateDetailView: View {
         JobDocumentLayout(
             summary: VStack(spacing: 12) {
                 EstimateSummaryCard(job: estimate, editLaborAction: showLaborEditor)
-                EditDocumentCard(
-                    title: "Edit Job",
-                    subtitle: "Update the basics and labor details for this job.",
-                    buttonTitle: "Edit Job",
-                    action: { showingJobEditor = true }
-                )
             },
             document: EstimateDocumentCard(
                 estimate: estimate,
-                editAction: { showingJobEditor = true },
                 previewAction: previewEstimate,
                 convertAction: convertToInvoice
             ),
@@ -123,13 +115,6 @@ struct EstimateDetailView: View {
         )
         .navigationTitle("Estimate")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showingJobEditor) {
-            NavigationView {
-                AddEditJobView(mode: .edit(estimate))
-                    .environmentObject(vm)
-                    .environmentObject(clientVM)
-            }
-        }
         .sheet(isPresented: $showingInvoiceEditor) {
             if let createdInvoice {
                 NavigationView {
@@ -433,7 +418,6 @@ private struct EstimateSummaryCard: View {
 
 private struct EstimateDocumentCard: View {
     let estimate: Job?
-    let editAction: () -> Void
     let previewAction: () -> Void
     let convertAction: () -> Void
 
@@ -453,12 +437,6 @@ private struct EstimateDocumentCard: View {
                     .foregroundColor(.white.opacity(0.8))
 
                 HStack(spacing: 12) {
-                    Button(action: editAction) {
-                        Label("Edit Estimate", systemImage: "square.and.pencil")
-                    }
-                    .buttonStyle(PrimaryBlueButton())
-                    .disabled(estimate == nil)
-
                     Button(action: previewAction) {
                         Label("Preview Estimate", systemImage: "doc.text.magnifyingglass")
                     }
