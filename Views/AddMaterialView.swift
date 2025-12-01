@@ -148,3 +148,18 @@ struct AddMaterialView: View {
     }
 }
 
+extension AddMaterialView.Mode: Identifiable {
+    var id: String {
+        switch self {
+        case .add(let job):
+            return "add-job-\(job.id)"
+        case .edit(let job, let index):
+            return "edit-job-\(job.id)-\(index)"
+        case .addToInvoice(let invoice):
+            return "add-invoice-\(invoice.id)"
+        case .editInInvoice(let invoice, let index):
+            return "edit-invoice-\(invoice.id)-\(index)"
+        }
+    }
+}
+

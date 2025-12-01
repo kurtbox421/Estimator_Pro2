@@ -18,7 +18,7 @@ struct EstimateDetailView: View {
     @Binding var estimate: Job
     @State private var createdInvoice: Invoice?
     @State private var showingInvoiceEditor = false
-    @State private var showingEstimateEditor = false
+    @State private var showingMaterialManager = false
 
     // Labor editor state
     @State private var showingLaborEditor = false
@@ -129,12 +129,12 @@ struct EstimateDetailView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingEstimateEditor) {
-            NavigationView {
-                AddEditJobView(mode: .edit(estimate))
-                    .environmentObject(vm)
-                    .environmentObject(clientVM)
-            }
+        .sheet(isPresented: $showingMaterialManager) {
+            MaterialManagerSheet(
+                job: $estimate,
+                jobVM: vm,
+                invoiceVM: invoiceVM
+            )
         }
         .sheet(isPresented: $showingLaborEditor) {
             laborEditorSheet
@@ -220,7 +220,7 @@ struct EstimateDetailView: View {
     }
 
     private func editEstimate() {
-        showingEstimateEditor = true
+        showingMaterialManager = true
     }
 
     private func convertToInvoice() {
@@ -591,6 +591,80 @@ struct EditDocumentCard: View {
                 .buttonStyle(PrimaryBlueButton())
             }
         }
+    }
+}
+
+struct MaterialManagerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    @Binding var job: Job
+    @ObservedObject var jobVM: JobViewModel
+    @ObservedObject var invoiceVM: InvoiceViewModel
+
+    @State private var editorMode: AddMaterialView.Mode?
+
+    var body: some View {
+        NavigationView {
+            List {
+                if job.materials.isEmpty {
+                    Text("No materials added yet.")
+                        .foregroundColor(.secondary)
+                } else {
+                    Section(header: Text("Materials")) {
+                        ForEach(job.materials.indices, id: \.self) { index in
+                            let material = job.materials[index]
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(material.name)
+                                    .font(.headline)
+                                Text("\(material.quantity, specifier: "%.2f") × \(material.unitCost, format: .currency(code: "USD"))")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                Text(material.cost, format: .currency(code: "USD"))
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button {
+                                    editorMode = .edit(job: job, index: index)
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(.blue)
+
+                                Button(role: .destructive) {
+                                    deleteMaterial(at: index)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .listStyle(.insetGrouped)
+            .navigationTitle("Edit Materials")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        editorMode = .add(job: job)
+                    } label: {
+                        Label("Add", systemImage: "plus")
+                    }
+                }
+            }
+        }
+        .sheet(item: $editorMode) { mode in
+            AddMaterialView(mode: mode, jobVM: jobVM, invoiceVM: invoiceVM)
+        }
+    }
+
+    private func deleteMaterial(at index: Int) {
+        guard job.materials.indices.contains(index) else { return }
+        job.materials.remove(at: index)
+        jobVM.update(job)
     }
 }
 
