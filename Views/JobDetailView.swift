@@ -159,23 +159,16 @@ struct JobDetailView: View {
     private func previewEstimate() {
         exportError = nil
         do {
-            let company = CompanySettings(
-                companyName: companySettings.companyName,
-                companyAddress: companySettings.companyAddress,
-                companyPhone: companySettings.companyPhone,
-                companyEmail: companySettings.companyEmail
-            )
-
             let url = try InvoicePDFRenderer.generateInvoicePDF(
                 for: job,
                 client: client(for: job),
-                company: company
+                company: companySettings.settings
             )
             pdfURL = url
             showingPDFPreview = true
         } catch {
             exportError = error.localizedDescription
-            print("PDF generation error:", error)
+            print("Failed to generate invoice PDF:", error)
         }
     }
 

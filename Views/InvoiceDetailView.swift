@@ -106,23 +106,16 @@ struct InvoiceDetailView: View {
     private func handlePreviewInvoice() {
         exportError = nil
         do {
-            let company = CompanySettings(
-                companyName: companySettings.companyName,
-                companyAddress: companySettings.companyAddress,
-                companyPhone: companySettings.companyPhone,
-                companyEmail: companySettings.companyEmail
-            )
-
             let url = try InvoicePDFRenderer.generateInvoicePDF(
                 for: currentInvoice,
                 client: client,
-                company: company
+                company: companySettings.settings
             )
             pdfURL = url
             showingPDFPreview = true
         } catch {
             exportError = error.localizedDescription
-            print("PDF generation error:", error)
+            print("Failed to generate invoice PDF:", error)
         }
     }
 

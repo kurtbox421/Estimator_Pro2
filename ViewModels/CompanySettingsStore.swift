@@ -27,6 +27,15 @@ final class CompanySettingsStore: ObservableObject {
     @Published var companyPhone: String = ""
     @Published var companyEmail: String = ""
 
+    var settings: CompanySettings {
+        CompanySettings(
+            companyName: companyName,
+            companyAddress: companyAddress,
+            companyPhone: companyPhone,
+            companyEmail: companyEmail
+        )
+    }
+
     private let persistence: PersistenceService
     private var cancellables: Set<AnyCancellable> = []
 
