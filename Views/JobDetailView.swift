@@ -17,6 +17,7 @@ struct JobDetailView: View {
 
     private let jobID: Job.ID
     @State private var job: Job
+    @State private var editingMaterial: Material?
     @State private var editingMaterialIndex: Int?
     @State private var showingMaterialSheet = false
     @State private var createdInvoice: Invoice?
@@ -52,36 +53,29 @@ struct JobDetailView: View {
             materials: {
                 MaterialsSection(
                     materials: job.materials,
-                    addAction: {
-                        editingMaterialIndex = nil
-                        showingMaterialSheet = true
-                    },
-                    editAction: { index in
-                        editingMaterialIndex = index
-                        showingMaterialSheet = true
-                    },
-                    deleteAction: { index in
-                        vm.removeMaterial(at: index, in: job)
-                    }
+                    addAction: addMaterial,
+                    editAction: editMaterial,
+                    deleteAction: deleteMaterial
                 )
             }
         )
         .navigationTitle("Estimate")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showingMaterialSheet) {
-            if let index = editingMaterialIndex {
-                AddMaterialView(
-                    mode: .edit(job: job, index: index),
-                    jobVM: vm,
-                    invoiceVM: invoiceVM
-                )
-            } else {
-                AddMaterialView(
-                    mode: .add(job: job),
-                    jobVM: vm,
-                    invoiceVM: invoiceVM
-                )
+            MaterialEditView(material: editingMaterial) { material in
+                if let index = editingMaterialIndex {
+                    if job.materials.indices.contains(index) {
+                        job.materials[index] = material
+                    }
+                    vm.update(job, replacingMaterialAt: index, with: material)
+                } else {
+                    job.materials.append(material)
+                    vm.addMaterial(material, to: job)
+                }
+
+                clearMaterialEditingState()
             }
+            .onDisappear(perform: clearMaterialEditingState)
         }
         .sheet(isPresented: $showingInvoiceEditor) {
             if let createdInvoice {
@@ -135,6 +129,31 @@ struct JobDetailView: View {
     }
 
     // MARK: - Materials editing
+
+    private func addMaterial() {
+        editingMaterial = Material(name: "", quantity: 1, unitCost: 0)
+        editingMaterialIndex = nil
+        showingMaterialSheet = true
+    }
+
+    private func editMaterial(_ index: Int) {
+        guard job.materials.indices.contains(index) else { return }
+        editingMaterial = job.materials[index]
+        editingMaterialIndex = index
+        showingMaterialSheet = true
+    }
+
+    private func deleteMaterial(_ index: Int) {
+        vm.removeMaterial(at: index, in: job)
+        if job.materials.indices.contains(index) {
+            job.materials.remove(at: index)
+        }
+    }
+
+    private func clearMaterialEditingState() {
+        editingMaterial = nil
+        editingMaterialIndex = nil
+    }
 
     private func saveLabor() {
         let hoursString = laborHoursText.replacingOccurrences(of: ",", with: ".")
@@ -546,7 +565,11 @@ struct MaterialsSection: View {
                         .font(.subheadline)
                         .foregroundColor(.white.opacity(0.7))
                 } else {
-                    ForEach(Array(materials.enumerated()), id: \.element.id) { index, material in
+                    let lastIndex = materials.indices.last
+
+                    ForEach(materials.indices, id: \.self) { index in
+                        let material = materials[index]
+
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(material.name)
@@ -566,7 +589,7 @@ struct MaterialsSection: View {
                             }
                         }
                         .padding(.vertical, 6)
-                        .contextMenu {
+                        .swipeActions(edge: .trailing) {
                             Button("Edit") {
                                 editAction(index)
                             }
@@ -578,7 +601,7 @@ struct MaterialsSection: View {
                             }
                         }
 
-                        if material.id != materials.last?.id {
+                        if let lastIndex, index != lastIndex {
                             Divider().overlay(Color.white.opacity(0.15))
                         }
                     }
