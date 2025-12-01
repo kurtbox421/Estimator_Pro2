@@ -12,6 +12,12 @@ struct AddEditJobView: View {
         case edit(Job)
     }
 
+    enum ClientSelection: Hashable {
+        case unassigned
+        case existing(UUID)
+        case newClient
+    }
+
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var vm: JobViewModel
     @EnvironmentObject private var clientVM: ClientViewModel
@@ -25,6 +31,8 @@ struct AddEditJobView: View {
     @State private var laborRate: String
     @State private var selectedClientId: UUID?
     @State private var isPresentingNewClientSheet = false
+    @State private var clientSelection: ClientSelection
+    @State private var lastNonNewClientSelection: ClientSelection
 
     struct MaterialDraft: Identifiable {
         let id = UUID()
@@ -48,6 +56,9 @@ struct AddEditJobView: View {
             _laborRate = State(initialValue: "")
             _selectedClientId = State(initialValue: nil)
             _materialDrafts = State(initialValue: [MaterialDraft()])
+            let initialSelection: ClientSelection = .unassigned
+            _clientSelection = State(initialValue: initialSelection)
+            _lastNonNewClientSelection = State(initialValue: initialSelection)
         case .edit(let job):
             _name = State(initialValue: job.name)
             _category = State(initialValue: job.category)
@@ -61,6 +72,9 @@ struct AddEditJobView: View {
                     unitCost: String(material.unitCost)
                 )
             })
+            let initialSelection: ClientSelection = job.clientId.map { .existing($0) } ?? .unassigned
+            _clientSelection = State(initialValue: initialSelection)
+            _lastNonNewClientSelection = State(initialValue: initialSelection)
         }
     }
 
@@ -83,19 +97,34 @@ struct AddEditJobView: View {
                     TextField("Job Name", text: $name)
                     TextField("Category (optional)", text: $category)
 
-                    Picker("Client", selection: $selectedClientId) {
-                        Text("Unassigned").tag(UUID?.none)
+                    Picker("Client", selection: $clientSelection) {
+                        Text("Unassigned").tag(ClientSelection.unassigned)
+
                         ForEach(clientVM.clients) { client in
                             Text(client.name.isEmpty ? "New client" : client.name)
-                                .tag(Optional(client.id))
+                                .tag(ClientSelection.existing(client.id))
                         }
 
                         Divider()
 
-                        Button {
+                        Label("New client…", systemImage: "person.badge.plus")
+                            .tag(ClientSelection.newClient)
+                    }
+                    .onChange(of: clientSelection) { newSelection in
+                        switch newSelection {
+                        case .unassigned:
+                            selectedClientId = nil
+                            lastNonNewClientSelection = newSelection
+
+                        case .existing(let id):
+                            selectedClientId = id
+                            lastNonNewClientSelection = newSelection
+
+                        case .newClient:
                             isPresentingNewClientSheet = true
-                        } label: {
-                            Label("New client…", systemImage: "person.badge.plus")
+                            DispatchQueue.main.async {
+                                clientSelection = lastNonNewClientSelection
+                            }
                         }
                     }
                 }
@@ -158,6 +187,8 @@ struct AddEditJobView: View {
             NavigationView {
                 NewClientSheet { newClient in
                     selectedClientId = newClient.id
+                    clientSelection = .existing(newClient.id)
+                    lastNonNewClientSelection = .existing(newClient.id)
                 }
                 .environmentObject(clientVM)
             }
