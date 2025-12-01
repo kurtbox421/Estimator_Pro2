@@ -10,17 +10,25 @@ struct InvoicePDFPreviewView: View {
     }
 }
 
-private struct PDFKitView: UIViewRepresentable {
+struct PDFKitView: UIViewRepresentable {
     let url: URL
 
     func makeUIView(context: Context) -> PDFView {
         let pdfView = PDFView()
         pdfView.autoScales = true
-        pdfView.document = PDFDocument(url: url)
+
+        if let doc = PDFDocument(url: url) {
+            pdfView.document = doc
+        } else {
+            print("⚠️ Failed to load PDFDocument from URL:", url)
+        }
+
         return pdfView
     }
 
     func updateUIView(_ uiView: PDFView, context: Context) {
-        uiView.document = PDFDocument(url: url)
+        if let doc = PDFDocument(url: url) {
+            uiView.document = doc
+        }
     }
 }
