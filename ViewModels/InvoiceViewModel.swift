@@ -1,4 +1,6 @@
 import Foundation
+import SwiftUI
+import os.log
 
 private enum InvoiceStorage {
     static let userDefaultsKey = "EstimatorPro_Invoices"
@@ -12,7 +14,12 @@ class InvoiceViewModel: ObservableObject {
         }
     }
 
+    @Published var previewURL: URL?
+    @Published var previewError: String?
+    @Published var isShowingPreview: Bool = false
+
     private let persistence: PersistenceService
+    private let logger = Logger(subsystem: "com.estimatorpro.invoice", category: "InvoiceViewModel")
 
     init(persistence: PersistenceService = .shared) {
         self.persistence = persistence
@@ -77,6 +84,29 @@ class InvoiceViewModel: ObservableObject {
 
     func removeMaterial(at index: Int, in invoice: Invoice) {
         removeMaterial(from: invoice, at: index)
+    }
+
+    // MARK: - PDF Preview
+
+    func generateInvoicePDF(for invoice: Invoice, client: Client?, company: CompanySettings) throws -> URL {
+        try InvoicePDFRenderer.generateInvoicePDF(
+            for: invoice,
+            client: client,
+            company: company
+        )
+    }
+
+    func preview(invoice: Invoice, client: Client?, company: CompanySettings) {
+        previewError = nil
+
+        do {
+            let url = try generateInvoicePDF(for: invoice, client: client, company: company)
+            previewURL = url
+            isShowingPreview = true
+        } catch {
+            previewError = error.localizedDescription
+            logger.error("Failed to generate invoice PDF: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Persistence
