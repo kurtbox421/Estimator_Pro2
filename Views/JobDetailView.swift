@@ -599,10 +599,14 @@ struct MaterialsSection: View {
                             }
                         }
                         .padding(.vertical, 6)
-                        .swipeActions(edge: .trailing) {
-                            Button("Edit") {
+                        .contentShape(Rectangle())
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button {
                                 editAction(index)
+                            } label: {
+                                Label("Edit", systemImage: "pencil")
                             }
+                            .tint(.blue)
 
                             Button(role: .destructive) {
                                 deleteAction(index)
