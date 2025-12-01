@@ -13,7 +13,6 @@ struct InvoiceDetailView: View {
     @State private var showingMaterialSheet = false
     @State private var pdfURL: URL?
     @State private var showingPDFPreview = false
-    @State private var pdfError: String?
 
     // MARK: - Derived data
 
@@ -33,7 +32,7 @@ struct InvoiceDetailView: View {
             summary: InvoiceSummaryCard(invoice: currentInvoice, client: client),
             document: InvoiceDocumentCard(
                 invoice: currentInvoice,
-                previewAction: previewInvoice,
+                previewAction: handlePreviewInvoice,
                 statusAction: markInvoiceAsSent
             ),
             customer: { EstimateCustomerCard(client: client) },
@@ -77,25 +76,8 @@ struct InvoiceDetailView: View {
                     InvoicePDFPreviewView(url: url)
                         .navigationTitle("Invoice Preview")
                         .navigationBarTitleDisplayMode(.inline)
-                        .toolbar {
-                            ToolbarItem(placement: .navigationBarTrailing) {
-                                ShareLink(item: url) {
-                                    Image(systemName: "square.and.arrow.up")
-                                }
-                            }
-                        }
                 }
             }
-        }
-        .alert("PDF Error", isPresented: Binding(
-            get: { pdfError != nil },
-            set: { newValue in
-                if !newValue { pdfError = nil }
-            }
-        )) {
-            Button("OK", role: .cancel) { pdfError = nil }
-        } message: {
-            Text(pdfError ?? "")
         }
     }
 
@@ -115,17 +97,16 @@ struct InvoiceDetailView: View {
         invoiceVM.removeMaterial(from: currentInvoice, at: index)
     }
 
-    private func previewInvoice() {
+    private func handlePreviewInvoice() {
         do {
             let url = try InvoicePDFGenerator.generate(
-                invoice: currentInvoice,
+                invoice: invoice,
                 company: companySettings
             )
             pdfURL = url
-            pdfError = nil
             showingPDFPreview = true
         } catch {
-            pdfError = "Failed to generate PDF: \(error.localizedDescription)"
+            print("PDF generation error:", error)
         }
     }
 
@@ -283,10 +264,12 @@ private struct InvoiceDocumentCard: View {
                     .foregroundColor(.white.opacity(0.8))
 
                 HStack(spacing: 12) {
-                    Button(action: previewAction) {
+                    Button {
+                        previewAction()
+                    } label: {
                         Label("Preview Invoice", systemImage: "doc.text.magnifyingglass")
                     }
-                    .buttonStyle(PrimaryBlueButton())
+                    .buttonStyle(.borderedProminent)
 
                     Button(action: statusAction) {
                         Label(invoice.status == .sent ? "Mark as Draft" : "Mark as Sent", systemImage: invoice.status == .sent ? "arrow.uturn.backward" : "paperplane.fill")
