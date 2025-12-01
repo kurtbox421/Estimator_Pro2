@@ -201,6 +201,7 @@ struct JobDetailView: View {
         )
 
         invoiceVM.add(invoice)
+        vm.delete(job)
         createdInvoice = invoice
         showingInvoiceEditor = true
     }
