@@ -25,6 +25,9 @@ struct EstimateDetailView: View {
     @State private var laborHoursText = ""
     @State private var laborRateText = ""
 
+    // Material editor state
+    @State private var showingMaterialEditor = false
+
     var body: some View {
         JobDocumentLayout(
             summary: VStack(spacing: 12) {
@@ -136,6 +139,13 @@ struct EstimateDetailView: View {
         .sheet(isPresented: $showingLaborEditor) {
             laborEditorSheet
         }
+        .sheet(isPresented: $showingMaterialEditor) {
+            AddMaterialView(
+                mode: .add(job: estimate),
+                jobVM: vm,
+                invoiceVM: invoiceVM
+            )
+        }
         .sheet(isPresented: Binding(
             get: { estimateVM.isShowingPreview },
             set: { estimateVM.isShowingPreview = $0 }
@@ -174,9 +184,7 @@ struct EstimateDetailView: View {
     // MARK: - Materials editing
 
     private func addMaterial() {
-        let newMaterial = Material(name: "", quantity: 1, unitCost: 0)
-        estimate.materials.append(newMaterial)
-        vm.update(estimate)
+        showingMaterialEditor = true
     }
 
     private func deleteMaterial(_ material: Material) {
