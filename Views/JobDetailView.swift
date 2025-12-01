@@ -18,6 +18,7 @@ struct EstimateDetailView: View {
     @Binding var estimate: Job
     @State private var createdInvoice: Invoice?
     @State private var showingInvoiceEditor = false
+    @State private var showingEstimateEditor = false
 
     // Labor editor state
     @State private var showingLaborEditor = false
@@ -124,6 +125,13 @@ struct EstimateDetailView: View {
                 }
             }
         }
+        .sheet(isPresented: $showingEstimateEditor) {
+            NavigationView {
+                AddEditJobView(mode: .edit(estimate))
+                    .environmentObject(vm)
+                    .environmentObject(clientVM)
+            }
+        }
         .sheet(isPresented: $showingLaborEditor) {
             laborEditorSheet
         }
@@ -200,6 +208,10 @@ struct EstimateDetailView: View {
             client: client(for: estimate),
             company: companySettings.settings
         )
+    }
+
+    private func editEstimate() {
+        showingEstimateEditor = true
     }
 
     private func convertToInvoice() {
@@ -419,6 +431,7 @@ private struct EstimateSummaryCard: View {
 private struct EstimateDocumentCard: View {
     let estimate: Job?
     let previewAction: () -> Void
+    let editAction: () -> Void
     let convertAction: () -> Void
 
     var body: some View {
@@ -439,6 +452,12 @@ private struct EstimateDocumentCard: View {
                 HStack(spacing: 12) {
                     Button(action: previewAction) {
                         Label("Preview Estimate", systemImage: "doc.text.magnifyingglass")
+                    }
+                    .buttonStyle(PrimaryBlueButton())
+                    .disabled(estimate == nil)
+
+                    Button(action: editAction) {
+                        Label("Edit Estimate", systemImage: "square.and.pencil")
                     }
                     .buttonStyle(PrimaryBlueButton())
                     .disabled(estimate == nil)
