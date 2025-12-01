@@ -18,6 +18,13 @@ struct AddEditInvoiceView: View {
     @State private var status: Invoice.InvoiceStatus
     @State private var includeDueDate: Bool
     @State private var dueDate: Date
+    @State private var materials: [Material]
+
+    @State private var isPresentingMaterialSheet = false
+    @State private var editingMaterialIndex: Int?
+    @State private var materialName = ""
+    @State private var materialQuantity = "1"
+    @State private var materialUnitCost = ""
     @State private var isPresentingNewClientSheet = false
 
     init(mode: Mode) {
@@ -31,6 +38,7 @@ struct AddEditInvoiceView: View {
             _status = State(initialValue: .draft)
             _includeDueDate = State(initialValue: false)
             _dueDate = State(initialValue: Date())
+            _materials = State(initialValue: [])
         case .edit(let invoice):
             _title = State(initialValue: invoice.title)
             _selectedClientId = State(initialValue: invoice.clientID)
@@ -38,6 +46,7 @@ struct AddEditInvoiceView: View {
             _status = State(initialValue: invoice.status)
             _includeDueDate = State(initialValue: invoice.dueDate != nil)
             _dueDate = State(initialValue: invoice.dueDate ?? Date())
+            _materials = State(initialValue: invoice.materials)
         }
     }
 
@@ -90,6 +99,50 @@ struct AddEditInvoiceView: View {
                     }
                 }
 
+                Section(header: Text("Materials")) {
+                    if materials.isEmpty {
+                        Text("No materials added yet.")
+                            .foregroundColor(.secondary)
+                    } else {
+                        ForEach(Array(materials.enumerated()), id: \.element.id) { index, material in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(material.name)
+                                        .font(.subheadline.weight(.semibold))
+                                    Text("\(material.quantity, specifier: "%.2f") × \(material.unitCost, format: .currency(code: "USD"))")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+
+                                Spacer()
+
+                                Text(material.total, format: .currency(code: "USD"))
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture { startEditingMaterial(material, at: index) }
+                            .swipeActions(edge: .trailing) {
+                                Button(role: .destructive) {
+                                    deleteMaterial(at: index)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+
+                                Button {
+                                    startEditingMaterial(material, at: index)
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(.blue)
+                            }
+                        }
+                    }
+
+                    Button(action: startAddingMaterial) {
+                        Label("Add Material", systemImage: "plus")
+                    }
+                }
+
                 Section {
                     Button {
                         save()
@@ -129,6 +182,33 @@ struct AddEditInvoiceView: View {
                 .environmentObject(clientVM)
             }
         }
+        .sheet(isPresented: $isPresentingMaterialSheet) {
+            NavigationView {
+                Form {
+                    Section("Material") {
+                        TextField("Name", text: $materialName)
+                    }
+
+                    Section("Details") {
+                        TextField("Quantity", text: $materialQuantity)
+                            .keyboardType(.decimalPad)
+                        TextField("Unit cost", text: $materialUnitCost)
+                            .keyboardType(.decimalPad)
+                    }
+                }
+                .navigationTitle(editingMaterialIndex == nil ? "Add Material" : "Edit Material")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { isPresentingMaterialSheet = false }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") { saveMaterial() }
+                            .disabled(!canSaveMaterial)
+                    }
+                }
+            }
+        }
     }
 
     private var modeTitle: String {
@@ -158,7 +238,7 @@ struct AddEditInvoiceView: View {
                 title: trimmedTitle,
                 clientID: selectedClientId,
                 clientName: trimmedClient,
-                materials: [],
+                materials: materials,
                 status: status,
                 dueDate: dueDateValue
             )
@@ -169,12 +249,64 @@ struct AddEditInvoiceView: View {
             updated.title = trimmedTitle
             updated.clientID = selectedClientId
             updated.clientName = trimmedClient
+            updated.materials = materials
             updated.status = status
             updated.dueDate = dueDateValue
             invoiceVM.update(updated)
         }
 
         dismiss()
+    }
+
+    private func startAddingMaterial() {
+        editingMaterialIndex = nil
+        materialName = ""
+        materialQuantity = "1"
+        materialUnitCost = ""
+        isPresentingMaterialSheet = true
+    }
+
+    private func startEditingMaterial(_ material: Material, at index: Int) {
+        editingMaterialIndex = index
+        materialName = material.name
+        materialQuantity = String(material.quantity)
+        materialUnitCost = String(material.unitCost)
+        isPresentingMaterialSheet = true
+    }
+
+    private var canSaveMaterial: Bool {
+        !materialName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        Double(materialQuantity) != nil &&
+        Double(materialUnitCost) != nil
+    }
+
+    private func saveMaterial() {
+        guard let quantity = Double(materialQuantity),
+              let unitCost = Double(materialUnitCost)
+        else { return }
+
+        let trimmedName = materialName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else { return }
+
+        let material = Material(
+            id: editingMaterialIndex.flatMap { materials[$0].id } ?? UUID(),
+            name: trimmedName,
+            quantity: quantity,
+            unitCost: unitCost
+        )
+
+        if let index = editingMaterialIndex, materials.indices.contains(index) {
+            materials[index] = material
+        } else {
+            materials.append(material)
+        }
+
+        isPresentingMaterialSheet = false
+    }
+
+    private func deleteMaterial(at index: Int) {
+        guard materials.indices.contains(index) else { return }
+        materials.remove(at: index)
     }
 }
 
