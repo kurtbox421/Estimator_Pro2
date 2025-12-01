@@ -6,7 +6,7 @@ struct InvoiceDetailView: View {
 
     @EnvironmentObject var clientVM: ClientViewModel
     @EnvironmentObject var invoiceVM: InvoiceViewModel
-    @EnvironmentObject private var companySettings: CompanySettingsStore
+    @EnvironmentObject var companySettings: CompanySettingsStore
 
     // MARK: - Binding
 
@@ -103,6 +103,7 @@ struct InvoiceDetailView: View {
     private func deleteMaterial(_ material: Material) {
         if let index = invoice.materials.firstIndex(where: { $0.id == material.id }) {
             invoice.materials.remove(at: index)
+            invoiceVM.update(invoice)
         }
     }
 

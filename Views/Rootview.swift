@@ -337,6 +337,8 @@ struct EstimatesTabView: View {
                     .listRowSeparator(.hidden)
             }
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
     }
 }
 
