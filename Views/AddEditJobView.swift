@@ -25,6 +25,15 @@ struct AddEditJobView: View {
     @State private var selectedClientId: UUID?
     @State private var isPresentingNewClientSheet = false
 
+    struct MaterialDraft: Identifiable {
+        let id = UUID()
+        var name: String = ""
+        var quantity: String = ""
+        var unitCost: String = ""
+    }
+
+    @State private var materialDrafts: [MaterialDraft]
+
     // MARK: - Init
 
     init(mode: Mode) {
@@ -37,12 +46,20 @@ struct AddEditJobView: View {
             _labourHours = State(initialValue: "")
             _laborRate = State(initialValue: "")
             _selectedClientId = State(initialValue: nil)
+            _materialDrafts = State(initialValue: [MaterialDraft()])
         case .edit(let job):
             _name = State(initialValue: job.name)
             _category = State(initialValue: job.category)
             _labourHours = State(initialValue: String(job.laborHours))
             _laborRate = State(initialValue: String(job.laborRate))
             _selectedClientId = State(initialValue: job.clientId)
+            _materialDrafts = State(initialValue: job.materials.map { material in
+                MaterialDraft(
+                    name: material.name,
+                    quantity: String(material.quantity),
+                    unitCost: String(material.unitCost)
+                )
+            })
         }
     }
 
@@ -87,6 +104,35 @@ struct AddEditJobView: View {
                         .keyboardType(.decimalPad)
                     TextField("Rate", text: $laborRate)
                         .keyboardType(.decimalPad)
+                }
+
+                Section(header: Text("Materials")) {
+                    ForEach($materialDrafts) { $draft in
+                        VStack(alignment: .leading, spacing: 4) {
+                            TextField("Description", text: $draft.name)
+
+                            HStack {
+                                TextField("Qty", text: $draft.quantity)
+                                    .keyboardType(.decimalPad)
+
+                                TextField("Unit Cost", text: $draft.unitCost)
+                                    .keyboardType(.decimalPad)
+                            }
+                        }
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                deleteDraft(draft)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
+
+                    Button {
+                        materialDrafts.append(MaterialDraft())
+                    } label: {
+                        Label("Add Material", systemImage: "plus")
+                    }
                 }
 
                 Section {
@@ -145,6 +191,29 @@ struct AddEditJobView: View {
         return true
     }
 
+    private func deleteDraft(_ draft: MaterialDraft) {
+        if let index = materialDrafts.firstIndex(where: { $0.id == draft.id }) {
+            materialDrafts.remove(at: index)
+        }
+    }
+
+    private func materialsFromDrafts() -> [Material] {
+        materialDrafts.compactMap { draft in
+            let trimmedName = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmedName.isEmpty else { return nil }
+
+            let qty = Double(draft.quantity) ?? 0
+            let cost = Double(draft.unitCost) ?? 0
+
+            return Material(
+                id: UUID(),
+                name: trimmedName,
+                quantity: qty,
+                unitCost: cost
+            )
+        }
+    }
+
     private func save() {
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
         guard !trimmedName.isEmpty else { return }
@@ -154,6 +223,7 @@ struct AddEditJobView: View {
         let r = Double(laborRate.trimmingCharacters(in: .whitespaces)) ?? 0
 
         let trimmedCategory = category.trimmingCharacters(in: .whitespaces)
+        let materials = materialsFromDrafts()
 
         switch mode {
         case .add:
@@ -162,7 +232,7 @@ struct AddEditJobView: View {
                 category: trimmedCategory,
                 laborHours: h,
                 laborRate: r,
-                materials: [],
+                materials: materials,
                 clientId: selectedClientId
             )
             vm.add(job)
@@ -174,6 +244,7 @@ struct AddEditJobView: View {
             updated.laborHours = h
             updated.laborRate = r
             updated.clientId = selectedClientId
+            updated.materials = materials
             vm.update(updated)
         }
 
