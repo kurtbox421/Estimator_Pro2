@@ -11,6 +11,7 @@ struct InvoiceDetailView: View {
     // MARK: - Binding
 
     @Binding var invoice: Invoice
+    @State private var isPresentingInvoiceEditor = false
 
     // MARK: - Derived data
 
@@ -23,7 +24,15 @@ struct InvoiceDetailView: View {
 
     var body: some View {
         JobDocumentLayout(
-            summary: InvoiceSummaryCard(invoice: invoice, client: client),
+            summary: VStack(spacing: 12) {
+                InvoiceSummaryCard(invoice: invoice, client: client)
+                EditDocumentCard(
+                    title: "Edit Invoice",
+                    subtitle: "Change the basics like title, client, status, or due date.",
+                    buttonTitle: "Edit Invoice",
+                    action: { isPresentingInvoiceEditor = true }
+                )
+            },
             document: InvoiceDocumentCard(
                 invoice: invoice,
                 previewAction: handlePreviewInvoice,
@@ -102,6 +111,13 @@ struct InvoiceDetailView: View {
         )
         .navigationTitle("Invoice")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $isPresentingInvoiceEditor) {
+            NavigationView {
+                AddEditInvoiceView(mode: .edit(invoice))
+                    .environmentObject(invoiceVM)
+                    .environmentObject(clientVM)
+            }
+        }
         .sheet(
             isPresented: Binding(
                 get: { invoiceVM.isShowingPreview },
