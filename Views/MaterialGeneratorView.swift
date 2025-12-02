@@ -50,6 +50,13 @@ struct MaterialGeneratorView: View {
                 if !suggestedMaterials.isEmpty {
                     targetJobPicker
 
+                    Button(action: createNewJobFromGeneratedMaterials) {
+                        Label("Create new job with these details", systemImage: "plus")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.accentColor)
+
                     List {
                         Section("Suggested materials") {
                             ForEach(suggestedMaterials) { material in
@@ -131,5 +138,35 @@ struct MaterialGeneratorView: View {
         else { return }
 
         jobVM.applyGeneratedMaterials(suggestedMaterials, to: targetJob)
+    }
+
+    private func createNewJobFromGeneratedMaterials() {
+        guard !suggestedMaterials.isEmpty else { return }
+
+        let trimmedDescription = descriptionText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let jobName = trimmedDescription.isEmpty ? "New Job" : trimmedDescription
+
+        let newJob = Job(
+            name: jobName,
+            category: "",
+            laborHours: 0,
+            laborRate: 0,
+            materials: materialsFromGenerated()
+        )
+
+        jobVM.add(newJob)
+        selectedJobID = newJob.id
+        dismiss()
+    }
+
+    private func materialsFromGenerated() -> [Material] {
+        suggestedMaterials.map { gm in
+            Material(
+                id: UUID(),
+                name: gm.name,
+                quantity: gm.quantity,
+                unitCost: gm.unitCost
+            )
+        }
     }
 }
