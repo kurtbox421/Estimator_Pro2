@@ -335,6 +335,7 @@ struct EstimatesTabView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .listRowInsets(rowInsets)
                     .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
             }
         }
         .listStyle(.plain)
