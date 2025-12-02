@@ -80,9 +80,18 @@ struct MaterialGeneratorView: View {
                 }
             }
             .padding()
-            .navigationTitle("Material generator")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    VStack(spacing: 2) {
+                        Text("Material generator")
+                            .font(.headline)
+                        Text("(beta)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
                 }
