@@ -26,16 +26,11 @@ struct InvoiceDetailView: View {
         JobDocumentLayout(
             summary: VStack(spacing: 12) {
                 InvoiceSummaryCard(invoice: invoice, client: client)
-                EditDocumentCard(
-                    title: "Edit Invoice",
-                    subtitle: "Change the basics like title, client, status, or due date.",
-                    buttonTitle: "Edit Invoice",
-                    action: { isPresentingInvoiceEditor = true }
-                )
             },
             document: InvoiceDocumentCard(
                 invoice: invoice,
                 previewAction: handlePreviewInvoice,
+                editAction: { isPresentingInvoiceEditor = true },
                 statusAction: markInvoiceAsSent
             ),
             customer: {
@@ -300,6 +295,7 @@ private struct InvoiceSummaryCard: View {
 private struct InvoiceDocumentCard: View {
     let invoice: Invoice
     let previewAction: () -> Void
+    let editAction: () -> Void
     let statusAction: () -> Void
 
     var body: some View {
@@ -321,7 +317,12 @@ private struct InvoiceDocumentCard: View {
                     Button(action: previewAction) {
                         Label("Preview Invoice", systemImage: "doc.text.magnifyingglass")
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(PrimaryBlueButton())
+
+                    Button(action: editAction) {
+                        Label("Edit Invoice", systemImage: "square.and.pencil")
+                    }
+                    .buttonStyle(PrimaryBlueButton())
 
                     Button(action: statusAction) {
                         Label(
