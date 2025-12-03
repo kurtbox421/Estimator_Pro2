@@ -1,181 +1,126 @@
 import SwiftUI
 
 struct MaterialGeneratorView: View {
-    @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var jobVM: JobViewModel
+    @EnvironmentObject var materialsStore: MaterialsCatalogStore
 
-    /// If opened from a specific job, it will be preselected.
-    let preselectedJob: Job?
+    @State private var jobType: JobType = .interiorWall
+    @State private var wallLength: String = "10"
+    @State private var wallHeight: String = "8"
+    @State private var roomArea: String = "120"
+    @State private var roomPerimeter: String = "44"
+    @State private var deckArea: String = "200"
+    @State private var openingCount: String = "1"
+    @State private var bathroomCount: String = "1"
 
-    @State private var descriptionText = ""
-    @State private var suggestedMaterials: [GeneratedMaterial] = []
-    @State private var isGenerating = false
-
-    @State private var selectedJobID: Job.ID?
-
-    // MARK: - Init
-
-    init(job: Job? = nil) {
-        self.preselectedJob = job
-        _selectedJobID = State(initialValue: job?.id)
-    }
-
-    // MARK: - Body
+    @State private var generated: [GeneratedMaterial] = []
 
     var body: some View {
-        NavigationView {
-            VStack(spacing: 16) {
-                Text("Describe the job")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                TextEditor(text: $descriptionText)
-                    .padding(8)
-                    .frame(minHeight: 140)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(.secondarySystemBackground))
-                    )
-
-                Button(action: generateMaterials) {
-                    if isGenerating {
-                        ProgressView()
-                    } else {
-                        Label("Generate materials", systemImage: "wand.and.stars")
+        Form {
+            Section("Job Type") {
+                Picker("Job", selection: $jobType) {
+                    ForEach(JobType.allCases) { type in
+                        Text(type.displayName).tag(type)
                     }
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isGenerating)
+                .pickerStyle(.segmented)
+            }
 
-                if !suggestedMaterials.isEmpty {
-                    targetJobPicker
+            parametersSection
 
-                    Button(action: createNewJobFromGeneratedMaterials) {
-                        Label("Create new job with these details", systemImage: "plus")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(.accentColor)
+            Button("Generate Materials") {
+                let context = buildContext()
+                let generator = JobMaterialGenerator(catalog: materialsStore)
+                generated = generator.generateMaterials(for: jobType, context: context)
+            }
 
-                    List {
-                        Section("Suggested materials") {
-                            ForEach(suggestedMaterials) { material in
-                                HStack {
-                                    VStack(alignment: .leading) {
-                                        Text(material.name)
-                                            .font(.subheadline.weight(.semibold))
-                                        Text(material.details)
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    Spacer()
-                                    Text(material.estimatedTotal.formatted(.currency(code: "USD")))
-                                        .font(.subheadline.bold())
-                                }
-                            }
+            if !generated.isEmpty {
+                Section("Suggested Materials") {
+                    ForEach(generated, id: \.material.id) { item in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(item.material.name)
+                                .font(.headline)
+                            Text("\\(item.quantity, specifier: \"%.2f\") \\(item.material.unit)")
+                            Text("Total: $\\(item.totalCost, specifier: \"%.2f\")")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
                         }
+                        .padding(.vertical, 4)
                     }
-                } else {
-                    Spacer()
                 }
             }
-            .padding()
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    VStack(spacing: 2) {
-                        Text("Material generator")
-                            .font(.headline)
-                        Text("(beta)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
+        }
+        .navigationTitle("Material Generator")
+    }
 
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
-                }
+    @ViewBuilder
+    private var parametersSection: some View {
+        switch jobType {
+        case .interiorWall:
+            Section("Wall Dimensions (ft)") {
+                TextField("Wall length", text: $wallLength)
+                    .keyboardType(.decimalPad)
+                TextField("Wall height", text: $wallHeight)
+                    .keyboardType(.decimalPad)
+            }
 
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Apply") {
-                        applyToSelectedJob()
-                        dismiss()
-                    }
-                    .disabled(!canApply)
+        case .lvpFloor, .paintRoom:
+            Section("Room Data") {
+                TextField("Floor area (sq ft)", text: $roomArea)
+                    .keyboardType(.decimalPad)
+                TextField("Perimeter (ft)", text: $roomPerimeter)
+                    .keyboardType(.decimalPad)
+                if jobType == .paintRoom {
+                    TextField("Wall height (ft)", text: $wallHeight)
+                        .keyboardType(.decimalPad)
                 }
+            }
+
+        case .basicBathRemodel:
+            Section("Bathroom") {
+                TextField("Tile area (sq ft)", text: $roomArea)
+                    .keyboardType(.decimalPad)
+                TextField("Bathroom count", text: $bathroomCount)
+                    .keyboardType(.numberPad)
+            }
+
+        case .deckSurfaceReplace:
+            Section("Deck") {
+                TextField("Deck area (sq ft)", text: $deckArea)
+                    .keyboardType(.decimalPad)
+                TextField("Deck length (ft)", text: $wallLength)
+                    .keyboardType(.decimalPad)
+            }
+
+        case .windowInstall:
+            Section("Openings") {
+                TextField("Window/door count", text: $openingCount)
+                    .keyboardType(.numberPad)
+                TextField("Perimeter trim (ft)", text: $roomPerimeter)
+                    .keyboardType(.decimalPad)
             }
         }
     }
 
-    // MARK: - Target selection
-
-    private var targetJobPicker: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Apply to estimate")
-                .font(.headline)
-
-            Picker("Estimate", selection: $selectedJobID) {
-                Text("Select estimate").tag(Optional<Job.ID>.none)
-                ForEach(jobVM.jobs) { job in
-                    Text(job.name).tag(Optional(job.id))
-                }
-            }
+    private func buildContext() -> QuantityContext {
+        func d(_ string: String) -> Double? {
+            Double(string.replacingOccurrences(of: ",", with: "."))
         }
-    }
-
-    private var canApply: Bool {
-        !suggestedMaterials.isEmpty && selectedJobID != nil
-    }
-
-    // MARK: - Actions
-
-    private func generateMaterials() {
-        isGenerating = true
-        suggestedMaterials = MaterialSuggestionEngine.suggestMaterials(from: descriptionText)
-        isGenerating = false
-
-        // If no job selected yet but we have a preselected job, keep it.
-        if selectedJobID == nil {
-            selectedJobID = preselectedJob?.id
+        func i(_ string: String) -> Int? {
+            Int(string)
         }
-    }
 
-    private func applyToSelectedJob() {
-        guard
-            let id = selectedJobID,
-            let targetJob = jobVM.jobs.first(where: { $0.id == id })
-        else { return }
-
-        jobVM.applyGeneratedMaterials(suggestedMaterials, to: targetJob)
-    }
-
-    private func createNewJobFromGeneratedMaterials() {
-        guard !suggestedMaterials.isEmpty else { return }
-
-        let trimmedDescription = descriptionText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let jobName = trimmedDescription.isEmpty ? "New Job" : trimmedDescription
-
-        let newJob = Job(
-            name: jobName,
-            category: "",
-            laborHours: 0,
-            laborRate: 0,
-            materials: materialsFromGenerated()
+        return QuantityContext(
+            wallLengthFt: d(wallLength),
+            wallHeightFt: d(wallHeight),
+            roomFloorAreaSqFt: d(roomArea),
+            roomPerimeterFt: d(roomPerimeter),
+            deckAreaSqFt: d(deckArea),
+            deckLengthFt: d(wallLength),
+            deckJoistSpanFt: nil,
+            concreteVolumeCuFt: nil,
+            openingCount: i(openingCount),
+            bathroomCount: i(bathroomCount),
+            tileAreaSqFt: d(roomArea)
         )
-
-        jobVM.add(newJob)
-        selectedJobID = newJob.id
-        dismiss()
-    }
-
-    private func materialsFromGenerated() -> [Material] {
-        suggestedMaterials.map { gm in
-            Material(
-                id: UUID(),
-                name: gm.name,
-                quantity: gm.quantity,
-                unitCost: gm.unitCost
-            )
-        }
     }
 }

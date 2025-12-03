@@ -1,0 +1,283 @@
+{
+  "materials": [
+    {
+      "id": "stud-2x4-8",
+      "name": "2x4x8 SPF Stud",
+      "category": "lumber_framing",
+      "unit": "each",
+      "defaultUnitCost": 4.25,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "studs_16oc_wall"
+    },
+    {
+      "id": "stud-2x4-104",
+      "name": "2x4x104-5/8 SPF Stud",
+      "category": "lumber_framing",
+      "unit": "each",
+      "defaultUnitCost": 5.50,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "studs_16oc_wall"
+    },
+    {
+      "id": "plate-2x4-16",
+      "name": "2x4x16 SPF Plate",
+      "category": "lumber_framing",
+      "unit": "each",
+      "defaultUnitCost": 12.50,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "plates_wall"
+    },
+    {
+      "id": "ply-osb-716-4x8",
+      "name": "7/16\" OSB 4x8",
+      "category": "sheetgoods",
+      "unit": "sheet",
+      "defaultUnitCost": 12.75,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "sheet_area_10pct_waste"
+    },
+    {
+      "id": "ply-drywall-12-4x8",
+      "name": "1/2\" Drywall 4x8",
+      "category": "drywall_backer",
+      "unit": "sheet",
+      "defaultUnitCost": 14.00,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "sheet_area_10pct_waste"
+    },
+    {
+      "id": "ply-drywall-58-4x12",
+      "name": "5/8\" Type X Drywall 4x12",
+      "category": "drywall_backer",
+      "unit": "sheet",
+      "defaultUnitCost": 22.00,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "sheet_area_10pct_waste"
+    },
+    {
+      "id": "cementboard-12-3x5",
+      "name": "1/2\" Cement Board 3x5",
+      "category": "drywall_backer",
+      "unit": "sheet",
+      "defaultUnitCost": 18.00,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "sheet_area_15pct_waste"
+    },
+    {
+      "id": "thinset-modified",
+      "name": "Modified Thinset Mortar (50 lb)",
+      "category": "tile_materials",
+      "unit": "bag",
+      "defaultUnitCost": 19.00,
+      "wasteFactor": 0.05,
+      "quantityRuleKey": "thinset_per_sqft"
+    },
+    {
+      "id": "grout-sanded",
+      "name": "Sanded Grout (25 lb)",
+      "category": "tile_materials",
+      "unit": "bag",
+      "defaultUnitCost": 18.00,
+      "wasteFactor": 0.05,
+      "quantityRuleKey": "grout_per_sqft"
+    },
+    {
+      "id": "membrane-waterproof",
+      "name": "Waterproofing Membrane (Roll)",
+      "category": "tile_materials",
+      "unit": "roll",
+      "defaultUnitCost": 110.00,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "membrane_per_sqft"
+    },
+    {
+      "id": "lvp-floor-7x48",
+      "name": "LVP Flooring 7\"x48\" Planks",
+      "category": "flooring",
+      "unit": "sqft",
+      "defaultUnitCost": 3.50,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "flooring_10pct_waste"
+    },
+    {
+      "id": "underlayment-foam",
+      "name": "Foam Underlayment (100 sq ft roll)",
+      "category": "flooring",
+      "unit": "roll",
+      "defaultUnitCost": 45.00,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "roll_coverage_100sqft"
+    },
+    {
+      "id": "trim-base-35",
+      "name": "3-1/2\" MDF Baseboard",
+      "category": "trim_finish",
+      "unit": "linear_ft",
+      "defaultUnitCost": 1.75,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "linear_ft_10pct_waste"
+    },
+    {
+      "id": "trim-casing-214",
+      "name": "2-1/4\" Door Casing",
+      "category": "trim_finish",
+      "unit": "linear_ft",
+      "defaultUnitCost": 1.40,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "linear_ft_10pct_waste"
+    },
+    {
+      "id": "paint-int-eggshell",
+      "name": "Interior Wall Paint (Eggshell, 1 gal)",
+      "category": "paint",
+      "unit": "gallon",
+      "defaultUnitCost": 42.00,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "paint_walls"
+    },
+    {
+      "id": "paint-primer",
+      "name": "Primer (1 gal)",
+      "category": "paint",
+      "unit": "gallon",
+      "defaultUnitCost": 30.00,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "paint_walls"
+    },
+    {
+      "id": "caulk-painter",
+      "name": "Painter's Caulk (10.1 oz)",
+      "category": "sealants",
+      "unit": "tube",
+      "defaultUnitCost": 3.25,
+      "wasteFactor": 0.15,
+      "quantityRuleKey": "caulk_per_linear_ft"
+    },
+    {
+      "id": "construction-adhesive",
+      "name": "Construction Adhesive (10 oz)",
+      "category": "sealants",
+      "unit": "tube",
+      "defaultUnitCost": 5.25,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "adhesive_generic"
+    },
+    {
+      "id": "screws-drywall-125",
+      "name": "1-1/4\" Drywall Screws (1 lb)",
+      "category": "hardware_fasteners",
+      "unit": "box",
+      "defaultUnitCost": 7.50,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "fasteners_per_sheet"
+    },
+    {
+      "id": "screws-deck-3",
+      "name": "3\" Exterior Deck Screws (1 lb)",
+      "category": "hardware_fasteners",
+      "unit": "box",
+      "defaultUnitCost": 10.50,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "fasteners_per_sqft_deck"
+    },
+    {
+      "id": "insul-batt-r13",
+      "name": "R-13 Fiberglass Batt (2x4 wall)",
+      "category": "insulation",
+      "unit": "bag",
+      "defaultUnitCost": 65.00,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "insulation_per_sqft"
+    },
+    {
+      "id": "concrete-80lb",
+      "name": "Concrete Mix 80 lb Bag",
+      "category": "concrete_masonry",
+      "unit": "bag",
+      "defaultUnitCost": 6.25,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "concrete_per_cuft"
+    },
+    {
+      "id": "deck-board-54x16",
+      "name": "5/4x6x16 PT Deck Board",
+      "category": "exterior_decking",
+      "unit": "each",
+      "defaultUnitCost": 18.75,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "deck_boards_16oc"
+    },
+    {
+      "id": "post-4x4-8",
+      "name": "4x4x8 PT Post",
+      "category": "exterior_structural",
+      "unit": "each",
+      "defaultUnitCost": 16.50,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "posts_linear"
+    },
+    {
+      "id": "joist-hanger-2x10",
+      "name": "Joist Hanger for 2x10",
+      "category": "hardware_connectors",
+      "unit": "each",
+      "defaultUnitCost": 2.25,
+      "wasteFactor": 0.05,
+      "quantityRuleKey": "joist_hangers_per_joist"
+    },
+    {
+      "id": "window-foam",
+      "name": "Low-Expanding Window & Door Foam",
+      "category": "sealants",
+      "unit": "can",
+      "defaultUnitCost": 9.50,
+      "wasteFactor": 0.15,
+      "quantityRuleKey": "foam_per_opening"
+    },
+    {
+      "id": "shims-mixed",
+      "name": "Composite Shims (pack)",
+      "category": "hardware_misc",
+      "unit": "pack",
+      "defaultUnitCost": 7.00,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "shims_per_opening"
+    },
+    {
+      "id": "drip-cap",
+      "name": "Aluminum Drip Cap",
+      "category": "exterior_flashing",
+      "unit": "linear_ft",
+      "defaultUnitCost": 2.25,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "linear_ft_exact"
+    },
+    {
+      "id": "tile-floor-porcelain",
+      "name": "Porcelain Floor Tile (sq ft)",
+      "category": "tile",
+      "unit": "sqft",
+      "defaultUnitCost": 4.25,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "flooring_10pct_waste"
+    },
+    {
+      "id": "gfc-outlet",
+      "name": "GFCI Outlet 15A",
+      "category": "electrical",
+      "unit": "each",
+      "defaultUnitCost": 22.00,
+      "wasteFactor": 0.05,
+      "quantityRuleKey": "outlets_per_bath"
+    },
+    {
+      "id": "pex-12",
+      "name": "1/2\" PEX Tubing (100 ft coil)",
+      "category": "plumbing",
+      "unit": "coil",
+      "defaultUnitCost": 45.00,
+      "wasteFactor": 0.1,
+      "quantityRuleKey": "pex_per_bath"
+    }
+  ]
+}
