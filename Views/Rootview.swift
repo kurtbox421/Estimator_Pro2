@@ -824,6 +824,14 @@ struct SettingsTabView: View {
                 .listRowSeparator(.hidden)
 
                 NavigationLink {
+                    MaterialPricingSettingsView()
+                } label: {
+                    SettingRow(icon: "dollarsign.circle.fill", title: "Material generator pricing")
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+
+                NavigationLink {
                     ImportDataView()
                 } label: {
                     SettingRow(icon: "square.and.arrow.down.on.square", title: "Import from other apps")

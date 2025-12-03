@@ -68,9 +68,17 @@ struct MaterialsCatalog: Codable {
 
 final class MaterialsCatalogStore: ObservableObject {
     @Published private(set) var materials: [MaterialItem] = []
+    @Published private(set) var priceOverrides: [String: Double] = [:] {
+        didSet { saveOverrides() }
+    }
 
-    init() {
+    private let persistence: PersistenceService
+
+    init(persistence: PersistenceService = .shared) {
+        self.persistence = persistence
+
         loadFromBundle()
+        loadOverrides()
     }
 
     private func loadFromBundle() {
@@ -94,4 +102,41 @@ final class MaterialsCatalogStore: ObservableObject {
     func material(withID id: String) -> MaterialItem? {
         materials.first { $0.id == id }
     }
+
+    func price(for material: MaterialItem) -> Double {
+        priceOverrides[material.id] ?? material.defaultUnitCost
+    }
+
+    func override(for materialID: String) -> Double? {
+        priceOverrides[materialID]
+    }
+
+    func setPriceOverride(_ value: Double, for materialID: String) {
+        var updated = priceOverrides
+        updated[materialID] = value
+        priceOverrides = updated
+    }
+
+    func resetOverride(for materialID: String) {
+        guard priceOverrides[materialID] != nil else { return }
+        var updated = priceOverrides
+        updated.removeValue(forKey: materialID)
+        priceOverrides = updated
+    }
+
+    // MARK: - Overrides persistence
+
+    private func loadOverrides() {
+        if let stored: [String: Double] = persistence.load([String: Double].self, from: MaterialsCatalogStorage.overrideFileName) {
+            priceOverrides = stored
+        }
+    }
+
+    private func saveOverrides() {
+        persistence.save(priceOverrides, to: MaterialsCatalogStorage.overrideFileName)
+    }
+}
+
+private enum MaterialsCatalogStorage {
+    static let overrideFileName = "materialPriceOverrides.json"
 }
