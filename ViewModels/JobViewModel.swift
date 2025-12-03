@@ -97,7 +97,7 @@ class JobViewModel: ObservableObject {
     // MARK: - Generated materials
     
     /// Apply AI-/rule-generated materials to an existing job.
-    func applyGeneratedMaterials(_ generated: [GeneratedMaterial], to job: Job?) {
+    func applyGeneratedMaterials(_ generated: [SuggestedMaterial], to job: Job?) {
         guard let job,
               !generated.isEmpty,
               let index = jobs.firstIndex(where: { $0.id == job.id }) else { return }
