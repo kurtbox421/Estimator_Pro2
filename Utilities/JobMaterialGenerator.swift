@@ -41,9 +41,14 @@ struct JobMaterialGenerator {
             return GeneratedMaterial(
                 material: material,
                 quantity: qty,
-                unitCost: material.defaultUnitCost
+                unitCost: catalog.price(for: material)
             )
         }
+    }
+
+    func allMaterialIDs() -> [String] {
+        let ids = JobType.allCases.flatMap { materialIDs(for: $0) }
+        return Array(Set(ids)).sorted()
     }
 
     private func materialIDs(for jobType: JobType) -> [String] {
