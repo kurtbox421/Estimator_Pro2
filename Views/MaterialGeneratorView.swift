@@ -17,12 +17,37 @@ struct MaterialGeneratorView: View {
     var body: some View {
         Form {
             Section("Job Type") {
-                Picker("Job", selection: $jobType) {
-                    ForEach(JobType.allCases) { type in
-                        Text(type.displayName).tag(type)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(JobType.allCases) { type in
+                            Button {
+                                jobType = type
+                            } label: {
+                                Text(type.displayName)
+                                    .font(.subheadline)
+                                    .padding(.vertical, 6)
+                                    .padding(.horizontal, 12)
+                                    .background(
+                                        jobType == type
+                                        ? Color.accentColor.opacity(0.15)
+                                        : Color.clear
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .stroke(
+                                                jobType == type
+                                                ? Color.accentColor
+                                                : Color.secondary.opacity(0.4),
+                                                lineWidth: 1
+                                            )
+                                    )
+                                    .cornerRadius(10)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
+                    .padding(.vertical, 4)
                 }
-                .pickerStyle(.segmented)
             }
 
             parametersSection
@@ -39,8 +64,10 @@ struct MaterialGeneratorView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(item.material.name)
                                 .font(.headline)
-                            Text("\\(item.quantity, specifier: \"%.2f\") \\(item.material.unit)")
-                            Text("Total: $\\(item.totalCost, specifier: \"%.2f\")")
+
+                            Text("\(item.quantity, specifier: \"%.2f\") \(item.material.unit)")
+
+                            Text("Total: $\(item.totalCost, specifier: \"%.2f\")")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
