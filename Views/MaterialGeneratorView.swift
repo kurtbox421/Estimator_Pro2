@@ -95,6 +95,14 @@ struct MaterialGeneratorView: View {
             return "Width"
         case .basicBathroomRemodel:
             return "Width"
+        case .exteriorPaint:
+            return "Width"
+        case .tileBacksplash:
+            return "Height"
+        case .deckBuild:
+            return "Width"
+        case .roofShingleReplacement:
+            return "Width"
         }
     }
 
