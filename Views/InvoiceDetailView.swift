@@ -67,43 +67,11 @@ struct InvoiceDetailView: View {
                                 .foregroundColor(.white.opacity(0.7))
                         } else {
                             ForEach($invoice.materials) { $material in
-                                VStack(alignment: .leading, spacing: 6) {
-                                    HStack(alignment: .firstTextBaseline) {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            TextField("Description", text: $material.name)
-                                                .font(.subheadline.weight(.semibold))
-                                                .foregroundColor(.white)
-
-                                            Text("\(material.quantity, specifier: "%.2f") × \(material.unitCost, format: .currency(code: "USD"))")
-                                                .font(.caption)
-                                                .foregroundColor(.white.opacity(0.7))
-                                            if let url = material.productURL.wrappedValue {
-                                                Link(url.absoluteString, destination: url)
-                                                    .font(.caption2)
-                                                    .foregroundColor(.blue.opacity(0.9))
-                                                    .lineLimit(1)
-                                            }
-                                        }
-
-                                        Spacer()
-
-                                        Text(material.total, format: .currency(code: "USD"))
-                                            .font(.subheadline.weight(.semibold))
-                                            .foregroundColor(.white)
-                                    }
-                                }
-                                .padding(.vertical, 6)
-                                .swipeActions(edge: .trailing) {
-                                    Button(role: .destructive) {
-                                        deleteMaterial(material)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                }
-
-                                if material.id != invoice.materials.last?.id {
-                                    Divider().overlay(Color.white.opacity(0.15))
-                                }
+                                InvoiceMaterialRow(
+                                    material: $material,
+                                    isLast: material.id == invoice.materials.last?.id,
+                                    deleteAction: { deleteMaterial(material) }
+                                )
                             }
                         }
                     }
@@ -339,6 +307,51 @@ private struct InvoiceDocumentCard: View {
                     .buttonStyle(PrimaryBlueButton())
                 }
             }
+        }
+    }
+}
+
+private struct InvoiceMaterialRow: View {
+    @Binding var material: Material
+    let isLast: Bool
+    let deleteAction: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 4) {
+                    TextField("Description", text: $material.name)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.white)
+
+                    Text("\(material.quantity, specifier: "%.2f") × \(material.unitCost, format: .currency(code: "USD"))")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.7))
+
+                    if let url = material.productURL.wrappedValue {
+                        Link(url.absoluteString, destination: url)
+                            .font(.caption2)
+                            .foregroundColor(.blue.opacity(0.9))
+                            .lineLimit(1)
+                    }
+                }
+
+                Spacer()
+
+                Text(material.total, format: .currency(code: "USD"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+            }
+        }
+        .padding(.vertical, 6)
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive, action: deleteAction) {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+
+        if !isLast {
+            Divider().overlay(Color.white.opacity(0.15))
         }
     }
 }
