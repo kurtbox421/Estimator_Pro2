@@ -42,6 +42,7 @@
 		39B8DCAE2EDCF57E005D0E08 /* JobDocumentLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39B8DCAD2EDCF57E005D0E08 /* JobDocumentLayout.swift */; };
 		39CCEF4A2EE12DAD0075521B /* MaterialsRecommender.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39CCEF492EE12DAD0075521B /* MaterialsRecommender.swift */; };
 		39E0A0112F00000100000001 /* ImportDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39E0A0102F00000100000001 /* ImportDataView.swift */; };
+		39E46E9F2EE240D80096D2A4 /* firestore.rules in Resources */ = {isa = PBXBuildFile; fileRef = 39E46E9E2EE240D80096D2A4 /* firestore.rules */; };
 		AA02AA02AA02AA02AA02AA02 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA01AA01AA01AA01AA01AA01 /* SettingsManager.swift */; };
 		AA04AA04AA04AA04AA04AA04 /* SavedMaterial.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA03AA03AA03AA03AA03AA03 /* SavedMaterial.swift */; };
 		AA06AA06AA06AA06AA06AA06 /* CompanySettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA05AA05AA05AA05AA05AA05 /* CompanySettingsStore.swift */; };
@@ -91,6 +92,7 @@
 		39B8DCAD2EDCF57E005D0E08 /* JobDocumentLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobDocumentLayout.swift; sourceTree = "<group>"; };
 		39CCEF492EE12DAD0075521B /* MaterialsRecommender.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialsRecommender.swift; sourceTree = "<group>"; };
 		39E0A0102F00000100000001 /* ImportDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportDataView.swift; sourceTree = "<group>"; };
+		39E46E9E2EE240D80096D2A4 /* firestore.rules */ = {isa = PBXFileReference; lastKnownFileType = text; path = firestore.rules; sourceTree = "<group>"; };
 		AA01AA01AA01AA01AA01AA01 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
 		AA03AA03AA03AA03AA03AA03 /* SavedMaterial.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedMaterial.swift; sourceTree = "<group>"; };
 		AA05AA05AA05AA05AA05AA05 /* CompanySettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanySettingsStore.swift; sourceTree = "<group>"; };
@@ -218,6 +220,7 @@
 		3969FD072ECD36970005C1AE /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				39E46E9E2EE240D80096D2A4 /* firestore.rules */,
 				39CCEF492EE12DAD0075521B /* MaterialsRecommender.swift */,
 				AA09AA09AA09AA09AA09AA08 /* InvoicePDFRenderer.swift */,
 				39B8DC722EDB6F4D005D0E08 /* MaterialSuggestionEngine.swift */,
@@ -309,6 +312,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D00100082FFF000100000001 /* MaterialsCatalog.json in Resources */,
+				39E46E9F2EE240D80096D2A4 /* firestore.rules in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

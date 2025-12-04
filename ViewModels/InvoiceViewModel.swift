@@ -150,7 +150,7 @@ class InvoiceViewModel: ObservableObject {
                     do {
                         return try document.data(as: Invoice.self)
                     } catch {
-                        logger.error("Failed to decode invoice \(document.documentID): \(error.localizedDescription)")
+                        self.logger.error("Failed to decode invoice \(document.documentID): \(error.localizedDescription)")
                         return nil
                     }
                 }
