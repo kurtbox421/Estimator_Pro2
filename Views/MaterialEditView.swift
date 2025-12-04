@@ -51,10 +51,10 @@ struct MaterialEditView: View {
                         .disabled(!canSave)
                 }
             }
-            .onChange(of: name) { _ in
+            .onChange(of: name, initial: false) { _ in
                 applyCommonMaterialPriceIfNeeded()
             }
-            .onChange(of: quantityText) { _ in
+            .onChange(of: quantityText, initial: false) { _ in
                 applyCommonMaterialPriceIfNeeded()
             }
         }
