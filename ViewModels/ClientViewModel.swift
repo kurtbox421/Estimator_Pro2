@@ -3,6 +3,7 @@ import FirebaseAuth
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 
+@MainActor
 final class ClientViewModel: ObservableObject {
     @Published var clients: [Client] = []
 
@@ -67,10 +68,15 @@ final class ClientViewModel: ObservableObject {
 
     private func configureAuthListener() {
         authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
-            self?.attachListener(for: user)
+            guard let self else { return }
+            Task { @MainActor in
+                self.attachListener(for: user)
+            }
         }
 
-        attachListener(for: Auth.auth().currentUser)
+        Task { @MainActor in
+            attachListener(for: Auth.auth().currentUser)
+        }
     }
 
     private func attachListener(for user: User?) {
@@ -98,7 +104,7 @@ final class ClientViewModel: ObservableObject {
                     }
                 } ?? []
 
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     self.clients = decoded
                 }
             }
