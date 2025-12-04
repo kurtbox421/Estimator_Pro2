@@ -202,39 +202,39 @@ struct RootView: View {
 
         var body: some View {
             Button(action: action) {
-                Text(tab.rawValue)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.9)
-                    .padding(.vertical, verticalPadding)
-                    .padding(.horizontal, horizontalPadding)
-                    .background(
-                        Capsule()
-                            .fill(
-                                isSelected
-                                ? Color.white
-                                : Color.white.opacity(0.14)
-                            )
-                    )
-                    .overlay(
-                        Capsule()
-                            .stroke(
-                                Color.white.opacity(isSelected ? 0.0 : 0.4),
-                                lineWidth: 1
-                            )
-                    )
-                    .shadow(
-                        color: Color.black.opacity(isSelected ? 0.12 : 0),
-                        radius: 8,
-                        x: 0,
-                        y: 4
-                    )
-                    .foregroundColor(
-                        isSelected
-                        ? Color.black.opacity(0.85)
-                        : Color.white
-                    )
+                buttonLabel
             }
+        }
+
+        private var buttonLabel: some View {
+            let backgroundColor = isSelected
+                ? Color.white
+                : Color.white.opacity(0.14)
+
+            let strokeOpacity: Double = isSelected ? 0.0 : 0.4
+            let shadowOpacity: Double = isSelected ? 0.12 : 0
+            let foregroundColor = isSelected
+                ? Color.black.opacity(0.85)
+                : Color.white
+
+            return Text(tab.rawValue)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.9)
+                .padding(.vertical, verticalPadding)
+                .padding(.horizontal, horizontalPadding)
+                .background(Capsule().fill(backgroundColor))
+                .overlay(
+                    Capsule()
+                        .stroke(Color.white.opacity(strokeOpacity), lineWidth: 1)
+                )
+                .shadow(
+                    color: Color.black.opacity(shadowOpacity),
+                    radius: 8,
+                    x: 0,
+                    y: 4
+                )
+                .foregroundColor(foregroundColor)
         }
     }
 
