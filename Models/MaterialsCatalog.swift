@@ -117,11 +117,11 @@ final class MaterialsCatalogStore: ObservableObject {
     }
 
     @discardableResult
-    func addCustomMaterial(name: String, unit: String, unitCost: Double) -> MaterialItem {
+    func addCustomMaterial(name: String, unit: String, unitCost: Double, category: MaterialCategory) -> MaterialItem {
         let newMaterial = MaterialItem(
             id: UUID().uuidString,
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-            category: .custom,
+            category: category,
             unit: unit.trimmingCharacters(in: .whitespacesAndNewlines),
             defaultUnitCost: unitCost,
             wasteFactor: 0,
@@ -136,14 +136,15 @@ final class MaterialsCatalogStore: ObservableObject {
         _ material: MaterialItem,
         name: String? = nil,
         unit: String? = nil,
-        defaultUnitCost: Double? = nil
+        defaultUnitCost: Double? = nil,
+        category: MaterialCategory? = nil
     ) {
         guard let index = customMaterials.firstIndex(where: { $0.id == material.id }) else { return }
 
         let updated = MaterialItem(
             id: material.id,
             name: name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? material.name,
-            category: .custom,
+            category: category ?? material.category,
             unit: unit?.trimmingCharacters(in: .whitespacesAndNewlines) ?? material.unit,
             defaultUnitCost: defaultUnitCost ?? material.defaultUnitCost,
             wasteFactor: material.wasteFactor,
