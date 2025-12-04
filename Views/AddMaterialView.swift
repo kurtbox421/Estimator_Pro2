@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import FirebaseAuth
 
 struct AddMaterialView: View {
     enum Mode {
@@ -117,10 +118,13 @@ struct AddMaterialView: View {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return }
 
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+
         let productURL = parsedURL(from: productURLText)
 
         let material = Material(
             id: existingMaterialID ?? UUID(),
+            ownerID: uid,
             name: trimmedName,
             quantity: q,
             unitCost: u,
