@@ -152,26 +152,38 @@ struct EstimateDetailView: View {
                 invoiceVM: invoiceVM
             )
         }
-        .sheet(isPresented: Binding(
-            get: { estimateVM.isShowingPreview },
-            set: { estimateVM.isShowingPreview = $0 }
-        )) {
+        .sheet(isPresented: previewSheetBinding) {
             if let url = estimateVM.previewURL {
                 PDFPreviewSheet(url: url)
             } else {
                 Text("No PDF available.")
             }
         }
-        .alert("Unable to generate PDF", isPresented: Binding(
-            get: { estimateVM.previewError != nil },
-            set: { if !$0 { estimateVM.previewError = nil } }
-        )) {
+        .alert("Unable to generate PDF", isPresented: previewErrorBinding) {
             Button("OK", role: .cancel) {
                 estimateVM.previewError = nil
             }
         } message: {
             Text(estimateVM.previewError ?? "Unknown error")
         }
+    }
+
+    private var previewSheetBinding: Binding<Bool> {
+        Binding(
+            get: { estimateVM.isShowingPreview },
+            set: { estimateVM.isShowingPreview = $0 }
+        )
+    }
+
+    private var previewErrorBinding: Binding<Bool> {
+        Binding(
+            get: { estimateVM.previewError != nil },
+            set: {
+                if !$0 {
+                    estimateVM.previewError = nil
+                }
+            }
+        )
     }
 
     // MARK: - Helpers
