@@ -35,93 +35,6 @@ struct MaterialPricingSettingsView: View {
                     .listRowBackground(Color.clear)
             }
 
-            Section("Custom generator materials") {
-                Text("Add materials that should always be suggested when you run the generator. Set their unit and default price to have them included alongside the built-in items.")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-                    .listRowBackground(Color.clear)
-
-                ForEach(materialsStore.customMaterials.filter { $0.category == .custom }, id: \.id) { material in
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(alignment: .firstTextBaseline, spacing: 12) {
-                            VStack(alignment: .leading, spacing: 6) {
-                                TextField("Material name", text: nameBinding(for: material))
-                                    .font(.subheadline.weight(.semibold))
-
-                                TextField("Unit (ex: each, tube, sq ft)", text: unitBinding(for: material))
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-
-                            Spacer()
-
-                            TextField(
-                                "Unit cost",
-                                value: priceBinding(for: material),
-                                format: .currency(code: "USD")
-                            )
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 140)
-                        }
-
-                        Picker("Category", selection: categoryBinding(for: material)) {
-                            ForEach(MaterialCategory.allCases) { category in
-                                Text(category.displayName).tag(category)
-                            }
-                        }
-                        .pickerStyle(.menu)
-
-                        if material.category == .custom {
-                            TextField(
-                                "Custom category name",
-                                text: customCategoryNameBinding(for: material)
-                            )
-                            .textInputAutocapitalization(.words)
-                        }
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            TextField("Product URL (optional)", text: productURLBinding(for: material))
-                                .keyboardType(.URL)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-
-                            if let url = materialsStore.productURL(for: material) {
-                                Link("See Product Information", destination: url)
-                                    .font(.caption2)
-                                    .foregroundColor(.accentColor)
-                                    .lineLimit(1)
-                            }
-                        }
-
-                        if materialsStore.override(for: material.id) != nil {
-                            Button {
-                                materialsStore.resetOverride(for: material.id)
-                                overrideValues[material.id] = material.defaultUnitCost
-                            } label: {
-                                Text("Reset to default \(material.defaultUnitCost.formatted(.currency(code: "USD")))")
-                                    .font(.caption)
-                                    .foregroundColor(.accentColor)
-                            }
-                            .buttonStyle(.plain)
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                        }
-                    }
-                    .padding(.vertical, 6)
-                    .swipeActions {
-                        Button(role: .destructive) {
-                            deleteMaterial(material)
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    }
-                }
-                .onDelete(perform: deleteCustomMaterials)
-
-            }
-
             ForEach(groupedMaterials, id: \.category) { group in
                 Section(group.category) {
                     ForEach(group.items, id: \.id) { material in
@@ -390,14 +303,6 @@ struct MaterialPricingSettingsView: View {
         newCustomPrice = ""
         newCustomCategoryName = ""
         newCustomCategory = MaterialCategory.allCases.first(where: { $0 != .custom }) ?? .paint
-    }
-
-    private func deleteCustomMaterials(at offsets: IndexSet) {
-        offsets.forEach { index in
-            guard materialsStore.customMaterials.indices.contains(index) else { return }
-            let material = materialsStore.customMaterials[index]
-            deleteMaterial(material)
-        }
     }
 
     private func deleteMaterial(_ material: MaterialItem) {
