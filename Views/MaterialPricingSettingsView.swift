@@ -38,7 +38,7 @@ struct MaterialPricingSettingsView: View {
                     .foregroundColor(.secondary)
                     .listRowBackground(Color.clear)
 
-                ForEach(materialsStore.customMaterials, id: \.id) { material in
+                ForEach(materialsStore.customMaterials.filter { $0.category == .custom }, id: \.id) { material in
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(alignment: .firstTextBaseline, spacing: 12) {
                             VStack(alignment: .leading, spacing: 6) {
