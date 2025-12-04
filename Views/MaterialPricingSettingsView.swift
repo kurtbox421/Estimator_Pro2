@@ -12,7 +12,6 @@ struct MaterialPricingSettingsView: View {
         let generator = JobMaterialGenerator(catalog: materialsStore)
         let ids = generator.allMaterialIDs()
         return ids.compactMap { materialsStore.material(withID: $0) }
-            .filter { $0.category != .custom }
             .sorted { lhs, rhs in
                 if lhs.displayCategory != rhs.displayCategory {
                     return lhs.displayCategory < rhs.displayCategory
