@@ -158,27 +158,24 @@ struct RootView: View {
     }
 
     private var segmentedControl: some View {
-        Group {
-            if horizontalSizeClass == .compact {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    segmentedButtons
-                }
-            } else {
-                segmentedButtons
-            }
-        }
+        segmentedButtons(isCompact: horizontalSizeClass == .compact)
     }
 
-    private var segmentedButtons: some View {
-        HStack(spacing: 8) {
+    private func segmentedButtons(isCompact: Bool) -> some View {
+        let spacing: CGFloat = isCompact ? 6 : 8
+        let verticalPadding: CGFloat = isCompact ? 6 : 8
+        let horizontalPadding: CGFloat = isCompact ? 10 : 14
+        let backgroundPadding: CGFloat = isCompact ? 4 : 6
+
+        return HStack(spacing: spacing) {
             ForEach(AppTab.allCases, id: \.self) { tab in
                 Button {
                     selectedTab = tab
                 } label: {
                     Text(tab.rawValue)
                         .font(.subheadline.weight(.semibold))
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 14)
+                        .padding(.vertical, verticalPadding)
+                        .padding(.horizontal, horizontalPadding)
                         .background(
                             Capsule()
                                 .fill(selectedTab == tab
@@ -193,7 +190,7 @@ struct RootView: View {
                 }
             }
         }
-        .padding(6)
+        .padding(backgroundPadding)
         .background(
             Capsule().fill(Color(.systemGray5))
         )
