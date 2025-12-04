@@ -1,34 +1,45 @@
 import Foundation
 import Combine
-
-private enum SettingsStorage {
-    static let userDefaultsKey = "estimateDefaultsMaterials"
-    static let fileName = "commonMaterials.json"
-}
+import FirebaseAuth
+import FirebaseFirestore
+import FirebaseFirestoreSwift
 
 final class SettingsManager: ObservableObject {
-    @Published var commonMaterials: [SavedMaterial] = [] {
-        didSet {
-            saveMaterials()
-        }
+    @Published var commonMaterials: [SavedMaterial] = []
+
+    private let db: Firestore
+    private var listener: ListenerRegistration?
+    private var authHandle: AuthStateDidChangeListenerHandle?
+    private var currentUserID: String?
+
+    init(database: Firestore = Firestore.firestore()) {
+        self.db = database
+        configureAuthListener()
     }
 
-    private let persistence: PersistenceService
-
-    init(persistence: PersistenceService = .shared) {
-        self.persistence = persistence
-        loadMaterials()
+    deinit {
+        listener?.remove()
+        if let authHandle { Auth.auth().removeStateDidChangeListener(authHandle) }
     }
 
     func addMaterial(name: String, price: Double) {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedName.isEmpty else { return }
+        guard !trimmedName.isEmpty, let uid = currentUserID else { return }
 
-        commonMaterials.append(SavedMaterial(name: trimmedName, price: price))
+        let material = SavedMaterial(ownerID: uid, isDefault: false, name: trimmedName, price: price)
+        commonMaterials.append(material)
+        persist(material)
     }
 
     func deleteMaterials(at offsets: IndexSet) {
+        let materialsToDelete = offsets.compactMap { commonMaterials.indices.contains($0) ? commonMaterials[$0] : nil }
         commonMaterials.remove(atOffsets: offsets)
+
+        materialsToDelete.forEach { material in
+            db.collection("materialPrices")
+                .document(material.id.uuidString)
+                .delete()
+        }
     }
 
     func updateMaterialName(at index: Int, name: String) {
@@ -37,6 +48,7 @@ final class SettingsManager: ObservableObject {
         var updatedMaterials = commonMaterials
         updatedMaterials[index].name = name
         commonMaterials = updatedMaterials
+        persist(updatedMaterials[index])
     }
 
     func updateMaterialPrice(at index: Int, price: Double) {
@@ -45,6 +57,7 @@ final class SettingsManager: ObservableObject {
         var updatedMaterials = commonMaterials
         updatedMaterials[index].price = price
         commonMaterials = updatedMaterials
+        persist(updatedMaterials[index])
     }
 
     func commonMaterialPrice(for name: String) -> Double? {
@@ -56,21 +69,56 @@ final class SettingsManager: ObservableObject {
         }?.price
     }
 
-    private func loadMaterials() {
-        if let stored: [SavedMaterial] = persistence.load([SavedMaterial].self, from: SettingsStorage.fileName) {
-            commonMaterials = stored
-            return
+    private func configureAuthListener() {
+        authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
+            self?.attachListener(for: user)
         }
 
-        if let migrated: [SavedMaterial] = persistence.migrateFromUserDefaults(key: SettingsStorage.userDefaultsKey, fileName: SettingsStorage.fileName, as: [SavedMaterial].self) {
-            commonMaterials = migrated
-            return
-        }
-
-        commonMaterials = []
+        attachListener(for: Auth.auth().currentUser)
     }
 
-    private func saveMaterials() {
-        persistence.save(commonMaterials, to: SettingsStorage.fileName)
+    private func attachListener(for user: User?) {
+        listener?.remove()
+        currentUserID = user?.uid
+        commonMaterials = []
+
+        guard let uid = user?.uid else { return }
+
+        listener = db.collection("materialPrices")
+            .whereField("ownerID", in: [uid, "global"])
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self else { return }
+
+                if let error { print("Failed to fetch material prices: \(error.localizedDescription)"); return }
+
+                let decoded: [SavedMaterial] = snapshot?.documents.compactMap { document in
+                    do {
+                        return try document.data(as: SavedMaterial.self)
+                    } catch {
+                        print("Failed to decode material price \(document.documentID): \(error.localizedDescription)")
+                        return nil
+                    }
+                } ?? []
+
+                DispatchQueue.main.async {
+                    self.commonMaterials = decoded.filter { $0.ownerID != "global" }
+                }
+            }
+    }
+
+    private func persist(_ material: SavedMaterial) {
+        guard let uid = currentUserID else { return }
+
+        var materialToSave = material
+        materialToSave.ownerID = uid
+        materialToSave.isDefault = false
+
+        do {
+            try db.collection("materialPrices")
+                .document(materialToSave.id.uuidString)
+                .setData(from: materialToSave)
+        } catch {
+            print("Failed to save material price: \(error.localizedDescription)")
+        }
     }
 }

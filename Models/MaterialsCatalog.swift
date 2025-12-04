@@ -1,4 +1,7 @@
 import Foundation
+import FirebaseAuth
+import FirebaseFirestore
+import FirebaseFirestoreSwift
 
 enum MaterialCategory: String, Codable, CaseIterable, Identifiable {
     case lumberFraming      = "lumber_framing"
@@ -52,6 +55,8 @@ enum MaterialCategory: String, Codable, CaseIterable, Identifiable {
 
 struct MaterialItem: Identifiable, Codable, Hashable {
     let id: String
+    var ownerID: String
+    var isDefault: Bool
     let name: String
     let category: MaterialCategory
     let customCategoryName: String?
@@ -68,6 +73,61 @@ struct MaterialItem: Identifiable, Codable, Hashable {
 
         return category.displayName
     }
+    init(
+        id: String,
+        ownerID: String = "global",
+        isDefault: Bool = true,
+        name: String,
+        category: MaterialCategory,
+        customCategoryName: String?,
+        unit: String,
+        defaultUnitCost: Double,
+        productURL: URL?,
+        wasteFactor: Double,
+        quantityRuleKey: String?
+    ) {
+        self.id = id
+        self.ownerID = ownerID
+        self.isDefault = isDefault
+        self.name = name
+        self.category = category
+        self.customCategoryName = customCategoryName
+        self.unit = unit
+        self.defaultUnitCost = defaultUnitCost
+        self.productURL = productURL
+        self.wasteFactor = wasteFactor
+        self.quantityRuleKey = quantityRuleKey
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        id = try container.decode(String.self, forKey: .id)
+        ownerID = try container.decodeIfPresent(String.self, forKey: .ownerID) ?? "global"
+        isDefault = try container.decodeIfPresent(Bool.self, forKey: .isDefault) ?? (ownerID == "global")
+        name = try container.decode(String.self, forKey: .name)
+        category = try container.decode(MaterialCategory.self, forKey: .category)
+        customCategoryName = try container.decodeIfPresent(String.self, forKey: .customCategoryName)
+        unit = try container.decode(String.self, forKey: .unit)
+        defaultUnitCost = try container.decode(Double.self, forKey: .defaultUnitCost)
+        productURL = try container.decodeIfPresent(URL.self, forKey: .productURL)
+        wasteFactor = try container.decode(Double.self, forKey: .wasteFactor)
+        quantityRuleKey = try container.decodeIfPresent(String.self, forKey: .quantityRuleKey)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case ownerID
+        case isDefault
+        case name
+        case category
+        case customCategoryName
+        case unit
+        case defaultUnitCost
+        case productURL
+        case wasteFactor
+        case quantityRuleKey
+    }
 }
 
 struct MaterialsCatalog: Codable {
@@ -77,36 +137,48 @@ struct MaterialsCatalog: Codable {
 final class MaterialsCatalogStore: ObservableObject {
     @Published private(set) var materials: [MaterialItem] = []
     @Published private(set) var customMaterials: [MaterialItem] = [] {
-        didSet {
-            saveCustomMaterials()
-            rebuildCatalog()
-        }
+        didSet { rebuildCatalog() }
     }
     @Published private(set) var priceOverrides: [String: Double] = [:] {
-        didSet { saveOverrides() }
+        didSet {
+            guard !isApplyingRemoteUpdate else { return }
+            persistPreferences()
+        }
     }
     @Published private(set) var productURLOverrides: [String: URL] = [:] {
-        didSet { saveProductURLOverrides() }
+        didSet {
+            guard !isApplyingRemoteUpdate else { return }
+            persistPreferences()
+        }
     }
     @Published private(set) var removedMaterialIDs: Set<String> = [] {
         didSet {
-            saveRemovedMaterials()
+            guard !isApplyingRemoteUpdate else { return }
+            persistPreferences()
             rebuildCatalog()
         }
     }
 
-    private let persistence: PersistenceService
+    private let db: Firestore
     private var baseMaterials: [MaterialItem] = []
+    private var authHandle: AuthStateDidChangeListenerHandle?
+    private var customMaterialsListener: ListenerRegistration?
+    private var preferencesListener: ListenerRegistration?
+    private var currentUserID: String?
+    private var isApplyingRemoteUpdate = false
 
-    init(persistence: PersistenceService = .shared) {
-        self.persistence = persistence
+    init(database: Firestore = Firestore.firestore()) {
+        self.db = database
 
         loadFromBundle()
-        loadCustomMaterials()
-        loadRemovedMaterials()
-        loadOverrides()
-        loadProductURLOverrides()
         rebuildCatalog()
+        configureAuthListener()
+    }
+
+    deinit {
+        customMaterialsListener?.remove()
+        preferencesListener?.remove()
+        if let authHandle { Auth.auth().removeStateDidChangeListener(authHandle) }
     }
 
     private func loadFromBundle() {
@@ -123,10 +195,12 @@ final class MaterialsCatalogStore: ObservableObject {
         }
     }
 
-    private func loadCustomMaterials() {
-        if let stored: [MaterialItem] = persistence.load([MaterialItem].self, from: MaterialsCatalogStorage.customMaterialsFileName) {
-            customMaterials = stored
+    private func configureAuthListener() {
+        authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
+            self?.attachListeners(for: user)
         }
+
+        attachListeners(for: Auth.auth().currentUser)
     }
 
     private func rebuildCatalog() {
@@ -148,8 +222,27 @@ final class MaterialsCatalogStore: ObservableObject {
         customCategoryName: String? = nil,
         productURL: URL? = nil
     ) -> MaterialItem {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            print("Attempted to add custom material without authenticated user")
+            return MaterialItem(
+                id: UUID().uuidString,
+                ownerID: "",
+                isDefault: false,
+                name: name,
+                category: category,
+                customCategoryName: customCategoryName,
+                unit: unit,
+                defaultUnitCost: unitCost,
+                productURL: productURL,
+                wasteFactor: 0,
+                quantityRuleKey: nil
+            )
+        }
+
         let newMaterial = MaterialItem(
             id: UUID().uuidString,
+            ownerID: uid,
+            isDefault: false,
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
             category: category,
             customCategoryName: customCategoryName?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -161,6 +254,7 @@ final class MaterialsCatalogStore: ObservableObject {
         )
 
         customMaterials.append(newMaterial)
+        persistCustomMaterial(newMaterial)
         return newMaterial
     }
 
@@ -191,6 +285,8 @@ final class MaterialsCatalogStore: ObservableObject {
 
         let updated = MaterialItem(
             id: material.id,
+            ownerID: material.ownerID,
+            isDefault: material.isDefault,
             name: name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? material.name,
             category: category ?? material.category,
             customCategoryName: updatedCustomCategoryName,
@@ -202,6 +298,7 @@ final class MaterialsCatalogStore: ObservableObject {
         )
 
         customMaterials[index] = updated
+        persistCustomMaterial(updated)
     }
 
     func deleteCustomMaterial(_ material: MaterialItem) {
@@ -209,6 +306,10 @@ final class MaterialsCatalogStore: ObservableObject {
         customMaterials.remove(at: index)
         resetOverride(for: material.id)
         resetProductURLOverride(for: material.id)
+
+        db.collection("materials")
+            .document(material.id)
+            .delete()
     }
 
     func deleteMaterial(_ material: MaterialItem) {
@@ -283,48 +384,14 @@ final class MaterialsCatalogStore: ObservableObject {
         productURLOverrides = updated
     }
 
-    // MARK: - Overrides persistence
-
-    private func loadOverrides() {
-        if let stored: [String: Double] = persistence.load([String: Double].self, from: MaterialsCatalogStorage.overrideFileName) {
-            priceOverrides = stored
-        }
-    }
-
-    private func loadProductURLOverrides() {
-        if let stored: [String: URL] = persistence.load([String: URL].self, from: MaterialsCatalogStorage.productURLOverridesFileName) {
-            productURLOverrides = stored
-        }
-    }
-
-    private func saveOverrides() {
-        persistence.save(priceOverrides, to: MaterialsCatalogStorage.overrideFileName)
-    }
-
-    private func saveProductURLOverrides() {
-        persistence.save(productURLOverrides, to: MaterialsCatalogStorage.productURLOverridesFileName)
-    }
-
-    private func saveCustomMaterials() {
-        persistence.save(customMaterials, to: MaterialsCatalogStorage.customMaterialsFileName)
-    }
-
-    private func loadRemovedMaterials() {
-        if let stored: Set<String> = persistence.load(Set<String>.self, from: MaterialsCatalogStorage.removedMaterialsFileName) {
-            removedMaterialIDs = stored
-        }
-    }
-
-    private func saveRemovedMaterials() {
-        persistence.save(removedMaterialIDs, to: MaterialsCatalogStorage.removedMaterialsFileName)
-    }
-
     private func applyProductURLOverride(to material: MaterialItem) -> MaterialItem {
         let override = productURLOverrides[material.id]
         guard override != nil || material.productURL != nil else { return material }
 
         return MaterialItem(
             id: material.id,
+            ownerID: material.ownerID,
+            isDefault: material.isDefault,
             name: material.name,
             category: material.category,
             customCategoryName: material.customCategoryName,
@@ -335,11 +402,94 @@ final class MaterialsCatalogStore: ObservableObject {
             quantityRuleKey: material.quantityRuleKey
         )
     }
-}
 
-private enum MaterialsCatalogStorage {
-    static let overrideFileName = "materialPriceOverrides.json"
-    static let customMaterialsFileName = "customGeneratorMaterials.json"
-    static let removedMaterialsFileName = "removedMaterials.json"
-    static let productURLOverridesFileName = "materialProductURLOverrides.json"
+    // MARK: - Firestore
+
+    private func attachListeners(for user: User?) {
+        customMaterialsListener?.remove()
+        preferencesListener?.remove()
+
+        currentUserID = user?.uid
+        isApplyingRemoteUpdate = true
+        customMaterials = []
+        priceOverrides = [:]
+        productURLOverrides = [:]
+        removedMaterialIDs = []
+        isApplyingRemoteUpdate = false
+        rebuildCatalog()
+
+        guard let uid = user?.uid else { return }
+
+        customMaterialsListener = db.collection("materials")
+            .whereField("ownerID", in: [uid, "global"])
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self else { return }
+
+                if let error { print("Failed to fetch materials: \(error.localizedDescription)"); return }
+
+                let decoded: [MaterialItem] = snapshot?.documents.compactMap { document in
+                    do {
+                        return try document.data(as: MaterialItem.self)
+                    } catch {
+                        print("Failed to decode material \(document.documentID): \(error.localizedDescription)")
+                        return nil
+                    }
+                } ?? []
+
+                DispatchQueue.main.async {
+                    self.customMaterials = decoded.filter { $0.ownerID != "global" }
+                }
+            }
+
+        preferencesListener = db.collection("materialPreferences")
+            .document(uid)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self else { return }
+
+                if let error { print("Failed to fetch material preferences: \(error.localizedDescription)"); return }
+
+                if let data = try? snapshot?.data(as: MaterialPreferences.self) {
+                    DispatchQueue.main.async {
+                        self.isApplyingRemoteUpdate = true
+                        self.priceOverrides = data.priceOverrides
+                        self.productURLOverrides = data.productURLOverrides
+                        self.removedMaterialIDs = Set(data.removedMaterialIDs)
+                        self.isApplyingRemoteUpdate = false
+                        self.rebuildCatalog()
+                    }
+                }
+            }
+    }
+
+    private func persistCustomMaterial(_ material: MaterialItem) {
+        guard !material.ownerID.isEmpty else { return }
+
+        do {
+            try db.collection("materials")
+                .document(material.id)
+                .setData(from: material)
+        } catch {
+            print("Failed to save material: \(error.localizedDescription)")
+        }
+    }
+
+    private func persistPreferences() {
+        guard let uid = currentUserID else { return }
+
+        let preferences = MaterialPreferences(
+            id: uid,
+            ownerID: uid,
+            priceOverrides: priceOverrides,
+            productURLOverrides: productURLOverrides,
+            removedMaterialIDs: Array(removedMaterialIDs)
+        )
+
+        do {
+            try db.collection("materialPreferences")
+                .document(uid)
+                .setData(from: preferences)
+        } catch {
+            print("Failed to save material preferences: \(error.localizedDescription)")
+        }
+    }
 }
