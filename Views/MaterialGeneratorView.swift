@@ -65,11 +65,11 @@ struct MaterialGeneratorView: View {
                             Text(item.material.name)
                                 .font(.headline)
 
-                            // FIXED — correct string interpolation with escaped quotes
-                            Text("\(item.quantity, specifier: \"%.2f\") \(item.material.unit)")
+                            // quantity line
+                            Text(String(format: "%.2f %@", item.quantity, item.material.unit))
 
-                            // FIXED — correct total formatting
-                            Text("Total: $\(item.totalCost, specifier: \"%.2f\")")
+                            // total line
+                            Text(String(format: "Total: $%.2f", item.totalCost))
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
