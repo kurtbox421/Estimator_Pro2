@@ -1,22 +1,23 @@
 import Foundation
-
-private enum ClientStorage {
-    static let userDefaultsKey = "EstimatorPro_Clients"
-    static let fileName = "clients.json"
-}
+import FirebaseAuth
+import FirebaseFirestore
+import FirebaseFirestoreSwift
 
 final class ClientViewModel: ObservableObject {
-    @Published var clients: [Client] = [] {
-        didSet {
-            saveClients()
-        }
+    @Published var clients: [Client] = []
+
+    private let db: Firestore
+    private var listener: ListenerRegistration?
+    private var authHandle: AuthStateDidChangeListenerHandle?
+
+    init(database: Firestore = Firestore.firestore()) {
+        self.db = database
+        configureAuthListener()
     }
 
-    private let persistence: PersistenceService
-
-    init(persistence: PersistenceService = .shared) {
-        self.persistence = persistence
-        loadClients()
+    deinit {
+        listener?.remove()
+        if let authHandle { Auth.auth().removeStateDidChangeListener(authHandle) }
     }
 
     func addClient(
@@ -27,7 +28,10 @@ final class ClientViewModel: ObservableObject {
         email: String = "",
         notes: String = ""
     ) -> Client {
+        guard let uid = Auth.auth().currentUser?.uid else { return Client() }
+
         let newClient = Client(
+            ownerID: uid,
             name: name,
             company: company,
             address: address,
@@ -35,16 +39,20 @@ final class ClientViewModel: ObservableObject {
             email: email,
             notes: notes
         )
-        clients.append(newClient)
+        persist(newClient)
         return newClient
     }
 
     func add(_ client: Client = Client()) {
-        clients.append(client)
+        persist(client)
     }
 
     func delete(_ client: Client) {
-        clients.removeAll { $0.id == client.id }
+        guard Auth.auth().currentUser != nil else { return }
+
+        db.collection("clients")
+            .document(client.id.uuidString)
+            .delete()
     }
 
     func move(from offsets: IndexSet, to destination: Int) {
@@ -52,25 +60,68 @@ final class ClientViewModel: ObservableObject {
     }
 
     func update(_ client: Client) {
-        guard let index = clients.firstIndex(where: { $0.id == client.id }) else { return }
-        clients[index] = client
+        persist(client)
     }
 
-    private func saveClients() {
-        persistence.save(clients, to: ClientStorage.fileName)
+    // MARK: - Firestore
+
+    private func configureAuthListener() {
+        authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
+            self?.attachListener(for: user)
+        }
+
+        attachListener(for: Auth.auth().currentUser)
     }
 
-    private func loadClients() {
-        if let stored: [Client] = persistence.load([Client].self, from: ClientStorage.fileName) {
-            clients = stored
-            return
+    private func attachListener(for user: User?) {
+        listener?.remove()
+        clients = []
+
+        guard let uid = user?.uid else { return }
+
+        listener = db.collection("clients")
+            .whereField("ownerID", isEqualTo: uid)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self else { return }
+
+                if let error {
+                    print("Failed to fetch clients: \(error.localizedDescription)")
+                    return
+                }
+
+                let decoded: [Client] = snapshot?.documents.compactMap { document in
+                    do {
+                        return try document.data(as: Client.self)
+                    } catch {
+                        print("Failed to decode client \(document.documentID): \(error.localizedDescription)")
+                        return nil
+                    }
+                } ?? []
+
+                DispatchQueue.main.async {
+                    self.clients = decoded
+                }
+            }
+    }
+
+    private func persist(_ client: Client) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+
+        var clientToSave = client
+        clientToSave.ownerID = uid
+
+        if let existingIndex = clients.firstIndex(where: { $0.id == clientToSave.id }) {
+            clients[existingIndex] = clientToSave
+        } else {
+            clients.append(clientToSave)
         }
 
-        if let migrated: [Client] = persistence.migrateFromUserDefaults(key: ClientStorage.userDefaultsKey, fileName: ClientStorage.fileName, as: [Client].self) {
-            clients = migrated
-            return
+        do {
+            try db.collection("clients")
+                .document(clientToSave.id.uuidString)
+                .setData(from: clientToSave)
+        } catch {
+            print("Failed to save client: \(error.localizedDescription)")
         }
-
-        clients = Client.sampleData
     }
 }

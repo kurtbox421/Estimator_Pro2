@@ -309,6 +309,7 @@ struct AddEditInvoiceView: View {
 
         let material = Material(
             id: editingMaterialIndex.flatMap { materials[$0].id } ?? UUID(),
+            ownerID: Auth.auth().currentUser?.uid ?? "",
             name: trimmedName,
             quantity: quantity,
             unitCost: unitCost,

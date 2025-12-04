@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import FirebaseAuth
 
 struct AddMaterialView: View {
     @Environment(\.dismiss) private var dismiss
@@ -57,6 +58,7 @@ struct AddMaterialView: View {
         else { return }
 
         let material = Material(
+            ownerID: Auth.auth().currentUser?.uid ?? "",
             name: name.trimmingCharacters(in: .whitespaces),
             quantity: q,
             unitCost: u

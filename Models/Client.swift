@@ -2,6 +2,7 @@ import Foundation
 
 struct Client: Identifiable, Codable, Equatable {
     var id: UUID = UUID()
+    var ownerID: String = ""
     var name: String = ""
     var company: String = ""
     var address: String = ""
@@ -11,12 +12,25 @@ struct Client: Identifiable, Codable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case id
+        case ownerID
         case name
         case company
         case address
         case phone
         case email
         case notes
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        ownerID = try container.decodeIfPresent(String.self, forKey: .ownerID) ?? ""
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? ""
+        company = try container.decodeIfPresent(String.self, forKey: .company) ?? ""
+        address = try container.decodeIfPresent(String.self, forKey: .address) ?? ""
+        phone = try container.decodeIfPresent(String.self, forKey: .phone) ?? ""
+        email = try container.decodeIfPresent(String.self, forKey: .email) ?? ""
+        notes = try container.decodeIfPresent(String.self, forKey: .notes) ?? ""
     }
 }
 
