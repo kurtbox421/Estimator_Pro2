@@ -324,7 +324,7 @@ private struct InvoiceMaterialRow: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(.white)
 
-                    Text("\(material.quantity, specifier: "%.2f") × \(material.unitCost, format: .currency(code: "USD"))")
+                    Text("\(String(format: "%.2f", material.quantity)) × \(material.unitCost, format: .currency(code: "USD"))")
                         .font(.caption)
                         .foregroundColor(.white.opacity(0.7))
 

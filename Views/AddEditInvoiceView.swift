@@ -110,7 +110,7 @@ struct AddEditInvoiceView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(material.name)
                                         .font(.subheadline.weight(.semibold))
-                                    Text("\(material.quantity, specifier: "%.2f") × \(material.unitCost, format: .currency(code: "USD"))")
+                                    Text("\(String(format: "%.2f", material.quantity)) × \(material.unitCost, format: .currency(code: "USD"))")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                     if let url = material.productURL {
