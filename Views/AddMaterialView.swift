@@ -93,10 +93,10 @@ struct AddMaterialView: View {
                         .disabled(!canSave)
                 }
             }
-            .onChange(of: name, initial: false) { _ in
+            .onChange(of: name, initial: false) { _, _ in
                 applyCommonMaterialPriceIfNeeded()
             }
-            .onChange(of: quantityText, initial: false) { _ in
+            .onChange(of: quantityText, initial: false) { _, _ in
                 applyCommonMaterialPriceIfNeeded()
             }
         }
