@@ -176,6 +176,8 @@ struct RootView: View {
                 } label: {
                     Text(tab.rawValue)
                         .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.9)
                         .padding(.vertical, verticalPadding)
                         .padding(.horizontal, horizontalPadding)
                         .background(
