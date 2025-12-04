@@ -36,13 +36,22 @@ struct JobMaterialGenerator {
 
         return materialIDs.compactMap { id in
             guard let material = catalog.material(withID: id) else { return nil }
-            let qty = engine.quantity(for: material, context: context)
+            let qty = min(engine.quantity(for: material, context: context), maxRecommendedQuantity(for: material))
             guard qty > 0 else { return nil }
             return GeneratedMaterial(
                 material: material,
                 quantity: qty,
                 unitCost: catalog.price(for: material)
             )
+        }
+    }
+
+    private func maxRecommendedQuantity(for material: MaterialItem) -> Double {
+        switch material.id {
+        case "screws-drywall-125":
+            return 5
+        default:
+            return .greatestFiniteMagnitude
         }
     }
 
