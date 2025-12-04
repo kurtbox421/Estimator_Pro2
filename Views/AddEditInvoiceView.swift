@@ -114,7 +114,7 @@ struct AddEditInvoiceView: View {
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                     if let url = material.productURL {
-                                        Link(url.absoluteString, destination: url)
+                                        Link("See Product Information", destination: url)
                                             .font(.caption2)
                                             .foregroundColor(.blue)
                                             .lineLimit(1)

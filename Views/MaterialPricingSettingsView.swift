@@ -79,7 +79,7 @@ struct MaterialPricingSettingsView: View {
                                 .foregroundColor(.secondary)
 
                             if let url = materialsStore.productURL(for: material) {
-                                Link(url.absoluteString, destination: url)
+                                Link("See Product Information", destination: url)
                                     .font(.caption2)
                                     .foregroundColor(.accentColor)
                                     .lineLimit(1)
@@ -172,7 +172,7 @@ struct MaterialPricingSettingsView: View {
                                 .foregroundColor(.secondary)
 
                             if let url = materialsStore.productURL(for: material) {
-                                Link(url.absoluteString, destination: url)
+                                Link("See Product Information", destination: url)
                                     .font(.caption2)
                                     .foregroundColor(.accentColor)
                                     .lineLimit(1)

@@ -329,7 +329,7 @@ private struct InvoiceMaterialRow: View {
                         .foregroundColor(.white.opacity(0.7))
 
                     if let url = material.productURL {
-                        Link(url.absoluteString, destination: url)
+                        Link("See Product Information", destination: url)
                             .font(.caption2)
                             .foregroundColor(.blue.opacity(0.9))
                             .lineLimit(1)
