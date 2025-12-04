@@ -8,17 +8,19 @@ final class ClientViewModel: ObservableObject {
     @Published var clients: [Client] = []
 
     private let db: Firestore
+    private let auth: Auth
     private var listener: ListenerRegistration?
     private var authHandle: AuthStateDidChangeListenerHandle?
 
-    init(database: Firestore = Firestore.firestore()) {
+    init(database: Firestore = Firestore.firestore(), auth: Auth = Auth.auth()) {
         self.db = database
+        self.auth = auth
         configureAuthListener()
     }
 
     deinit {
         listener?.remove()
-        if let authHandle { Auth.auth().removeStateDidChangeListener(authHandle) }
+        if let authHandle { auth.removeStateDidChangeListener(authHandle) }
     }
 
     func addClient(
@@ -29,7 +31,7 @@ final class ClientViewModel: ObservableObject {
         email: String = "",
         notes: String = ""
     ) -> Client {
-        guard let uid = Auth.auth().currentUser?.uid else { return Client() }
+        guard let uid = auth.currentUser?.uid else { return Client() }
 
         let newClient = Client(
             ownerID: uid,
@@ -49,7 +51,7 @@ final class ClientViewModel: ObservableObject {
     }
 
     func delete(_ client: Client) {
-        guard Auth.auth().currentUser != nil else { return }
+        guard auth.currentUser != nil else { return }
 
         db.collection("clients")
             .document(client.id.uuidString)
@@ -67,7 +69,7 @@ final class ClientViewModel: ObservableObject {
     // MARK: - Firestore
 
     private func configureAuthListener() {
-        authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
+        authHandle = auth.addStateDidChangeListener { [weak self] _, user in
             guard let self else { return }
             Task { @MainActor in
                 self.attachListener(for: user)
@@ -75,7 +77,7 @@ final class ClientViewModel: ObservableObject {
         }
 
         Task { @MainActor in
-            attachListener(for: Auth.auth().currentUser)
+            attachListener(for: auth.currentUser)
         }
     }
 
@@ -111,7 +113,7 @@ final class ClientViewModel: ObservableObject {
     }
 
     private func persist(_ client: Client) {
-        guard let uid = Auth.auth().currentUser?.uid else { return }
+        guard let uid = auth.currentUser?.uid else { return }
 
         var clientToSave = client
         clientToSave.ownerID = uid
