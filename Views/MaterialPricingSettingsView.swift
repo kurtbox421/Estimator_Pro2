@@ -9,6 +9,7 @@ struct MaterialPricingSettingsView: View {
     @State private var newCustomUnit: String = ""
     @State private var newCustomPrice: String = ""
     @State private var newCustomCategory: MaterialCategory = MaterialCategory.allCases.first(where: { $0 != .custom }) ?? .paint
+    @State private var showingAddMaterialSheet = false
 
     private var generatorMaterials: [MaterialItem] {
         let generator = JobMaterialGenerator(catalog: materialsStore)
@@ -110,30 +111,6 @@ struct MaterialPricingSettingsView: View {
                 }
                 .onDelete(perform: deleteCustomMaterials)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Add material")
-                        .font(.subheadline.weight(.semibold))
-
-                    TextField("Name", text: $newCustomName)
-                    TextField("Unit (each, tube, sq ft)", text: $newCustomUnit)
-                    TextField("Unit cost", text: $newCustomPrice)
-                        .keyboardType(.decimalPad)
-
-                    Picker("Category", selection: $newCustomCategory) {
-                        ForEach(MaterialCategory.allCases) { category in
-                            Text(category.displayName).tag(category)
-                        }
-                    }
-                    .pickerStyle(.menu)
-
-                    Button {
-                        addCustomMaterial()
-                    } label: {
-                        Label("Add to generator", systemImage: "plus.circle.fill")
-                    }
-                    .disabled(!canAddCustomMaterial)
-                }
-                .padding(.vertical, 4)
             }
 
             ForEach(groupedMaterials, id: \.category) { group in
@@ -205,6 +182,16 @@ struct MaterialPricingSettingsView: View {
             }
         }
         .navigationTitle("Material pricing")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showingAddMaterialSheet = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("Add generator material")
+            }
+        }
         .onAppear {
             syncOverrides()
             syncProductURLTexts()
@@ -212,6 +199,41 @@ struct MaterialPricingSettingsView: View {
         .onChange(of: materialsStore.materials) { _ in
             syncOverrides()
             syncProductURLTexts()
+        }
+        .sheet(isPresented: $showingAddMaterialSheet) {
+            NavigationStack {
+                Form {
+                    Section("Add generator material") {
+                        TextField("Name", text: $newCustomName)
+                        TextField("Unit (each, tube, sq ft)", text: $newCustomUnit)
+                        TextField("Unit cost", text: $newCustomPrice)
+                            .keyboardType(.decimalPad)
+
+                        Picker("Category", selection: $newCustomCategory) {
+                            ForEach(MaterialCategory.allCases) { category in
+                                Text(category.displayName).tag(category)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                    }
+                }
+                .navigationTitle("New material")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") {
+                            resetNewCustomMaterialForm()
+                            showingAddMaterialSheet = false
+                        }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Add") {
+                            addCustomMaterial()
+                            showingAddMaterialSheet = false
+                        }
+                        .disabled(!canAddCustomMaterial)
+                    }
+                }
+            }
         }
     }
 
@@ -316,11 +338,15 @@ struct MaterialPricingSettingsView: View {
         )
         overrideValues[material.id] = price
 
+        resetNewCustomMaterialForm()
+        syncOverrides()
+    }
+
+    private func resetNewCustomMaterialForm() {
         newCustomName = ""
         newCustomUnit = ""
         newCustomPrice = ""
         newCustomCategory = MaterialCategory.allCases.first(where: { $0 != .custom }) ?? .paint
-        syncOverrides()
     }
 
     private func deleteCustomMaterials(at offsets: IndexSet) {
