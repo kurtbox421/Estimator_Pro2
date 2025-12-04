@@ -199,10 +199,10 @@ struct MaterialGeneratorView: View {
     private func materialFromRecommendation(_ rec: MaterialRecommendation) -> Material {
         let unitPrice = settingsManager.commonMaterialPrice(for: rec.name) ?? 0
 
-        Material(
+        return Material(
             name: rec.name,
-            quantity: rec.quantity,
-            unitCost: unitPrice,
+            quantity: rec.quantity,     // from generator
+            unitCost: unitPrice,        // from settings
             productURL: nil,
             unit: rec.unit,
             notes: rec.notes
