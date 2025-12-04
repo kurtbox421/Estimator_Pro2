@@ -171,31 +171,13 @@ struct RootView: View {
             ForEach(AppTab.allCases, id: \.self) { tab in
                 let isSelected = selectedTab == tab
 
-                Button {
+                AppTabButton(
+                    tab: tab,
+                    isSelected: isSelected,
+                    verticalPadding: verticalPadding,
+                    horizontalPadding: horizontalPadding
+                ) {
                     selectedTab = tab
-                } label: {
-                    Text(tab.rawValue)
-                        .font(.subheadline.weight(.semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.9)
-                        .padding(.vertical, verticalPadding)
-                        .padding(.horizontal, horizontalPadding)
-                        .background(
-                            Capsule()
-                                .fill(isSelected
-                                      ? Color.white
-                                      : Color.white.opacity(0.14))
-                        )
-                        .overlay(
-                            Capsule()
-                                .stroke(Color.white.opacity(isSelected ? 0.0 : 0.4), lineWidth: 1)
-                        )
-                        .shadow(color: Color.black.opacity(isSelected ? 0.12 : 0), radius: 8, x: 0, y: 4)
-                        .foregroundColor(
-                            isSelected
-                            ? Color.black.opacity(0.85)
-                            : Color.white
-                        )
                 }
             }
         }
@@ -209,6 +191,51 @@ struct RootView: View {
                 )
                 .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
         )
+    }
+
+    private struct AppTabButton: View {
+        let tab: AppTab
+        let isSelected: Bool
+        let verticalPadding: CGFloat
+        let horizontalPadding: CGFloat
+        let action: () -> Void
+
+        var body: some View {
+            Button(action: action) {
+                Text(tab.rawValue)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.9)
+                    .padding(.vertical, verticalPadding)
+                    .padding(.horizontal, horizontalPadding)
+                    .background(
+                        Capsule()
+                            .fill(
+                                isSelected
+                                ? Color.white
+                                : Color.white.opacity(0.14)
+                            )
+                    )
+                    .overlay(
+                        Capsule()
+                            .stroke(
+                                Color.white.opacity(isSelected ? 0.0 : 0.4),
+                                lineWidth: 1
+                            )
+                    )
+                    .shadow(
+                        color: Color.black.opacity(isSelected ? 0.12 : 0),
+                        radius: 8,
+                        x: 0,
+                        y: 4
+                    )
+                    .foregroundColor(
+                        isSelected
+                        ? Color.black.opacity(0.85)
+                        : Color.white
+                    )
+            }
+        }
     }
 
     // MARK: Hero card
