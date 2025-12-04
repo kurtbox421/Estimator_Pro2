@@ -18,6 +18,7 @@ struct Invoice: Identifiable, Codable {
     }
 
     var id: UUID
+    var ownerID: String
     var invoiceNumber: String
     var title: String
     var clientID: UUID?
@@ -25,7 +26,6 @@ struct Invoice: Identifiable, Codable {
     var materials: [Material]
     var status: InvoiceStatus
     var dueDate: Date?
-    var ownerID: String
 
     var amount: Double {
         materials.reduce(into: 0) { $0 += $1.total }
@@ -36,7 +36,7 @@ struct Invoice: Identifiable, Codable {
     init(
         id: UUID = UUID(),
         ownerID: String = "",
-        invoiceNumber: String? = nil,
+        invoiceNumber: String = InvoiceNumberManager.shared.generateInvoiceNumber(),
         title: String,
         clientID: UUID? = nil,
         clientName: String,
@@ -47,7 +47,6 @@ struct Invoice: Identifiable, Codable {
         self.id = id
         self.ownerID = ownerID
         self.invoiceNumber = invoiceNumber
-            ?? InvoiceNumberManager.shared.generateInvoiceNumber()
         self.title = title
         self.clientID = clientID
         self.clientName = clientName
