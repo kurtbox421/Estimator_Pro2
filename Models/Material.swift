@@ -27,7 +27,7 @@ struct Material: Identifiable, Codable {
 
     init(
         id: UUID = UUID(),
-        ownerID: String = "",
+        ownerID: String,
         name: String,
         quantity: Double,
         unitCost: Double,

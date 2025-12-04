@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import FirebaseAuth
 
 private enum JobStorage {
     static let userDefaultsKey = "EstimatorPro_Jobs"
@@ -131,10 +132,13 @@ class JobViewModel: ObservableObject {
         guard let job,
               !generated.isEmpty,
               let index = jobs.firstIndex(where: { $0.id == job.id }) else { return }
-        
+
+        let ownerID = Auth.auth().currentUser?.uid ?? ""
+
         let newMaterials: [Material] = generated.map { gm in
             Material(
                 id: UUID(),
+                ownerID: ownerID,
                 name: gm.name,
                 quantity: gm.quantity,
                 unitCost: gm.unitCost
