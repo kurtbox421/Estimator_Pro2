@@ -32,7 +32,7 @@ struct JobMaterialGenerator {
         for jobType: JobType,
         context: QuantityContext
     ) -> [GeneratedMaterial] {
-        let materialIDs = materialIDs(for: jobType)
+        let materialIDs = materialIDs(for: jobType) + catalog.customMaterialIDs
 
         return materialIDs.compactMap { id in
             guard let material = catalog.material(withID: id) else { return nil }
@@ -47,7 +47,7 @@ struct JobMaterialGenerator {
     }
 
     func allMaterialIDs() -> [String] {
-        let ids = JobType.allCases.flatMap { materialIDs(for: $0) }
+        let ids = JobType.allCases.flatMap { materialIDs(for: $0) } + catalog.customMaterialIDs
         return Array(Set(ids)).sorted()
     }
 
