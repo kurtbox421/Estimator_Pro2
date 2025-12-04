@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MaterialGeneratorView: View {
     @EnvironmentObject private var jobVM: JobViewModel
+    @EnvironmentObject private var settingsManager: SettingsManager
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedJobType: MaterialJobType = .interiorWallBuild
@@ -184,10 +185,12 @@ struct MaterialGeneratorView: View {
     }
 
     private func materialFromRecommendation(_ rec: MaterialRecommendation) -> Material {
+        let unitPrice = settingsManager.commonMaterialPrice(for: rec.name) ?? 0
+
         Material(
             name: rec.name,
             quantity: rec.quantity,
-            unitCost: 0,
+            unitCost: unitPrice,
             productURL: nil,
             unit: rec.unit,
             notes: rec.notes
