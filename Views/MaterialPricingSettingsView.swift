@@ -4,6 +4,7 @@ struct MaterialPricingSettingsView: View {
     @EnvironmentObject private var materialsStore: MaterialsCatalogStore
 
     @State private var overrideValues: [String: Double] = [:]
+    @State private var productURLTexts: [String: String] = [:]
     @State private var newCustomName: String = ""
     @State private var newCustomUnit: String = ""
     @State private var newCustomPrice: String = ""
@@ -68,6 +69,22 @@ struct MaterialPricingSettingsView: View {
                             }
                         }
                         .pickerStyle(.menu)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            TextField("Product URL (optional)", text: productURLBinding(for: material))
+                                .keyboardType(.URL)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            if let url = materialsStore.productURL(for: material) {
+                                Link(url.absoluteString, destination: url)
+                                    .font(.caption2)
+                                    .foregroundColor(.accentColor)
+                                    .lineLimit(1)
+                            }
+                        }
 
                         if materialsStore.override(for: material.id) != nil {
                             Button {
@@ -136,21 +153,37 @@ struct MaterialPricingSettingsView: View {
 
                                 Spacer()
 
-                                TextField(
-                                    "Unit cost",
-                                    value: priceBinding(for: material),
-                                    format: .currency(code: "USD")
-                                )
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
-                                .frame(width: 140)
-                            }
+                            TextField(
+                                "Unit cost",
+                                value: priceBinding(for: material),
+                                format: .currency(code: "USD")
+                            )
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 140)
+                        }
 
-                            if materialsStore.override(for: material.id) != nil {
-                                Button {
-                                    materialsStore.resetOverride(for: material.id)
-                                    overrideValues[material.id] = material.defaultUnitCost
-                                } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            TextField("Product URL (optional)", text: productURLBinding(for: material))
+                                .keyboardType(.URL)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            if let url = materialsStore.productURL(for: material) {
+                                Link(url.absoluteString, destination: url)
+                                    .font(.caption2)
+                                    .foregroundColor(.accentColor)
+                                    .lineLimit(1)
+                            }
+                        }
+
+                        if materialsStore.override(for: material.id) != nil {
+                            Button {
+                                materialsStore.resetOverride(for: material.id)
+                                overrideValues[material.id] = material.defaultUnitCost
+                            } label: {
                                     Text("Reset to default \(material.defaultUnitCost.formatted(.currency(code: "USD")))")
                                         .font(.caption)
                                         .foregroundColor(.accentColor)
@@ -172,8 +205,14 @@ struct MaterialPricingSettingsView: View {
             }
         }
         .navigationTitle("Material pricing")
-        .onAppear(perform: syncOverrides)
-        .onChange(of: materialsStore.materials) { _ in syncOverrides() }
+        .onAppear {
+            syncOverrides()
+            syncProductURLTexts()
+        }
+        .onChange(of: materialsStore.materials) { _ in
+            syncOverrides()
+            syncProductURLTexts()
+        }
     }
 
     private func priceBinding(for material: MaterialItem) -> Binding<Double> {
@@ -199,6 +238,14 @@ struct MaterialPricingSettingsView: View {
         overrideValues = values
     }
 
+    private func syncProductURLTexts() {
+        var values: [String: String] = [:]
+        generatorMaterials.forEach { material in
+            values[material.id] = materialsStore.productURL(for: material)?.absoluteString ?? ""
+        }
+        productURLTexts = values
+    }
+
     private func nameBinding(for material: MaterialItem) -> Binding<String> {
         Binding(
             get: { material.name },
@@ -215,6 +262,27 @@ struct MaterialPricingSettingsView: View {
             set: { newValue in
                 materialsStore.updateCustomMaterial(material, unit: newValue)
                 syncOverrides()
+            }
+        )
+    }
+
+    private func productURLBinding(for material: MaterialItem) -> Binding<String> {
+        Binding(
+            get: {
+                productURLTexts[material.id] ?? materialsStore.productURL(for: material)?.absoluteString ?? ""
+            },
+            set: { newValue in
+                productURLTexts[material.id] = newValue
+
+                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else {
+                    materialsStore.setProductURL(nil, for: material)
+                    return
+                }
+
+                if let url = URL(string: trimmed), let scheme = url.scheme, !scheme.isEmpty {
+                    materialsStore.setProductURL(url, for: material)
+                }
             }
         )
     }
