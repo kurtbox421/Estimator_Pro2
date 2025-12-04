@@ -1087,29 +1087,10 @@ struct EstimateDefaultsView: View {
                         .listRowBackground(Color.clear)
                 } else {
                     ForEach(Array(settingsManager.commonMaterials.enumerated()), id: \.element.id) { index, _ in
-                        HStack(spacing: 12) {
-                            TextField(
-                                "Material",
-                                text: Binding(
-                                    get: { settingsManager.commonMaterials[index].name },
-                                    set: { settingsManager.updateMaterialName(at: index, name: $0) }
-                                )
-                            )
-
-                            Spacer()
-
-                            TextField(
-                                "Price",
-                                value: Binding(
-                                    get: { settingsManager.commonMaterials[index].price },
-                                    set: { settingsManager.updateMaterialPrice(at: index, price: $0) }
-                                ),
-                                format: .number
-                            )
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 110)
-                        }
+                        CommonMaterialRow(
+                            name: nameBinding(for: index),
+                            price: priceBinding(for: index)
+                        )
                     }
                     .onDelete(perform: settingsManager.deleteMaterials)
                 }
@@ -1154,6 +1135,44 @@ struct EstimateDefaultsView: View {
         settingsManager.addMaterial(name: trimmedName, price: priceValue)
         newName = ""
         newPrice = ""
+    }
+
+    private func nameBinding(for index: Int) -> Binding<String> {
+        Binding(
+            get: {
+                guard settingsManager.commonMaterials.indices.contains(index) else { return "" }
+                return settingsManager.commonMaterials[index].name
+            },
+            set: { settingsManager.updateMaterialName(at: index, name: $0) }
+        )
+    }
+
+    private func priceBinding(for index: Int) -> Binding<Double> {
+        Binding(
+            get: {
+                guard settingsManager.commonMaterials.indices.contains(index) else { return 0 }
+                return settingsManager.commonMaterials[index].price
+            },
+            set: { settingsManager.updateMaterialPrice(at: index, price: $0) }
+        )
+    }
+}
+
+private struct CommonMaterialRow: View {
+    let name: Binding<String>
+    let price: Binding<Double>
+
+    var body: some View {
+        HStack(spacing: 12) {
+            TextField("Material", text: name)
+
+            Spacer()
+
+            TextField("Price", value: price, format: .number)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 110)
+        }
     }
 }
 
