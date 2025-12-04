@@ -334,7 +334,7 @@ private struct EditableMaterialRow: View {
                         .font(.caption)
                         .foregroundColor(.white.opacity(0.7))
 
-                    if let url = material.productURL.wrappedValue {
+                    if let url = material.productURL {
                         Link(url.absoluteString, destination: url)
                             .font(.caption2)
                             .foregroundColor(.blue.opacity(0.9))
