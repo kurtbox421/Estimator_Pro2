@@ -8,6 +8,7 @@ struct MaterialPricingSettingsView: View {
     @State private var newCustomName: String = ""
     @State private var newCustomUnit: String = ""
     @State private var newCustomPrice: String = ""
+    @State private var newCustomCategoryName: String = ""
     @State private var newCustomCategory: MaterialCategory = MaterialCategory.allCases.first(where: { $0 != .custom }) ?? .paint
     @State private var showingAddMaterialSheet = false
 
@@ -70,6 +71,14 @@ struct MaterialPricingSettingsView: View {
                             }
                         }
                         .pickerStyle(.menu)
+
+                        if material.category == .custom {
+                            TextField(
+                                "Custom category name",
+                                text: customCategoryNameBinding(for: material)
+                            )
+                            .textInputAutocapitalization(.words)
+                        }
 
                         VStack(alignment: .leading, spacing: 4) {
                             TextField("Product URL (optional)", text: productURLBinding(for: material))
@@ -196,6 +205,11 @@ struct MaterialPricingSettingsView: View {
             syncOverrides()
             syncProductURLTexts()
         }
+        .onChange(of: newCustomCategory) { newValue in
+            if newValue != .custom {
+                newCustomCategoryName = ""
+            }
+        }
         .onChange(of: materialsStore.materials) { _ in
             syncOverrides()
             syncProductURLTexts()
@@ -215,6 +229,10 @@ struct MaterialPricingSettingsView: View {
                             }
                         }
                         .pickerStyle(.menu)
+
+                        if newCustomCategory == .custom {
+                            TextField("Custom category name", text: $newCustomCategoryName)
+                        }
                     }
                 }
                 .navigationTitle("New material")
@@ -313,7 +331,25 @@ struct MaterialPricingSettingsView: View {
         Binding(
             get: { material.category },
             set: { newValue in
-                materialsStore.updateCustomMaterial(material, category: newValue)
+                let updatedCustomCategoryName = newValue == .custom ? material.customCategoryName : nil
+                materialsStore.updateCustomMaterial(
+                    material,
+                    category: newValue,
+                    customCategoryName: updatedCustomCategoryName
+                )
+                syncOverrides()
+            }
+        )
+    }
+
+    private func customCategoryNameBinding(for material: MaterialItem) -> Binding<String> {
+        Binding(
+            get: { material.customCategoryName ?? "" },
+            set: { newValue in
+                materialsStore.updateCustomMaterial(
+                    material,
+                    customCategoryName: newValue
+                )
                 syncOverrides()
             }
         )
@@ -323,18 +359,24 @@ struct MaterialPricingSettingsView: View {
         let trimmedName = newCustomName.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedUnit = newCustomUnit.trimmingCharacters(in: .whitespacesAndNewlines)
         let price = Double(newCustomPrice.replacingOccurrences(of: ",", with: "."))
-        return !trimmedName.isEmpty && !trimmedUnit.isEmpty && price != nil
+        let trimmedCustomCategoryName = newCustomCategoryName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasValidCustomCategory = newCustomCategory != .custom || !trimmedCustomCategoryName.isEmpty
+
+        return !trimmedName.isEmpty && !trimmedUnit.isEmpty && price != nil && hasValidCustomCategory
     }
 
     private func addCustomMaterial() {
         let trimmedName = newCustomName.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedUnit = newCustomUnit.trimmingCharacters(in: .whitespacesAndNewlines)
         let price = Double(newCustomPrice.replacingOccurrences(of: ",", with: ".")) ?? 0
+        let trimmedCategoryName = newCustomCategoryName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let customCategoryName = newCustomCategory == .custom ? trimmedCategoryName : nil
         let material = materialsStore.addCustomMaterial(
             name: trimmedName,
             unit: trimmedUnit,
             unitCost: price,
-            category: newCustomCategory
+            category: newCustomCategory,
+            customCategoryName: customCategoryName
         )
         overrideValues[material.id] = price
 
@@ -346,6 +388,7 @@ struct MaterialPricingSettingsView: View {
         newCustomName = ""
         newCustomUnit = ""
         newCustomPrice = ""
+        newCustomCategoryName = ""
         newCustomCategory = MaterialCategory.allCases.first(where: { $0 != .custom }) ?? .paint
     }
 

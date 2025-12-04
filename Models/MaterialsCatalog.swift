@@ -54,6 +54,7 @@ struct MaterialItem: Identifiable, Codable, Hashable {
     let id: String
     let name: String
     let category: MaterialCategory
+    let customCategoryName: String?
     let unit: String               // "each", "sheet", "sqft", "linear_ft", "bag", etc.
     let defaultUnitCost: Double
     let productURL: URL?
@@ -61,7 +62,11 @@ struct MaterialItem: Identifiable, Codable, Hashable {
     let quantityRuleKey: String?   // optional, allows manual-only items
 
     var displayCategory: String {
-        category.displayName
+        if category == .custom, let customCategoryName, !customCategoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return customCategoryName
+        }
+
+        return category.displayName
     }
 }
 
@@ -135,11 +140,19 @@ final class MaterialsCatalogStore: ObservableObject {
     }
 
     @discardableResult
-    func addCustomMaterial(name: String, unit: String, unitCost: Double, category: MaterialCategory, productURL: URL? = nil) -> MaterialItem {
+    func addCustomMaterial(
+        name: String,
+        unit: String,
+        unitCost: Double,
+        category: MaterialCategory,
+        customCategoryName: String? = nil,
+        productURL: URL? = nil
+    ) -> MaterialItem {
         let newMaterial = MaterialItem(
             id: UUID().uuidString,
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
             category: category,
+            customCategoryName: customCategoryName?.trimmingCharacters(in: .whitespacesAndNewlines),
             unit: unit.trimmingCharacters(in: .whitespacesAndNewlines),
             defaultUnitCost: unitCost,
             productURL: productURL,
@@ -157,6 +170,7 @@ final class MaterialsCatalogStore: ObservableObject {
         unit: String? = nil,
         defaultUnitCost: Double? = nil,
         category: MaterialCategory? = nil,
+        customCategoryName: String?? = nil,
         productURL: URL?? = nil
     ) {
         guard let index = customMaterials.firstIndex(where: { $0.id == material.id }) else { return }
@@ -168,10 +182,18 @@ final class MaterialsCatalogStore: ObservableObject {
             updatedProductURL = material.productURL
         }
 
+        let updatedCustomCategoryName: String?
+        if let customCategoryName {
+            updatedCustomCategoryName = customCategoryName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        } else {
+            updatedCustomCategoryName = material.customCategoryName
+        }
+
         let updated = MaterialItem(
             id: material.id,
             name: name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? material.name,
             category: category ?? material.category,
+            customCategoryName: updatedCustomCategoryName,
             unit: unit?.trimmingCharacters(in: .whitespacesAndNewlines) ?? material.unit,
             defaultUnitCost: defaultUnitCost ?? material.defaultUnitCost,
             productURL: updatedProductURL,
@@ -305,6 +327,7 @@ final class MaterialsCatalogStore: ObservableObject {
             id: material.id,
             name: material.name,
             category: material.category,
+            customCategoryName: material.customCategoryName,
             unit: material.unit,
             defaultUnitCost: material.defaultUnitCost,
             productURL: override ?? material.productURL,
