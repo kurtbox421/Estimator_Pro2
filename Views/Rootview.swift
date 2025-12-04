@@ -1013,7 +1013,7 @@ struct BrandingLogoView: View {
                     )
                 }
                 .buttonStyle(.plain)
-                .onChange(of: selectedItem) { newItem in
+                .onChange(of: selectedItem, initial: false) { newItem in
                     Task {
                         guard let data = try? await newItem?.loadTransferable(type: Data.self) else { return }
                         brandingLogoData = data
