@@ -246,8 +246,8 @@ struct AddEditInvoiceView: View {
         switch mode {
         case .add:
             let invoice = Invoice(
-                invoiceNumber: InvoiceNumberManager.shared.generateInvoiceNumber(),
                 ownerID: Auth.auth().currentUser?.uid ?? "",
+                invoiceNumber: InvoiceNumberManager.shared.generateInvoiceNumber(),
                 title: trimmedTitle,
                 clientID: selectedClientId,
                 clientName: trimmedClient,
