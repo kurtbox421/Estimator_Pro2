@@ -25,6 +25,7 @@ struct AddEditInvoiceView: View {
     @State private var materialName = ""
     @State private var materialQuantity = "1"
     @State private var materialUnitCost = ""
+    @State private var materialProductURL = ""
     @State private var isPresentingNewClientSheet = false
 
     init(mode: Mode) {
@@ -112,6 +113,12 @@ struct AddEditInvoiceView: View {
                                     Text("\(material.quantity, specifier: "%.2f") × \(material.unitCost, format: .currency(code: "USD"))")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
+                                    if let url = material.productURL {
+                                        Link(url.absoluteString, destination: url)
+                                            .font(.caption2)
+                                            .foregroundColor(.blue)
+                                            .lineLimit(1)
+                                    }
                                 }
 
                                 Spacer()
@@ -194,6 +201,10 @@ struct AddEditInvoiceView: View {
                             .keyboardType(.decimalPad)
                         TextField("Unit cost", text: $materialUnitCost)
                             .keyboardType(.decimalPad)
+                        TextField("Product URL (optional)", text: $materialProductURL)
+                            .keyboardType(.URL)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
                     }
                 }
                 .navigationTitle(editingMaterialIndex == nil ? "Add Material" : "Edit Material")
@@ -263,6 +274,7 @@ struct AddEditInvoiceView: View {
         materialName = ""
         materialQuantity = "1"
         materialUnitCost = ""
+        materialProductURL = ""
         isPresentingMaterialSheet = true
     }
 
@@ -271,13 +283,15 @@ struct AddEditInvoiceView: View {
         materialName = material.name
         materialQuantity = String(material.quantity)
         materialUnitCost = String(material.unitCost)
+        materialProductURL = material.productURL?.absoluteString ?? ""
         isPresentingMaterialSheet = true
     }
 
     private var canSaveMaterial: Bool {
         !materialName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         Double(materialQuantity) != nil &&
-        Double(materialUnitCost) != nil
+        Double(materialUnitCost) != nil &&
+        isValidProductURL(materialProductURL)
     }
 
     private func saveMaterial() {
@@ -288,11 +302,14 @@ struct AddEditInvoiceView: View {
         let trimmedName = materialName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return }
 
+        let productURL = parsedProductURL(from: materialProductURL)
+
         let material = Material(
             id: editingMaterialIndex.flatMap { materials[$0].id } ?? UUID(),
             name: trimmedName,
             quantity: quantity,
-            unitCost: unitCost
+            unitCost: unitCost,
+            productURL: productURL
         )
 
         if let index = editingMaterialIndex, materials.indices.contains(index) {
@@ -307,6 +324,17 @@ struct AddEditInvoiceView: View {
     private func deleteMaterial(at index: Int) {
         guard materials.indices.contains(index) else { return }
         materials.remove(at: index)
+    }
+
+    private func isValidProductURL(_ text: String) -> Bool {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return true }
+        return parsedProductURL(from: text) != nil
+    }
+
+    private func parsedProductURL(from text: String) -> URL? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let url = URL(string: trimmed), let scheme = url.scheme, !scheme.isEmpty else { return nil }
+        return url
     }
 }
 

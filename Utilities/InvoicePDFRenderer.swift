@@ -5,6 +5,7 @@ struct InvoicePDFRenderer {
     private struct InvoiceLineItem {
         let description: String
         let amount: Double
+        let productURL: URL?
     }
 
     static func generateInvoicePDF(for job: Job,
@@ -30,7 +31,7 @@ struct InvoicePDFRenderer {
                                    company: CompanySettings) throws -> URL {
         let invoiceNumber = invoice.invoiceNumber
         let lineItems = invoice.materials.map { material in
-            InvoiceLineItem(description: material.name, amount: material.total)
+            InvoiceLineItem(description: material.name, amount: material.total, productURL: material.productURL)
         }
 
         return try renderPDF(
@@ -75,6 +76,47 @@ struct InvoicePDFRenderer {
                 let size = text.size(withAttributes: attributes)
                 text.draw(at: CGPoint(x: x, y: y), withAttributes: attributes)
                 y += size.height + 6
+            }
+
+            func drawLineItem(_ item: InvoiceLineItem) {
+                let descriptionAttributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 13),
+                    .foregroundColor: UIColor.black
+                ]
+
+                let amountAttributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 13),
+                    .foregroundColor: UIColor.black
+                ]
+
+                let linkAttributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 11),
+                    .foregroundColor: UIColor.systemBlue,
+                    .underlineStyle: NSUnderlineStyle.single.rawValue
+                ]
+
+                let descriptionSize = item.description.size(withAttributes: descriptionAttributes)
+                let amountString = String(format: "$%.2f", item.amount)
+                let amountSize = amountString.size(withAttributes: amountAttributes)
+
+                let startY = y
+
+                item.description.draw(at: CGPoint(x: 40, y: y), withAttributes: descriptionAttributes)
+
+                var nextY = y + descriptionSize.height + 4
+
+                if let url = item.productURL {
+                    let linkString = url.absoluteString
+                    let attributed = NSAttributedString(string: linkString, attributes: linkAttributes)
+                    let maxWidth = pageRect.width - 200
+                    let linkRect = CGRect(x: 40, y: nextY, width: maxWidth, height: attributed.size().height)
+                    attributed.draw(in: linkRect)
+                    nextY += attributed.size().height + 4
+                }
+
+                amountString.draw(at: CGPoint(x: pageRect.width - 160, y: startY), withAttributes: amountAttributes)
+
+                y = max(nextY, startY + amountSize.height) + 6
             }
 
             // Company info
@@ -124,10 +166,7 @@ struct InvoicePDFRenderer {
 
             // Items
             for item in lineItems {
-                draw(item.description, font: .systemFont(ofSize: 13))
-                let amountString = String(format: "$%.2f", item.amount)
-                draw(amountString, font: .systemFont(ofSize: 13),
-                     x: pageRect.width - 160)
+                drawLineItem(item)
             }
 
             y += 16
@@ -150,7 +189,7 @@ struct InvoicePDFRenderer {
 
     private static func buildLineItems(for job: Job) -> [InvoiceLineItem] {
         var items = job.materials.map { material in
-            InvoiceLineItem(description: material.name, amount: material.total)
+            InvoiceLineItem(description: material.name, amount: material.total, productURL: material.productURL)
         }
 
         if job.laborHours > 0 && job.laborRate > 0 {
