@@ -68,12 +68,12 @@ struct MaterialPricingSettingsView: View {
             syncOverrides()
             syncProductURLTexts()
         }
-        .onChange(of: newCustomCategory, initial: false) { newValue in
+        .onChange(of: newCustomCategory, initial: false) { _, newValue in
             if newValue != .custom {
                 newCustomCategoryName = ""
             }
         }
-        .onChange(of: materialsStore.materials, initial: false) { _ in
+        .onChange(of: materialsStore.materials, initial: false) { _, _ in
             syncOverrides()
             syncProductURLTexts()
         }
