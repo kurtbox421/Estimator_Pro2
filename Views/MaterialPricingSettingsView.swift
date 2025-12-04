@@ -7,23 +7,18 @@ struct MaterialPricingSettingsView: View {
     @State private var newCustomName: String = ""
     @State private var newCustomUnit: String = ""
     @State private var newCustomPrice: String = ""
+    @State private var newCustomCategory: MaterialCategory = MaterialCategory.allCases.first(where: { $0 != .custom }) ?? .paint
 
     private var generatorMaterials: [MaterialItem] {
         let generator = JobMaterialGenerator(catalog: materialsStore)
         let ids = generator.allMaterialIDs()
         return ids.compactMap { materialsStore.material(withID: $0) }
-            .sorted { lhs, rhs in
-                if lhs.displayCategory != rhs.displayCategory {
-                    return lhs.displayCategory < rhs.displayCategory
-                }
-                return lhs.name < rhs.name
-            }
     }
 
     private var groupedMaterials: [(category: String, items: [MaterialItem])] {
         let grouped = Dictionary(grouping: generatorMaterials, by: { $0.displayCategory })
         return grouped.keys.sorted().compactMap { key in
-            guard let items = grouped[key] else { return nil }
+            guard let items = grouped[key]?.sorted(by: { $0.name < $1.name }) else { return nil }
             return (key, items)
         }
     }
@@ -67,6 +62,13 @@ struct MaterialPricingSettingsView: View {
                             .frame(width: 140)
                         }
 
+                        Picker("Category", selection: categoryBinding(for: material)) {
+                            ForEach(MaterialCategory.allCases) { category in
+                                Text(category.displayName).tag(category)
+                            }
+                        }
+                        .pickerStyle(.menu)
+
                         if materialsStore.override(for: material.id) != nil {
                             Button {
                                 materialsStore.resetOverride(for: material.id)
@@ -92,6 +94,13 @@ struct MaterialPricingSettingsView: View {
                     TextField("Unit (each, tube, sq ft)", text: $newCustomUnit)
                     TextField("Unit cost", text: $newCustomPrice)
                         .keyboardType(.decimalPad)
+
+                    Picker("Category", selection: $newCustomCategory) {
+                        ForEach(MaterialCategory.allCases) { category in
+                            Text(category.displayName).tag(category)
+                        }
+                    }
+                    .pickerStyle(.menu)
 
                     Button {
                         addCustomMaterial()
@@ -173,9 +182,6 @@ struct MaterialPricingSettingsView: View {
         generatorMaterials.forEach { material in
             values[material.id] = materialsStore.price(for: material)
         }
-        materialsStore.customMaterials.forEach { material in
-            values[material.id] = materialsStore.price(for: material)
-        }
         overrideValues = values
     }
 
@@ -199,6 +205,16 @@ struct MaterialPricingSettingsView: View {
         )
     }
 
+    private func categoryBinding(for material: MaterialItem) -> Binding<MaterialCategory> {
+        Binding(
+            get: { material.category },
+            set: { newValue in
+                materialsStore.updateCustomMaterial(material, category: newValue)
+                syncOverrides()
+            }
+        )
+    }
+
     private var canAddCustomMaterial: Bool {
         let trimmedName = newCustomName.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedUnit = newCustomUnit.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -210,12 +226,18 @@ struct MaterialPricingSettingsView: View {
         let trimmedName = newCustomName.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedUnit = newCustomUnit.trimmingCharacters(in: .whitespacesAndNewlines)
         let price = Double(newCustomPrice.replacingOccurrences(of: ",", with: ".")) ?? 0
-        let material = materialsStore.addCustomMaterial(name: trimmedName, unit: trimmedUnit, unitCost: price)
+        let material = materialsStore.addCustomMaterial(
+            name: trimmedName,
+            unit: trimmedUnit,
+            unitCost: price,
+            category: newCustomCategory
+        )
         overrideValues[material.id] = price
 
         newCustomName = ""
         newCustomUnit = ""
         newCustomPrice = ""
+        newCustomCategory = MaterialCategory.allCases.first(where: { $0 != .custom }) ?? .paint
         syncOverrides()
     }
 
