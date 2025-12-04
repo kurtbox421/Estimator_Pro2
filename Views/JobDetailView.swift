@@ -220,6 +220,7 @@ struct EstimateDetailView: View {
         if estimate.laborHours > 0 && estimate.laborRate > 0 {
             let laborMaterial = Material(
                 id: UUID(),
+                ownerID: Auth.auth().currentUser?.uid ?? "",
                 name: "Labor",
                 quantity: estimate.laborHours,
                 unitCost: estimate.laborRate

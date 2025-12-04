@@ -1,4 +1,5 @@
 import SwiftUI
+import FirebaseAuth
 
 struct MaterialEditView: View {
     @Environment(\.dismiss) private var dismiss
@@ -78,6 +79,7 @@ struct MaterialEditView: View {
 
         let updatedMaterial = Material(
             id: material?.id ?? UUID(),
+            ownerID: material?.ownerID ?? (Auth.auth().currentUser?.uid ?? ""),
             name: trimmedName,
             quantity: quantity,
             unitCost: unitCost,

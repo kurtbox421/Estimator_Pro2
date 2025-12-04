@@ -1,4 +1,5 @@
 import SwiftUI
+import FirebaseAuth
 
 struct MaterialGeneratorView: View {
     @EnvironmentObject private var jobVM: JobViewModel
@@ -200,6 +201,7 @@ struct MaterialGeneratorView: View {
         let unitPrice = settingsManager.commonMaterialPrice(for: rec.name) ?? 0
 
         return Material(
+            ownerID: Auth.auth().currentUser?.uid ?? "",
             name: rec.name,
             quantity: rec.quantity,     // from generator
             unitCost: unitPrice,        // from settings
