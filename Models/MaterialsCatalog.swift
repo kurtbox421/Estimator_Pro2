@@ -20,6 +20,7 @@ enum MaterialCategory: String, Codable, CaseIterable, Identifiable {
     case exteriorFlashing   = "exterior_flashing"
     case electrical         = "electrical"
     case plumbing           = "plumbing"
+    case custom             = "custom"
 
     var id: String { rawValue }
 
@@ -44,6 +45,7 @@ enum MaterialCategory: String, Codable, CaseIterable, Identifiable {
         case .exteriorFlashing:   return "Flashing"
         case .electrical:         return "Electrical"
         case .plumbing:           return "Plumbing"
+        case .custom:             return "Custom"
         }
     }
 }
@@ -68,16 +70,25 @@ struct MaterialsCatalog: Codable {
 
 final class MaterialsCatalogStore: ObservableObject {
     @Published private(set) var materials: [MaterialItem] = []
+    @Published private(set) var customMaterials: [MaterialItem] = [] {
+        didSet {
+            saveCustomMaterials()
+            rebuildCatalog()
+        }
+    }
     @Published private(set) var priceOverrides: [String: Double] = [:] {
         didSet { saveOverrides() }
     }
 
     private let persistence: PersistenceService
+    private var baseMaterials: [MaterialItem] = []
 
     init(persistence: PersistenceService = .shared) {
         self.persistence = persistence
 
         loadFromBundle()
+        loadCustomMaterials()
+        rebuildCatalog()
         loadOverrides()
     }
 
@@ -89,10 +100,67 @@ final class MaterialsCatalogStore: ObservableObject {
         do {
             let data = try Data(contentsOf: url)
             let decoded = try JSONDecoder().decode(MaterialsCatalog.self, from: data)
-            self.materials = decoded.materials
+            baseMaterials = decoded.materials
         } catch {
             print("Failed to load MaterialsCatalog.json: \(error)")
         }
+    }
+
+    private func loadCustomMaterials() {
+        if let stored: [MaterialItem] = persistence.load([MaterialItem].self, from: MaterialsCatalogStorage.customMaterialsFileName) {
+            customMaterials = stored
+        }
+    }
+
+    private func rebuildCatalog() {
+        materials = baseMaterials + customMaterials
+    }
+
+    @discardableResult
+    func addCustomMaterial(name: String, unit: String, unitCost: Double) -> MaterialItem {
+        let newMaterial = MaterialItem(
+            id: UUID().uuidString,
+            name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+            category: .custom,
+            unit: unit.trimmingCharacters(in: .whitespacesAndNewlines),
+            defaultUnitCost: unitCost,
+            wasteFactor: 0,
+            quantityRuleKey: nil
+        )
+
+        customMaterials.append(newMaterial)
+        return newMaterial
+    }
+
+    func updateCustomMaterial(
+        _ material: MaterialItem,
+        name: String? = nil,
+        unit: String? = nil,
+        defaultUnitCost: Double? = nil
+    ) {
+        guard let index = customMaterials.firstIndex(where: { $0.id == material.id }) else { return }
+
+        let updated = MaterialItem(
+            id: material.id,
+            name: name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? material.name,
+            category: .custom,
+            unit: unit?.trimmingCharacters(in: .whitespacesAndNewlines) ?? material.unit,
+            defaultUnitCost: defaultUnitCost ?? material.defaultUnitCost,
+            wasteFactor: material.wasteFactor,
+            quantityRuleKey: material.quantityRuleKey
+        )
+
+        customMaterials[index] = updated
+    }
+
+    func deleteCustomMaterial(_ material: MaterialItem) {
+        guard let index = customMaterials.firstIndex(where: { $0.id == material.id }) else { return }
+        customMaterials.remove(at: index)
+        resetOverride(for: material.id)
+    }
+
+    var customMaterialIDs: [String] {
+        customMaterials.map { $0.id }
     }
 
     func materials(in category: MaterialCategory) -> [MaterialItem] {
@@ -135,8 +203,13 @@ final class MaterialsCatalogStore: ObservableObject {
     private func saveOverrides() {
         persistence.save(priceOverrides, to: MaterialsCatalogStorage.overrideFileName)
     }
+
+    private func saveCustomMaterials() {
+        persistence.save(customMaterials, to: MaterialsCatalogStorage.customMaterialsFileName)
+    }
 }
 
 private enum MaterialsCatalogStorage {
     static let overrideFileName = "materialPriceOverrides.json"
+    static let customMaterialsFileName = "customGeneratorMaterials.json"
 }
