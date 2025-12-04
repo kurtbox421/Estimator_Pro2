@@ -10,6 +10,26 @@ struct Client: Identifiable, Codable, Equatable {
     var email: String = ""
     var notes: String = ""
 
+    init(
+        id: UUID = UUID(),
+        ownerID: String = "",
+        name: String = "",
+        company: String = "",
+        address: String = "",
+        phone: String = "",
+        email: String = "",
+        notes: String = ""
+    ) {
+        self.id = id
+        self.ownerID = ownerID
+        self.name = name
+        self.company = company
+        self.address = address
+        self.phone = phone
+        self.email = email
+        self.notes = notes
+    }
+
     private enum CodingKeys: String, CodingKey {
         case id
         case ownerID
