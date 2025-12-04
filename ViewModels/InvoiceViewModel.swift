@@ -1,58 +1,67 @@
 import Foundation
 import SwiftUI
 import os.log
-
-private enum InvoiceStorage {
-    static let userDefaultsKey = "EstimatorPro_Invoices"
-    static let fileName = "invoices.json"
-}
+import FirebaseAuth
+import FirebaseFirestore
+import FirebaseFirestoreSwift
 
 class InvoiceViewModel: ObservableObject {
-    @Published var invoices: [Invoice] = [] {
-        didSet {
-            saveInvoices()
-        }
-    }
-
+    @Published var invoices: [Invoice] = []
     @Published var previewURL: URL?
     @Published var previewError: String?
     @Published var isShowingPreview: Bool = false
 
-    private let persistence: PersistenceService
     private let logger = Logger(subsystem: "com.estimatorpro.invoice", category: "InvoiceViewModel")
+    private let db: Firestore
+    private var listener: ListenerRegistration?
+    private var authHandle: AuthStateDidChangeListenerHandle?
 
-    init(persistence: PersistenceService = .shared) {
-        self.persistence = persistence
-        loadInvoices()
+    init(database: Firestore = Firestore.firestore()) {
+        self.db = database
+        configureAuthListener()
+    }
+
+    deinit {
+        listener?.remove()
+        if let authHandle {
+            Auth.auth().removeStateDidChangeListener(authHandle)
+        }
     }
 
     // MARK: - CRUD
 
     func add(_ invoice: Invoice) {
-        invoices.append(invoice)
-        sortInvoices()
+        persist(invoice)
     }
 
     func update(_ invoice: Invoice) {
-        guard let index = invoices.firstIndex(where: { $0.id == invoice.id }) else { return }
-        invoices[index] = invoice
-        sortInvoices()
+        persist(invoice)
     }
 
     func delete(at offsets: IndexSet) {
+        let invoicesToDelete = offsets.map { invoices[$0] }
         invoices.remove(atOffsets: offsets)
+
+        invoicesToDelete.forEach { delete($0) }
     }
 
     func delete(_ invoice: Invoice) {
-        guard let index = invoices.firstIndex(where: { $0.id == invoice.id }) else { return }
-        invoices.remove(at: index)
+        guard Auth.auth().currentUser != nil else { return }
+
+        db.collection("invoices")
+            .document(invoice.id.uuidString)
+            .delete { [weak self] error in
+                if let error {
+                    self?.logger.error("Failed to delete invoice: \(error.localizedDescription)")
+                }
+            }
     }
 
     func addMaterial(to invoice: Invoice, material: Material) {
         guard let invoiceIndex = invoices.firstIndex(where: { $0.id == invoice.id }) else { return }
 
         invoices[invoiceIndex].materials.append(material)
-        sortInvoices()
+        persist(invoices[invoiceIndex])
     }
 
     func updateMaterial(in invoice: Invoice, at index: Int, with material: Material) {
@@ -60,7 +69,7 @@ class InvoiceViewModel: ObservableObject {
               invoices[invoiceIndex].materials.indices.contains(index) else { return }
 
         invoices[invoiceIndex].materials[index] = material
-        sortInvoices()
+        persist(invoices[invoiceIndex])
     }
 
     func removeMaterial(from invoice: Invoice, at index: Int) {
@@ -68,13 +77,10 @@ class InvoiceViewModel: ObservableObject {
               invoices[invoiceIndex].materials.indices.contains(index) else { return }
 
         invoices[invoiceIndex].materials.remove(at: index)
-        sortInvoices()
+        persist(invoices[invoiceIndex])
     }
 
     func update(_ invoice: Invoice, replacingMaterialAt index: Int, with material: Material) {
-        guard let invoiceIndex = invoices.firstIndex(where: { $0.id == invoice.id }),
-              invoices[invoiceIndex].materials.indices.contains(index) else { return }
-
         updateMaterial(in: invoice, at: index, with: material)
     }
 
@@ -109,64 +115,86 @@ class InvoiceViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Persistence
+    // MARK: - Firestore Synchronization
 
-    private func saveInvoices() {
-        persistence.save(invoices, to: InvoiceStorage.fileName)
+    private func configureAuthListener() {
+        authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
+            self?.attachListener(for: user)
+        }
+
+        attachListener(for: Auth.auth().currentUser)
     }
 
-    private func loadInvoices() {
-        if let stored: [Invoice] = persistence.load([Invoice].self, from: InvoiceStorage.fileName) {
-            invoices = stored
-            sortInvoices()
+    private func attachListener(for user: User?) {
+        listener?.remove()
+        invoices = []
+
+        guard let uid = user?.uid else { return }
+
+        listener = db.collection("invoices")
+            .whereField("ownerID", isEqualTo: uid)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self else { return }
+
+                if let error {
+                    logger.error("Failed to fetch invoices: \(error.localizedDescription)")
+                    return
+                }
+
+                guard let documents = snapshot?.documents else {
+                    DispatchQueue.main.async { self.invoices = [] }
+                    return
+                }
+
+                let decoded: [Invoice] = documents.compactMap { document in
+                    do {
+                        return try document.data(as: Invoice.self)
+                    } catch {
+                        logger.error("Failed to decode invoice \(document.documentID): \(error.localizedDescription)")
+                        return nil
+                    }
+                }
+
+                DispatchQueue.main.async {
+                    self.invoices = self.sortInvoices(decoded)
+                }
+            }
+    }
+
+    private func persist(_ invoice: Invoice) {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            logger.error("Attempted to persist invoice without an authenticated user")
             return
         }
 
-        if let migrated: [Invoice] = persistence.migrateFromUserDefaults(key: InvoiceStorage.userDefaultsKey, fileName: InvoiceStorage.fileName, as: [Invoice].self) {
-            invoices = migrated
-            sortInvoices()
-            return
-        }
+        var invoiceToSave = invoice
+        invoiceToSave.ownerID = uid
 
-        invoices = [
-            Invoice(
-                title: "Kitchen Remodel",
-                clientName: "Maria Sanchez",
-                materials: [
-                    Material(name: "Cabinetry", quantity: 12, unitCost: 150),
-                    Material(name: "Tile", quantity: 80, unitCost: 4.25)
-                ],
-                status: .draft
-            ),
-            Invoice(
-                title: "Patio Extension",
-                clientName: "Johnny Appleseed",
-                materials: [
-                    Material(name: "Pavers", quantity: 150, unitCost: 3.5),
-                    Material(name: "Sand", quantity: 20, unitCost: 15)
-                ],
-                status: .sent
-            ),
-            Invoice(
-                title: "Basement Finish",
-                clientName: "Harper Logistics",
-                materials: [
-                    Material(name: "Drywall", quantity: 60, unitCost: 18),
-                    Material(name: "Paint", quantity: 15, unitCost: 32)
-                ],
-                status: .overdue
-            )
-        ]
+        // Optimistically update local state while Firestore write completes
+        if let existingIndex = invoices.firstIndex(where: { $0.id == invoiceToSave.id }) {
+            invoices[existingIndex] = invoiceToSave
+        } else {
+            invoices.append(invoiceToSave)
+        }
+        invoices = sortInvoices(invoices)
+
+        do {
+            try db.collection("invoices")
+                .document(invoiceToSave.id.uuidString)
+                .setData(from: invoiceToSave)
+        } catch {
+            logger.error("Failed to save invoice: \(error.localizedDescription)")
+        }
     }
 
-    private func sortInvoices() {
+    private func sortInvoices(_ invoices: [Invoice]) -> [Invoice] {
         let statusPriority: [Invoice.InvoiceStatus: Int] = [
             .overdue: 0,
             .sent: 1,
             .draft: 2
         ]
 
-        invoices.sort { lhs, rhs in
+        return invoices.sorted { lhs, rhs in
             let lhsPriority = statusPriority[lhs.status] ?? Int.max
             let rhsPriority = statusPriority[rhs.status] ?? Int.max
 

@@ -25,6 +25,7 @@ struct Invoice: Identifiable, Codable {
     var materials: [Material]
     var status: InvoiceStatus
     var dueDate: Date?
+    var ownerID: String
 
     var amount: Double {
         materials.reduce(into: 0) { $0 += $1.total }
@@ -34,6 +35,7 @@ struct Invoice: Identifiable, Codable {
 
     init(
         id: UUID = UUID(),
+        ownerID: String = "",
         invoiceNumber: String? = nil,
         title: String,
         clientID: UUID? = nil,
@@ -43,6 +45,7 @@ struct Invoice: Identifiable, Codable {
         dueDate: Date? = nil
     ) {
         self.id = id
+        self.ownerID = ownerID
         self.invoiceNumber = invoiceNumber
             ?? InvoiceNumberManager.shared.generateInvoiceNumber()
         self.title = title
@@ -55,8 +58,9 @@ struct Invoice: Identifiable, Codable {
 
     // MARK: - Convenience init from Job
 
-    init(from job: Job, clientName: String) {
+    init(from job: Job, clientName: String, ownerID: String = "") {
         self.init(
+            ownerID: ownerID,
             title: job.name,
             clientID: job.clientId,
             clientName: clientName,
@@ -76,6 +80,7 @@ struct Invoice: Identifiable, Codable {
         case materials
         case status
         case dueDate
+        case ownerID
     }
 
     init(from decoder: Decoder) throws {
@@ -93,5 +98,6 @@ struct Invoice: Identifiable, Codable {
         self.materials = try container.decodeIfPresent([Material].self, forKey: .materials) ?? []
         self.status = try container.decode(InvoiceStatus.self, forKey: .status)
         self.dueDate = try container.decodeIfPresent(Date.self, forKey: .dueDate)
+        self.ownerID = try container.decodeIfPresent(String.self, forKey: .ownerID) ?? ""
     }
 }
