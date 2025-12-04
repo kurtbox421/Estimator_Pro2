@@ -13,6 +13,8 @@ struct Material: Identifiable, Codable {
     var quantity: Double
     var unitCost: Double
     var productURL: URL?
+    var unit: String?
+    var notes: String?
 
     var total: Double {
         quantity * unitCost
@@ -27,13 +29,17 @@ struct Material: Identifiable, Codable {
         name: String,
         quantity: Double,
         unitCost: Double,
-        productURL: URL? = nil
+        productURL: URL? = nil,
+        unit: String? = nil,
+        notes: String? = nil
     ) {
         self.id = id
         self.name = name
         self.quantity = quantity
         self.unitCost = unitCost
         self.productURL = productURL
+        self.unit = unit
+        self.notes = notes
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -42,5 +48,7 @@ struct Material: Identifiable, Codable {
         case quantity
         case unitCost
         case productURL
+        case unit
+        case notes
     }
 }
