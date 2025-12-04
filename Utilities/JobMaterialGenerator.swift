@@ -48,7 +48,15 @@ struct JobMaterialGenerator {
 
     func allMaterialIDs() -> [String] {
         let ids = JobType.allCases.flatMap { materialIDs(for: $0) } + catalog.customMaterialIDs
-        return Array(Set(ids)).sorted()
+
+        var uniqueOrderedIDs: [String] = []
+        var seen: Set<String> = []
+
+        for id in ids where seen.insert(id).inserted {
+            uniqueOrderedIDs.append(id)
+        }
+
+        return uniqueOrderedIDs
     }
 
     private func materialIDs(for jobType: JobType) -> [String] {
