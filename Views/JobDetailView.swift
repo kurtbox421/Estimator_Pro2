@@ -7,6 +7,7 @@
 
 import SwiftUI
 import UIKit
+import FirebaseAuth
 
 struct EstimateDetailView: View {
     @EnvironmentObject private var vm: JobViewModel
@@ -229,6 +230,7 @@ struct EstimateDetailView: View {
 
         let invoice = Invoice(
             id: UUID(),
+            ownerID: Auth.auth().currentUser?.uid ?? "",
             invoiceNumber: InvoiceNumberManager.shared.generateInvoiceNumber(),
             title: estimate.name,
             clientID: estimate.clientId,
