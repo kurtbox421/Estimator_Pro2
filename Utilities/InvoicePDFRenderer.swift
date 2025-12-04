@@ -195,7 +195,8 @@ struct InvoicePDFRenderer {
         if job.laborHours > 0 && job.laborRate > 0 {
             let laborTotal = job.laborHours * job.laborRate
             items.append(InvoiceLineItem(description: "Labor",
-                                         amount: laborTotal))
+                                         amount: laborTotal,
+                                         productURL: nil))
         }
 
         return items
