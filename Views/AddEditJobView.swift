@@ -39,6 +39,7 @@ struct AddEditJobView: View {
         var name: String = ""
         var quantity: String = ""
         var unitCost: String = ""
+        var productURL: String = ""
     }
 
     @State private var materialDrafts: [MaterialDraft]
@@ -69,7 +70,8 @@ struct AddEditJobView: View {
                 MaterialDraft(
                     name: material.name,
                     quantity: String(material.quantity),
-                    unitCost: String(material.unitCost)
+                    unitCost: String(material.unitCost),
+                    productURL: material.productURL?.absoluteString ?? ""
                 )
             })
             let initialSelection: ClientSelection = job.clientId.map { .existing($0) } ?? .unassigned
@@ -154,6 +156,11 @@ struct AddEditJobView: View {
                                 TextField("Unit Cost", text: $draft.unitCost)
                                     .keyboardType(.decimalPad)
                             }
+
+                            TextField("Product URL (optional)", text: $draft.productURL)
+                                .keyboardType(.URL)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
                         }
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) {
@@ -226,7 +233,7 @@ struct AddEditJobView: View {
         if !hoursTrimmed.isEmpty && Double(hoursTrimmed) == nil { return false }
         if !rateTrimmed.isEmpty && Double(rateTrimmed) == nil { return false }
 
-        return true
+        return materialDrafts.allSatisfy { isValidProductURL($0.productURL) }
     }
 
     private func deleteDraft(_ draft: MaterialDraft) {
@@ -242,14 +249,27 @@ struct AddEditJobView: View {
 
             let qty = Double(draft.quantity) ?? 0
             let cost = Double(draft.unitCost) ?? 0
+            let productURL = parsedURL(from: draft.productURL)
 
             return Material(
                 id: UUID(),
                 name: trimmedName,
                 quantity: qty,
-                unitCost: cost
+                unitCost: cost,
+                productURL: productURL
             )
         }
+    }
+
+    private func isValidProductURL(_ text: String) -> Bool {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return true }
+        return parsedURL(from: text) != nil
+    }
+
+    private func parsedURL(from text: String) -> URL? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let url = URL(string: trimmed), let scheme = url.scheme, !scheme.isEmpty else { return nil }
+        return url
     }
 
     private func save() {

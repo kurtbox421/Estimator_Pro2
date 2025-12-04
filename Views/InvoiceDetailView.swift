@@ -77,6 +77,12 @@ struct InvoiceDetailView: View {
                                             Text("\(material.quantity, specifier: "%.2f") × \(material.unitCost, format: .currency(code: "USD"))")
                                                 .font(.caption)
                                                 .foregroundColor(.white.opacity(0.7))
+                                            if let url = material.productURL.wrappedValue {
+                                                Link(url.absoluteString, destination: url)
+                                                    .font(.caption2)
+                                                    .foregroundColor(.blue.opacity(0.9))
+                                                    .lineLimit(1)
+                                            }
                                         }
 
                                         Spacer()

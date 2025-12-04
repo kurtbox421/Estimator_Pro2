@@ -10,6 +10,7 @@ struct MaterialEditView: View {
     @State private var name: String
     @State private var quantityText: String
     @State private var unitCostText: String
+    @State private var productURLText: String
 
     init(material: Material? = nil, onSave: @escaping (Material) -> Void) {
         self.material = material
@@ -18,6 +19,7 @@ struct MaterialEditView: View {
         _name = State(initialValue: material?.name ?? "")
         _quantityText = State(initialValue: material.map { String($0.quantity) } ?? "")
         _unitCostText = State(initialValue: material.map { String($0.unitCost) } ?? "")
+        _productURLText = State(initialValue: material?.productURL?.absoluteString ?? "")
     }
 
     var body: some View {
@@ -32,6 +34,10 @@ struct MaterialEditView: View {
                         .keyboardType(.decimalPad)
                     TextField("Unit cost", text: $unitCostText)
                         .keyboardType(.decimalPad)
+                    TextField("Product URL (optional)", text: $productURLText)
+                        .keyboardType(.URL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
                 }
             }
             .navigationTitle(material == nil ? "Add Material" : "Edit Material")
@@ -57,7 +63,8 @@ struct MaterialEditView: View {
     private var canSave: Bool {
         !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         Double(quantityText) != nil &&
-        Double(unitCostText) != nil
+        Double(unitCostText) != nil &&
+        isValidProductURLText(productURLText)
     }
 
     private func save() {
@@ -67,11 +74,14 @@ struct MaterialEditView: View {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return }
 
+        let productURL = parsedURL(from: productURLText)
+
         let updatedMaterial = Material(
             id: material?.id ?? UUID(),
             name: trimmedName,
             quantity: quantity,
-            unitCost: unitCost
+            unitCost: unitCost,
+            productURL: productURL
         )
 
         onSave(updatedMaterial)
@@ -86,5 +96,16 @@ struct MaterialEditView: View {
         if unitCostText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             unitCostText = String(format: "%.2f", price)
         }
+    }
+
+    private func isValidProductURLText(_ text: String) -> Bool {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return true }
+        return parsedURL(from: text) != nil
+    }
+
+    private func parsedURL(from text: String) -> URL? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let url = URL(string: trimmed), let scheme = url.scheme, !scheme.isEmpty else { return nil }
+        return url
     }
 }
