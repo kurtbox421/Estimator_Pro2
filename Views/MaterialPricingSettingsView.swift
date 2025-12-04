@@ -38,67 +38,17 @@ struct MaterialPricingSettingsView: View {
             ForEach(groupedMaterials, id: \.category) { group in
                 Section(group.category) {
                     ForEach(group.items, id: \.id) { material in
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(material.name)
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundColor(.primary)
-
-                                    Text(material.unit)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-
-                                Spacer()
-
-                            TextField(
-                                "Unit cost",
-                                value: priceBinding(for: material),
-                                format: .currency(code: "USD")
-                            )
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 140)
-                        }
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            TextField("Product URL (optional)", text: productURLBinding(for: material))
-                                .keyboardType(.URL)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-
-                            if let url = materialsStore.productURL(for: material) {
-                                Link("See Product Information", destination: url)
-                                    .font(.caption2)
-                                    .foregroundColor(.accentColor)
-                                    .lineLimit(1)
-                            }
-                        }
-
-                        if materialsStore.override(for: material.id) != nil {
-                            Button {
+                        MaterialPricingRow(
+                            material: material,
+                            price: priceBinding(for: material),
+                            productURL: productURLBinding(for: material),
+                            resetOverride: {
                                 materialsStore.resetOverride(for: material.id)
                                 overrideValues[material.id] = material.defaultUnitCost
-                            } label: {
-                                    Text("Reset to default \(material.defaultUnitCost.formatted(.currency(code: "USD")))")
-                                        .font(.caption)
-                                        .foregroundColor(.accentColor)
-                                }
-                                .buttonStyle(.plain)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
-                            }
-                        }
-                        .padding(.vertical, 6)
-                        .swipeActions {
-                            Button(role: .destructive) {
-                                deleteMaterial(material)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
+                            },
+                            deleteAction: { deleteMaterial(material) },
+                            store: materialsStore
+                        )
                     }
                 }
             }
@@ -309,5 +259,85 @@ struct MaterialPricingSettingsView: View {
         materialsStore.deleteMaterial(material)
         overrideValues.removeValue(forKey: material.id)
         syncOverrides()
+    }
+}
+
+private struct MaterialPricingRow: View {
+    let material: MaterialItem
+    let price: Binding<Double>
+    let productURL: Binding<String>
+    let resetOverride: () -> Void
+    let deleteAction: () -> Void
+    let store: MaterialsCatalogStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            header
+            urlFields
+            overrideButton
+        }
+        .padding(.vertical, 6)
+        .swipeActions {
+            Button(role: .destructive, action: deleteAction) {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+    }
+
+    private var header: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(material.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.primary)
+
+                Text(material.unit)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            TextField(
+                "Unit cost",
+                value: price,
+                format: .currency(code: "USD")
+            )
+            .keyboardType(.decimalPad)
+            .multilineTextAlignment(.trailing)
+            .frame(width: 140)
+        }
+    }
+
+    private var urlFields: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            TextField("Product URL (optional)", text: productURL)
+                .keyboardType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            if let url = store.productURL(for: material) {
+                Link("See Product Information", destination: url)
+                    .font(.caption2)
+                    .foregroundColor(.accentColor)
+                    .lineLimit(1)
+            }
+        }
+    }
+
+    private var overrideButton: some View {
+        Group {
+            if store.override(for: material.id) != nil {
+                Button(action: resetOverride) {
+                    Text("Reset to default \(material.defaultUnitCost.formatted(.currency(code: "USD")))")
+                        .font(.caption)
+                        .foregroundColor(.accentColor)
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
     }
 }
