@@ -1,9 +1,14 @@
 import SwiftUI
 
 struct MaterialGeneratorView: View {
+    @EnvironmentObject private var jobVM: JobViewModel
+    @Environment(\.dismiss) private var dismiss
+
     @State private var selectedJobType: MaterialJobType = .interiorWallBuild
     @State private var lengthText: String = ""
     @State private var secondaryText: String = ""
+    @State private var suggestedMaterials: [MaterialRecommendation] = []
+    @State private var isShowingEstimatePicker = false
     @State private var generated: [Material] = []
     @State private var validationMessage: String?
 
@@ -81,8 +86,48 @@ struct MaterialGeneratorView: View {
                     }
                 }
             }
+
+            if !suggestedMaterials.isEmpty {
+                Section(header: Text("WHAT'S NEXT?")) {
+                    Button(action: createNewEstimateFromSuggestedMaterials) {
+                        Text("Create New Estimate")
+                            .frame(maxWidth: .infinity)
+                    }
+
+                    Button(action: { isShowingEstimatePicker = true }) {
+                        Text("Add to Existing Estimate")
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+            }
         }
         .navigationTitle("Material Generator")
+        .sheet(isPresented: $isShowingEstimatePicker) {
+            NavigationView {
+                List {
+                    ForEach(jobVM.jobs) { job in
+                        Button {
+                            addSuggestedMaterials(to: job)
+                            isShowingEstimatePicker = false
+                            dismiss()
+                        } label: {
+                            VStack(alignment: .leading) {
+                                Text(job.name)
+                                Text(job.category)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                }
+                .navigationTitle("Choose Estimate")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { isShowingEstimatePicker = false }
+                    }
+                }
+            }
+        }
     }
 
     private var secondaryPlaceholder: String {
@@ -113,6 +158,7 @@ struct MaterialGeneratorView: View {
         guard length != nil || secondary != nil else {
             validationMessage = "Enter at least one dimension."
             generated = []
+            suggestedMaterials = []
             return
         }
 
@@ -133,15 +179,33 @@ struct MaterialGeneratorView: View {
         )
 
         let recommendations = MaterialsRecommender().recommendMaterials(for: context)
-        generated = recommendations.map { rec in
-            Material(
-                name: rec.name,
-                quantity: rec.quantity,
-                unitCost: 0,
-                productURL: nil,
-                unit: rec.unit,
-                notes: rec.notes
-            )
-        }
+        suggestedMaterials = recommendations
+        generated = recommendations.map(materialFromRecommendation)
+    }
+
+    private func materialFromRecommendation(_ rec: MaterialRecommendation) -> Material {
+        Material(
+            name: rec.name,
+            quantity: rec.quantity,
+            unitCost: 0,
+            productURL: nil,
+            unit: rec.unit,
+            notes: rec.notes
+        )
+    }
+
+    private func makeEstimateMaterials(from recs: [MaterialRecommendation]) -> [Material] {
+        recs.map(materialFromRecommendation)
+    }
+
+    private func createNewEstimateFromSuggestedMaterials() {
+        let materials = makeEstimateMaterials(from: suggestedMaterials)
+        _ = jobVM.createEstimate(from: materials, jobType: selectedJobType)
+        dismiss()
+    }
+
+    private func addSuggestedMaterials(to job: Job) {
+        let materials = makeEstimateMaterials(from: suggestedMaterials)
+        jobVM.appendMaterials(materials, to: job.id)
     }
 }

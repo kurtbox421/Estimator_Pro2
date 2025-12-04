@@ -78,12 +78,42 @@ class JobViewModel: ObservableObject {
     func removeMaterial(at index: Int, in job: Job) {
         guard let jobIndex = jobs.firstIndex(where: { $0.id == job.id }),
               jobs[jobIndex].materials.indices.contains(index) else { return }
-        
+
         var updatedJob = jobs[jobIndex]
         updatedJob.materials.remove(at: index)
         recalculateTotals(for: &updatedJob)
         jobs[jobIndex] = updatedJob
         sortJobs()
+    }
+
+    func appendMaterials(_ materials: [Material], to jobID: Job.ID) {
+        guard let index = jobs.firstIndex(where: { $0.id == jobID }) else { return }
+
+        var updatedJob = jobs[index]
+        updatedJob.materials.append(contentsOf: materials)
+        recalculateTotals(for: &updatedJob)
+        jobs[index] = updatedJob
+        sortJobs()
+    }
+
+    /// Creates and saves a new estimate pre-populated with materials.
+    @discardableResult
+    func createEstimate(from materials: [Material], jobType: MaterialJobType?) -> Job {
+        let displayName = jobType?.displayName ?? "New Estimate"
+
+        var job = Job(
+            name: displayName,
+            category: displayName,
+            laborHours: 0,
+            laborRate: 0,
+            materials: materials,
+            clientId: nil
+        )
+
+        recalculateTotals(for: &job)
+        jobs.append(job)
+        sortJobs()
+        return job
     }
     
     func jobs(for client: Client) -> [Job] {
