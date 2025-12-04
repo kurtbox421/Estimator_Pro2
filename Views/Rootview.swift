@@ -47,6 +47,7 @@ struct RootView: View {
     @EnvironmentObject private var jobVM: JobViewModel
     @EnvironmentObject private var clientVM: ClientViewModel
     @EnvironmentObject private var invoiceVM: InvoiceViewModel
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var selectedTab: AppTab = .estimates
     @State private var showingNewEstimate = false
@@ -157,6 +158,18 @@ struct RootView: View {
     }
 
     private var segmentedControl: some View {
+        Group {
+            if horizontalSizeClass == .compact {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    segmentedButtons
+                }
+            } else {
+                segmentedButtons
+            }
+        }
+    }
+
+    private var segmentedButtons: some View {
         HStack(spacing: 8) {
             ForEach(AppTab.allCases, id: \.self) { tab in
                 Button {
@@ -166,7 +179,6 @@ struct RootView: View {
                         .font(.subheadline.weight(.semibold))
                         .padding(.vertical, 8)
                         .padding(.horizontal, 14)
-                        .frame(maxWidth: .infinity)
                         .background(
                             Capsule()
                                 .fill(selectedTab == tab
