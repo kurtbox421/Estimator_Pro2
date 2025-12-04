@@ -50,9 +50,10 @@
 		AA08AA08AA08AA08AA08AA08 /* InvoicePDFGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA08AA08AA08AA08AA08AA07 /* InvoicePDFGenerator.swift */; };
 		AA09AA09AA09AA09AA09AA09 /* InvoicePDFRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA09AA09AA09AA09AA09AA08 /* InvoicePDFRenderer.swift */; };
 		AA0AAA0AAA0AAA0AAA0AAA0 /* PDFPreviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0AAA0AAA0AAA0AAA0AAA0F /* PDFPreviewSheet.swift */; };
-		AA0B0B0B0B0B0B0B0B0B0B0B /* EstimateViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0B0B0B0B0B0B0B0B0B0B0A /* EstimateViewModel.swift */; };
-		B1E7E0112F01000100000001 /* MaterialEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E7E0102F01000100000001 /* MaterialEditView.swift */; };
-		D00100022FFF000100000001 /* MaterialsCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100012FFF000100000001 /* MaterialsCatalog.swift */; };
+                AA0B0B0B0B0B0B0B0B0B0B0B /* EstimateViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0B0B0B0B0B0B0B0B0B0B0A /* EstimateViewModel.swift */; };
+                B1E7E0112F01000100000001 /* MaterialEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E7E0102F01000100000001 /* MaterialEditView.swift */; };
+                D00200022FFF000200000001 /* MaterialPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00200012FFF000200000001 /* MaterialPreferences.swift */; };
+                D00100022FFF000100000001 /* MaterialsCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100012FFF000100000001 /* MaterialsCatalog.swift */; };
 		D00100042FFF000100000001 /* MaterialQuantityEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100032FFF000100000001 /* MaterialQuantityEngine.swift */; };
 		D00100062FFF000100000001 /* JobMaterialGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100052FFF000100000001 /* JobMaterialGenerator.swift */; };
 		D00100082FFF000100000001 /* MaterialsCatalog.json in Resources */ = {isa = PBXBuildFile; fileRef = D00100072FFF000100000001 /* MaterialsCatalog.json */; };
@@ -64,11 +65,12 @@
 		3969FCFF2ECD35E60005C1AE /* Job.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Job.swift; sourceTree = "<group>"; };
 		3969FD012ECD36190005C1AE /* JobViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobViewModel.swift; sourceTree = "<group>"; };
 		3969FD082ECD36E10005C1AE /* JobListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobListView.swift; sourceTree = "<group>"; };
-		3969FD0A2ECD37000005C1AE /* AddEditJobView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditJobView.swift; sourceTree = "<group>"; };
-		3969FD0C2ECD372A0005C1AE /* JobDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobDetailView.swift; sourceTree = "<group>"; };
-		3969FD0E2ECD37F10005C1AE /* Material.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Material.swift; sourceTree = "<group>"; };
-		3969FD142ECD3F410005C1AE /* AddMaterialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddMaterialView.swift; sourceTree = "<group>"; };
-		397D69662EDE36C7005E0657 /* InvoiceNumberManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoiceNumberManager.swift; sourceTree = "<group>"; };
+                3969FD0A2ECD37000005C1AE /* AddEditJobView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditJobView.swift; sourceTree = "<group>"; };
+                3969FD0C2ECD372A0005C1AE /* JobDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobDetailView.swift; sourceTree = "<group>"; };
+                3969FD0E2ECD37F10005C1AE /* Material.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Material.swift; sourceTree = "<group>"; };
+                D00200012FFF000200000001 /* MaterialPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialPreferences.swift; sourceTree = "<group>"; };
+                3969FD142ECD3F410005C1AE /* AddMaterialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddMaterialView.swift; sourceTree = "<group>"; };
+                397D69662EDE36C7005E0657 /* InvoiceNumberManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoiceNumberManager.swift; sourceTree = "<group>"; };
 		398D93D32ECE8FFC00A168FC /* ClientViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientViewModel.swift; sourceTree = "<group>"; };
 		398D93D52ECE902900A168FC /* Client.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Client.swift; sourceTree = "<group>"; };
 		398D93EB2ECFBAAE00A168FC /* ClientCardViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientCardViews.swift; sourceTree = "<group>"; };
@@ -155,14 +157,15 @@
 		};
 		3969FD032ECD36610005C1AE /* Models */ = {
 			isa = PBXGroup;
-			children = (
-				39B8DC822EDCDB50005D0E08 /* AuthManager.swift */,
-				398D93D52ECE902900A168FC /* Client.swift */,
-				39A395202ECD7EE400D5E76D /* Invoice.swift */,
-				3969FCFF2ECD35E60005C1AE /* Job.swift */,
-				D00100012FFF000100000001 /* MaterialsCatalog.swift */,
-				AA03AA03AA03AA03AA03AA03 /* SavedMaterial.swift */,
-			);
+                        children = (
+                                39B8DC822EDCDB50005D0E08 /* AuthManager.swift */,
+                                398D93D52ECE902900A168FC /* Client.swift */,
+                                39A395202ECD7EE400D5E76D /* Invoice.swift */,
+                                3969FCFF2ECD35E60005C1AE /* Job.swift */,
+                                D00100012FFF000100000001 /* MaterialsCatalog.swift */,
+                                D00200012FFF000200000001 /* MaterialPreferences.swift */,
+                                AA03AA03AA03AA03AA03AA03 /* SavedMaterial.swift */,
+                        );
 			path = Models;
 			sourceTree = "<group>";
 		};
@@ -344,9 +347,10 @@
 				39B8DC712EDB6779005D0E08 /* Formatting.swift in Sources */,
 				AA09AA09AA09AA09AA09AA09 /* InvoicePDFRenderer.swift in Sources */,
 				AA08AA08AA08AA08AA08AA08 /* InvoicePDFGenerator.swift in Sources */,
-				AA0AAA0AAA0AAA0AAA0AAA0 /* PDFPreviewSheet.swift in Sources */,
-				D00100022FFF000100000001 /* MaterialsCatalog.swift in Sources */,
-				3969FD152ECD3F410005C1AE /* AddMaterialView.swift in Sources */,
+                                AA0AAA0AAA0AAA0AAA0AAA0 /* PDFPreviewSheet.swift in Sources */,
+                                D00100022FFF000100000001 /* MaterialsCatalog.swift in Sources */,
+                                D00200022FFF000200000001 /* MaterialPreferences.swift in Sources */,
+                                3969FD152ECD3F410005C1AE /* AddMaterialView.swift in Sources */,
 				39B8DC752EDB6FC4005D0E08 /* MaterialGeneratorView.swift in Sources */,
 				D00100192FFF000100000010 /* MaterialPricingSettingsView.swift in Sources */,
 				39B8DC872EDCDB6E005D0E08 /* AuthContainerView.swift in Sources */,

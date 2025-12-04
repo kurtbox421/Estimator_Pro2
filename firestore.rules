@@ -4,5 +4,22 @@ service cloud.firestore {
     match /invoices/{invoiceId} {
       allow read, write: if request.auth != null && request.auth.uid == resource.data.ownerID;
     }
+
+    match /materials/{materialId} {
+      allow read: if request.auth != null &&
+                  (resource.data.ownerID == request.auth.uid || resource.data.ownerID == "global");
+
+      allow write: if request.auth != null &&
+                   request.auth.uid == resource.data.ownerID &&
+                   resource.data.ownerID != "global";
+    }
+
+    match /materialPrices/{priceId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.ownerID;
+    }
+
+    match /materialPreferences/{preferencesId} {
+      allow read, write: if request.auth != null && request.auth.uid == preferencesId;
+    }
   }
 }
