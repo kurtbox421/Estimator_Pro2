@@ -56,6 +56,7 @@ struct MaterialItem: Identifiable, Codable, Hashable {
     let category: MaterialCategory
     let unit: String               // "each", "sheet", "sqft", "linear_ft", "bag", etc.
     let defaultUnitCost: Double
+    let productURL: URL?
     let wasteFactor: Double        // 0.10 for 10%
     let quantityRuleKey: String?   // optional, allows manual-only items
 
@@ -79,6 +80,9 @@ final class MaterialsCatalogStore: ObservableObject {
     @Published private(set) var priceOverrides: [String: Double] = [:] {
         didSet { saveOverrides() }
     }
+    @Published private(set) var productURLOverrides: [String: URL] = [:] {
+        didSet { saveProductURLOverrides() }
+    }
     @Published private(set) var removedMaterialIDs: Set<String> = [] {
         didSet {
             saveRemovedMaterials()
@@ -95,8 +99,9 @@ final class MaterialsCatalogStore: ObservableObject {
         loadFromBundle()
         loadCustomMaterials()
         loadRemovedMaterials()
-        rebuildCatalog()
         loadOverrides()
+        loadProductURLOverrides()
+        rebuildCatalog()
     }
 
     private func loadFromBundle() {
@@ -120,19 +125,24 @@ final class MaterialsCatalogStore: ObservableObject {
     }
 
     private func rebuildCatalog() {
-        let filteredBase = baseMaterials.filter { !removedMaterialIDs.contains($0.id) }
-        let filteredCustom = customMaterials.filter { !removedMaterialIDs.contains($0.id) }
+        let filteredBase = baseMaterials
+            .filter { !removedMaterialIDs.contains($0.id) }
+            .map { applyProductURLOverride(to: $0) }
+        let filteredCustom = customMaterials
+            .filter { !removedMaterialIDs.contains($0.id) }
+            .map { applyProductURLOverride(to: $0) }
         materials = filteredBase + filteredCustom
     }
 
     @discardableResult
-    func addCustomMaterial(name: String, unit: String, unitCost: Double, category: MaterialCategory) -> MaterialItem {
+    func addCustomMaterial(name: String, unit: String, unitCost: Double, category: MaterialCategory, productURL: URL? = nil) -> MaterialItem {
         let newMaterial = MaterialItem(
             id: UUID().uuidString,
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
             category: category,
             unit: unit.trimmingCharacters(in: .whitespacesAndNewlines),
             defaultUnitCost: unitCost,
+            productURL: productURL,
             wasteFactor: 0,
             quantityRuleKey: nil
         )
@@ -146,9 +156,17 @@ final class MaterialsCatalogStore: ObservableObject {
         name: String? = nil,
         unit: String? = nil,
         defaultUnitCost: Double? = nil,
-        category: MaterialCategory? = nil
+        category: MaterialCategory? = nil,
+        productURL: URL?? = nil
     ) {
         guard let index = customMaterials.firstIndex(where: { $0.id == material.id }) else { return }
+
+        let updatedProductURL: URL?
+        if let productURL {
+            updatedProductURL = productURL
+        } else {
+            updatedProductURL = material.productURL
+        }
 
         let updated = MaterialItem(
             id: material.id,
@@ -156,6 +174,7 @@ final class MaterialsCatalogStore: ObservableObject {
             category: category ?? material.category,
             unit: unit?.trimmingCharacters(in: .whitespacesAndNewlines) ?? material.unit,
             defaultUnitCost: defaultUnitCost ?? material.defaultUnitCost,
+            productURL: updatedProductURL,
             wasteFactor: material.wasteFactor,
             quantityRuleKey: material.quantityRuleKey
         )
@@ -167,6 +186,7 @@ final class MaterialsCatalogStore: ObservableObject {
         guard let index = customMaterials.firstIndex(where: { $0.id == material.id }) else { return }
         customMaterials.remove(at: index)
         resetOverride(for: material.id)
+        resetProductURLOverride(for: material.id)
     }
 
     func deleteMaterial(_ material: MaterialItem) {
@@ -175,6 +195,7 @@ final class MaterialsCatalogStore: ObservableObject {
         } else {
             removedMaterialIDs.insert(material.id)
             resetOverride(for: material.id)
+            resetProductURLOverride(for: material.id)
         }
     }
 
@@ -187,11 +208,33 @@ final class MaterialsCatalogStore: ObservableObject {
     }
 
     func material(withID id: String) -> MaterialItem? {
-        materials.first { $0.id == id }
+        materials.compactMap { applyProductURLOverride(to: $0) }.first { $0.id == id }
     }
 
     func price(for material: MaterialItem) -> Double {
         priceOverrides[material.id] ?? material.defaultUnitCost
+    }
+
+    func productURL(for material: MaterialItem) -> URL? {
+        productURLOverrides[material.id] ?? material.productURL
+    }
+
+    func setProductURL(_ url: URL?, for material: MaterialItem) {
+        if customMaterials.contains(where: { $0.id == material.id }) {
+            resetProductURLOverride(for: material.id)
+            updateCustomMaterial(material, productURL: url)
+            rebuildCatalog()
+            return
+        }
+
+        var updated = productURLOverrides
+        if let url {
+            updated[material.id] = url
+        } else {
+            updated.removeValue(forKey: material.id)
+        }
+        productURLOverrides = updated
+        rebuildCatalog()
     }
 
     func override(for materialID: String) -> Double? {
@@ -211,6 +254,13 @@ final class MaterialsCatalogStore: ObservableObject {
         priceOverrides = updated
     }
 
+    func resetProductURLOverride(for materialID: String) {
+        guard productURLOverrides[materialID] != nil else { return }
+        var updated = productURLOverrides
+        updated.removeValue(forKey: materialID)
+        productURLOverrides = updated
+    }
+
     // MARK: - Overrides persistence
 
     private func loadOverrides() {
@@ -219,8 +269,18 @@ final class MaterialsCatalogStore: ObservableObject {
         }
     }
 
+    private func loadProductURLOverrides() {
+        if let stored: [String: URL] = persistence.load([String: URL].self, from: MaterialsCatalogStorage.productURLOverridesFileName) {
+            productURLOverrides = stored
+        }
+    }
+
     private func saveOverrides() {
         persistence.save(priceOverrides, to: MaterialsCatalogStorage.overrideFileName)
+    }
+
+    private func saveProductURLOverrides() {
+        persistence.save(productURLOverrides, to: MaterialsCatalogStorage.productURLOverridesFileName)
     }
 
     private func saveCustomMaterials() {
@@ -236,10 +296,27 @@ final class MaterialsCatalogStore: ObservableObject {
     private func saveRemovedMaterials() {
         persistence.save(removedMaterialIDs, to: MaterialsCatalogStorage.removedMaterialsFileName)
     }
+
+    private func applyProductURLOverride(to material: MaterialItem) -> MaterialItem {
+        let override = productURLOverrides[material.id]
+        guard override != nil || material.productURL != nil else { return material }
+
+        return MaterialItem(
+            id: material.id,
+            name: material.name,
+            category: material.category,
+            unit: material.unit,
+            defaultUnitCost: material.defaultUnitCost,
+            productURL: override ?? material.productURL,
+            wasteFactor: material.wasteFactor,
+            quantityRuleKey: material.quantityRuleKey
+        )
+    }
 }
 
 private enum MaterialsCatalogStorage {
     static let overrideFileName = "materialPriceOverrides.json"
     static let customMaterialsFileName = "customGeneratorMaterials.json"
     static let removedMaterialsFileName = "removedMaterials.json"
+    static let productURLOverridesFileName = "materialProductURLOverrides.json"
 }
