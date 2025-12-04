@@ -79,6 +79,12 @@ final class MaterialsCatalogStore: ObservableObject {
     @Published private(set) var priceOverrides: [String: Double] = [:] {
         didSet { saveOverrides() }
     }
+    @Published private(set) var removedMaterialIDs: Set<String> = [] {
+        didSet {
+            saveRemovedMaterials()
+            rebuildCatalog()
+        }
+    }
 
     private let persistence: PersistenceService
     private var baseMaterials: [MaterialItem] = []
@@ -88,6 +94,7 @@ final class MaterialsCatalogStore: ObservableObject {
 
         loadFromBundle()
         loadCustomMaterials()
+        loadRemovedMaterials()
         rebuildCatalog()
         loadOverrides()
     }
@@ -113,7 +120,9 @@ final class MaterialsCatalogStore: ObservableObject {
     }
 
     private func rebuildCatalog() {
-        materials = baseMaterials + customMaterials
+        let filteredBase = baseMaterials.filter { !removedMaterialIDs.contains($0.id) }
+        let filteredCustom = customMaterials.filter { !removedMaterialIDs.contains($0.id) }
+        materials = filteredBase + filteredCustom
     }
 
     @discardableResult
@@ -158,6 +167,15 @@ final class MaterialsCatalogStore: ObservableObject {
         guard let index = customMaterials.firstIndex(where: { $0.id == material.id }) else { return }
         customMaterials.remove(at: index)
         resetOverride(for: material.id)
+    }
+
+    func deleteMaterial(_ material: MaterialItem) {
+        if customMaterials.contains(where: { $0.id == material.id }) {
+            deleteCustomMaterial(material)
+        } else {
+            removedMaterialIDs.insert(material.id)
+            resetOverride(for: material.id)
+        }
     }
 
     var customMaterialIDs: [String] {
@@ -208,9 +226,20 @@ final class MaterialsCatalogStore: ObservableObject {
     private func saveCustomMaterials() {
         persistence.save(customMaterials, to: MaterialsCatalogStorage.customMaterialsFileName)
     }
+
+    private func loadRemovedMaterials() {
+        if let stored: Set<String> = persistence.load(Set<String>.self, from: MaterialsCatalogStorage.removedMaterialsFileName) {
+            removedMaterialIDs = stored
+        }
+    }
+
+    private func saveRemovedMaterials() {
+        persistence.save(removedMaterialIDs, to: MaterialsCatalogStorage.removedMaterialsFileName)
+    }
 }
 
 private enum MaterialsCatalogStorage {
     static let overrideFileName = "materialPriceOverrides.json"
     static let customMaterialsFileName = "customGeneratorMaterials.json"
+    static let removedMaterialsFileName = "removedMaterials.json"
 }

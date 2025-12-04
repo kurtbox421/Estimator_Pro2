@@ -83,6 +83,13 @@ struct MaterialPricingSettingsView: View {
                         }
                     }
                     .padding(.vertical, 6)
+                    .swipeActions {
+                        Button(role: .destructive) {
+                            deleteMaterial(material)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
                 }
                 .onDelete(perform: deleteCustomMaterials)
 
@@ -153,6 +160,13 @@ struct MaterialPricingSettingsView: View {
                             }
                         }
                         .padding(.vertical, 6)
+                        .swipeActions {
+                            Button(role: .destructive) {
+                                deleteMaterial(material)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                     }
                 }
             }
@@ -245,9 +259,13 @@ struct MaterialPricingSettingsView: View {
         offsets.forEach { index in
             guard materialsStore.customMaterials.indices.contains(index) else { return }
             let material = materialsStore.customMaterials[index]
-            materialsStore.deleteCustomMaterial(material)
-            overrideValues.removeValue(forKey: material.id)
+            deleteMaterial(material)
         }
+    }
+
+    private func deleteMaterial(_ material: MaterialItem) {
+        materialsStore.deleteMaterial(material)
+        overrideValues.removeValue(forKey: material.id)
         syncOverrides()
     }
 }
