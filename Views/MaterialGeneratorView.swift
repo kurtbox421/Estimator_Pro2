@@ -15,7 +15,7 @@ struct MaterialGeneratorView: View {
 
     var body: some View {
         Form {
-            Section("Job Type") {
+            Section {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(MaterialJobType.allCases) { type in
@@ -46,6 +46,18 @@ struct MaterialGeneratorView: View {
                         }
                     }
                     .padding(.vertical, 4)
+                }
+            } header: {
+                VStack(spacing: 4) {
+                    Text("Beta")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+
+                    Text("JOB TYPE")
+                        .font(.headline)
+                        .padding(.top, 2)
                 }
             }
 
