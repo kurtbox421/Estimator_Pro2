@@ -1,41 +1,34 @@
 import SwiftUI
 
 struct MaterialGeneratorView: View {
-    @EnvironmentObject var materialsStore: MaterialsCatalogStore
-
-    @State private var jobType: JobType = .interiorWall
-    @State private var wallLength: String = "10"
-    @State private var wallHeight: String = "8"
-    @State private var roomArea: String = "120"
-    @State private var roomPerimeter: String = "44"
-    @State private var deckArea: String = "200"
-    @State private var openingCount: String = "1"
-    @State private var bathroomCount: String = "1"
-
-    @State private var generated: [GeneratedMaterial] = []
+    @State private var selectedJobType: MaterialJobType = .interiorWallBuild
+    @State private var lengthText: String = ""
+    @State private var secondaryText: String = ""
+    @State private var generated: [Material] = []
+    @State private var validationMessage: String?
 
     var body: some View {
         Form {
             Section("Job Type") {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        ForEach(JobType.allCases) { type in
+                        ForEach(MaterialJobType.allCases) { type in
                             Button {
-                                jobType = type
+                                selectedJobType = type
                             } label: {
                                 Text(type.displayName)
                                     .font(.subheadline)
                                     .padding(.vertical, 6)
                                     .padding(.horizontal, 12)
                                     .background(
-                                        jobType == type
+                                        selectedJobType == type
                                         ? Color.accentColor.opacity(0.15)
                                         : Color.clear
                                     )
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 10)
                                             .stroke(
-                                                jobType == type
+                                                selectedJobType == type
                                                 ? Color.accentColor
                                                 : Color.secondary.opacity(0.4),
                                                 lineWidth: 1
@@ -50,28 +43,39 @@ struct MaterialGeneratorView: View {
                 }
             }
 
-            parametersSection
+            Section("WALL DIMENSIONS (FT)") {
+                TextField("Length", text: $lengthText)
+                    .keyboardType(.decimalPad)
+                TextField(
+                    secondaryPlaceholder,
+                    text: $secondaryText
+                )
+                .keyboardType(.decimalPad)
+            }
 
             Button("Generate Materials") {
-                let context = buildContext()
-                let generator = JobMaterialGenerator(catalog: materialsStore)
-                generated = generator.generateMaterials(for: jobType, context: context)
+                generateMaterials()
+            }
+
+            if let validationMessage {
+                Text(validationMessage)
+                    .font(.footnote)
+                    .foregroundColor(.red)
             }
 
             if !generated.isEmpty {
                 Section("Suggested Materials") {
-                    ForEach(generated, id: \.material.id) { item in
+                    ForEach(generated) { item in
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(item.material.name)
+                            Text(item.name)
                                 .font(.headline)
 
-                            // quantity line
-                            Text(String(format: "%.2f %@", item.quantity, item.material.unit))
-
-                            // total line
-                            Text(String(format: "Total: $%.2f", item.totalCost))
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                            Text("\(String(format: "%.2f", item.quantity)) \(item.unit ?? "")")
+                            if let notes = item.notes {
+                                Text(notes)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                         .padding(.vertical, 4)
                     }
@@ -81,75 +85,55 @@ struct MaterialGeneratorView: View {
         .navigationTitle("Material Generator")
     }
 
-    @ViewBuilder
-    private var parametersSection: some View {
-        switch jobType {
-        case .interiorWall:
-            Section("Wall Dimensions (ft)") {
-                TextField("Wall length", text: $wallLength)
-                    .keyboardType(.decimalPad)
-                TextField("Wall height", text: $wallHeight)
-                    .keyboardType(.decimalPad)
-            }
-
-        case .lvpFloor, .paintRoom:
-            Section("Room Data") {
-                TextField("Floor area (sq ft)", text: $roomArea)
-                    .keyboardType(.decimalPad)
-                TextField("Perimeter (ft)", text: $roomPerimeter)
-                    .keyboardType(.decimalPad)
-                if jobType == .paintRoom {
-                    TextField("Wall height (ft)", text: $wallHeight)
-                        .keyboardType(.decimalPad)
-                }
-            }
-
-        case .basicBathRemodel:
-            Section("Bathroom") {
-                TextField("Tile area (sq ft)", text: $roomArea)
-                    .keyboardType(.decimalPad)
-                TextField("Bathroom count", text: $bathroomCount)
-                    .keyboardType(.numberPad)
-            }
-
-        case .deckSurfaceReplace:
-            Section("Deck") {
-                TextField("Deck area (sq ft)", text: $deckArea)
-                    .keyboardType(.decimalPad)
-                TextField("Deck length (ft)", text: $wallLength)
-                    .keyboardType(.decimalPad)
-            }
-
-        case .windowInstall:
-            Section("Openings") {
-                TextField("Window/door count", text: $openingCount)
-                    .keyboardType(.numberPad)
-                TextField("Perimeter trim (ft)", text: $roomPerimeter)
-                    .keyboardType(.decimalPad)
-            }
+    private var secondaryPlaceholder: String {
+        switch selectedJobType {
+        case .interiorWallBuild:
+            return "Height"
+        case .lvpFlooring:
+            return "Width"
+        case .paintRoom:
+            return "Width"
+        case .basicBathroomRemodel:
+            return "Width"
         }
     }
 
-    private func buildContext() -> QuantityContext {
-        func d(_ string: String) -> Double? {
-            Double(string.replacingOccurrences(of: ",", with: "."))
-        }
-        func i(_ string: String) -> Int? {
-            Int(string)
+    private func generateMaterials() {
+        let length = Double(lengthText)
+        let secondary = Double(secondaryText)
+
+        guard length != nil || secondary != nil else {
+            validationMessage = "Enter at least one dimension."
+            generated = []
+            return
         }
 
-        return QuantityContext(
-            wallLengthFt: d(wallLength),
-            wallHeightFt: d(wallHeight),
-            roomFloorAreaSqFt: d(roomArea),
-            roomPerimeterFt: d(roomPerimeter),
-            deckAreaSqFt: d(deckArea),
-            deckLengthFt: d(wallLength),
-            deckJoistSpanFt: nil,
-            concreteVolumeCuFt: nil,
-            openingCount: i(openingCount),
-            bathroomCount: i(bathroomCount),
-            tileAreaSqFt: d(roomArea)
+        validationMessage = nil
+
+        let context = JobContext(
+            jobType: selectedJobType,
+            lengthFeet: length,
+            secondaryFeet: secondary,
+            heightFeet: nil,
+            areaSqFt: nil,
+            doorCount: 0,
+            windowCount: 0,
+            coats: 2,
+            includesCeiling: true,
+            wasteFactor: 0.1,
+            notes: nil
         )
+
+        let recommendations = MaterialsRecommender().recommendMaterials(for: context)
+        generated = recommendations.map { rec in
+            Material(
+                name: rec.name,
+                quantity: rec.quantity,
+                unitCost: 0,
+                productURL: nil,
+                unit: rec.unit,
+                notes: rec.notes
+            )
+        }
     }
 }
