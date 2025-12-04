@@ -162,13 +162,15 @@ struct RootView: View {
     }
 
     private func segmentedButtons(isCompact: Bool) -> some View {
-        let spacing: CGFloat = isCompact ? 6 : 8
-        let verticalPadding: CGFloat = isCompact ? 6 : 8
-        let horizontalPadding: CGFloat = isCompact ? 10 : 14
-        let backgroundPadding: CGFloat = isCompact ? 4 : 6
+        let spacing: CGFloat = isCompact ? 6 : 10
+        let verticalPadding: CGFloat = isCompact ? 8 : 10
+        let horizontalPadding: CGFloat = isCompact ? 14 : 18
+        let backgroundPadding: CGFloat = isCompact ? 6 : 8
 
         return HStack(spacing: spacing) {
             ForEach(AppTab.allCases, id: \.self) { tab in
+                let isSelected = selectedTab == tab
+
                 Button {
                     selectedTab = tab
                 } label: {
@@ -178,21 +180,32 @@ struct RootView: View {
                         .padding(.horizontal, horizontalPadding)
                         .background(
                             Capsule()
-                                .fill(selectedTab == tab
+                                .fill(isSelected
                                       ? Color.white
-                                      : Color.clear)
+                                      : Color.white.opacity(0.14))
                         )
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.white.opacity(isSelected ? 0.0 : 0.4), lineWidth: 1)
+                        )
+                        .shadow(color: Color.black.opacity(isSelected ? 0.12 : 0), radius: 8, x: 0, y: 4)
                         .foregroundColor(
-                            selectedTab == tab
-                            ? Color.accentColor
-                            : Color.primary
+                            isSelected
+                            ? Color.black.opacity(0.85)
+                            : Color.white
                         )
                 }
             }
         }
         .padding(backgroundPadding)
         .background(
-            Capsule().fill(Color(.systemGray5))
+            Capsule()
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    Capsule()
+                        .stroke(Color.white.opacity(0.35), lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
         )
     }
 
