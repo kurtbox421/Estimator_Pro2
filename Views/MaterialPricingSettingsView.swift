@@ -38,51 +38,6 @@ struct MaterialPricingSettingsView: View {
                     .listRowBackground(Color.clear)
             }
 
-            ForEach(groupedMaterials, id: \.category) { group in
-                Section(group.category) {
-                    ForEach(group.items, id: \.id) { material in
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(material.name)
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundColor(.primary)
-
-                                    Text(material.unit)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-
-                                Spacer()
-
-                                TextField(
-                                    "Unit cost",
-                                    value: priceBinding(for: material),
-                                    format: .currency(code: "USD")
-                                )
-                                .keyboardType(.decimalPad)
-                                .multilineTextAlignment(.trailing)
-                                .frame(width: 140)
-                            }
-
-                            if materialsStore.override(for: material.id) != nil {
-                                Button {
-                                    materialsStore.resetOverride(for: material.id)
-                                    overrideValues[material.id] = material.defaultUnitCost
-                                } label: {
-                                    Text("Reset to default \(material.defaultUnitCost.formatted(.currency(code: "USD")))")
-                                        .font(.caption)
-                                        .foregroundColor(.accentColor)
-                                }
-                                .buttonStyle(.plain)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
-                            }
-                        }
-                        .padding(.vertical, 6)
-                    }
-                }
-            }
-
             Section("Custom generator materials") {
                 Text("Add materials that should always be suggested when you run the generator. Set their unit and default price to have them included alongside the built-in items.")
                     .font(.footnote)
@@ -147,6 +102,51 @@ struct MaterialPricingSettingsView: View {
                     .disabled(!canAddCustomMaterial)
                 }
                 .padding(.vertical, 4)
+            }
+
+            ForEach(groupedMaterials, id: \.category) { group in
+                Section(group.category) {
+                    ForEach(group.items, id: \.id) { material in
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(material.name)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundColor(.primary)
+
+                                    Text(material.unit)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+
+                                Spacer()
+
+                                TextField(
+                                    "Unit cost",
+                                    value: priceBinding(for: material),
+                                    format: .currency(code: "USD")
+                                )
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 140)
+                            }
+
+                            if materialsStore.override(for: material.id) != nil {
+                                Button {
+                                    materialsStore.resetOverride(for: material.id)
+                                    overrideValues[material.id] = material.defaultUnitCost
+                                } label: {
+                                    Text("Reset to default \(material.defaultUnitCost.formatted(.currency(code: "USD")))")
+                                        .font(.caption)
+                                        .foregroundColor(.accentColor)
+                                }
+                                .buttonStyle(.plain)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                            }
+                        }
+                        .padding(.vertical, 6)
+                    }
+                }
             }
         }
         .navigationTitle("Material pricing")
