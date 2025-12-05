@@ -94,6 +94,11 @@ struct MaterialGeneratorView: View {
                                 .font(.headline)
 
                             Text("\(String(format: "%.2f", item.quantity)) \(item.unit ?? "")")
+                            if item.unitCost > 0 {
+                                Text("Est. unit cost: \(safeNumber(item.unitCost).formatted(.currency(code: "USD")))")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                             if let notes = item.notes {
                                 Text(notes)
                                     .font(.subheadline)
