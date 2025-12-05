@@ -4,6 +4,7 @@ import FirebaseAuth
 struct MaterialGeneratorView: View {
     @EnvironmentObject private var jobVM: JobViewModel
     @EnvironmentObject private var settingsManager: SettingsManager
+    @EnvironmentObject private var materialInsights: MaterialIntelligenceStore
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedJobType: MaterialJobType = .interiorWallBuild
@@ -13,9 +14,12 @@ struct MaterialGeneratorView: View {
     @State private var isShowingEstimatePicker = false
     @State private var generated: [Material] = []
     @State private var validationMessage: String?
+    @State private var selectedMaterialName: String?
 
     var body: some View {
         Form {
+            smartSuggestionsSection
+
             Section {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
@@ -97,6 +101,10 @@ struct MaterialGeneratorView: View {
                             }
                         }
                         .padding(.vertical, 4)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            selectedMaterialName = item.name
+                        }
                     }
                 }
             }
@@ -142,6 +150,88 @@ struct MaterialGeneratorView: View {
                 }
             }
         }
+    }
+
+    private var smartSuggestionsSection: some View {
+        let frequent = materialInsights.frequentlyUsedMaterials(limit: 6)
+        let jobSpecific = materialInsights.materials(forJobType: selectedJobType.displayName, limit: 6)
+        let paired = selectedMaterialName.flatMap { materialInsights.commonlyUsed(withMaterialName: $0, limit: 6) } ?? []
+
+        return Section("SMART SUGGESTIONS") {
+            if frequent.isEmpty, jobSpecific.isEmpty, paired.isEmpty {
+                Text("Suggestions will appear here once you have materials saved in your jobs or invoices.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+
+            if !frequent.isEmpty {
+                suggestionGroup(title: "Frequently used", stats: frequent)
+            }
+
+            if !jobSpecific.isEmpty {
+                suggestionGroup(title: "Suggested for \(selectedJobType.displayName)", stats: jobSpecific)
+            }
+
+            if !paired.isEmpty {
+                suggestionGroup(title: "Commonly paired", stats: paired)
+            }
+        }
+    }
+
+    private func suggestionGroup(title: String, stats: [MaterialUsageStats]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(stats) { stat in
+                        suggestionChip(for: stat)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func suggestionChip(for stat: MaterialUsageStats) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(stat.name)
+                .font(.headline)
+                .lineLimit(2)
+
+            if let avgCost = stat.averageUnitCost {
+                Text("Avg unit cost: \(safeNumber(avgCost).formatted(.currency(code: "USD")))")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            if let avgQty = stat.averageQuantity {
+                Text("Avg qty: \(String(format: "%.2f", safeNumber(avgQty))) \(stat.mostCommonUnit ?? "units")")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Button {
+                applySuggestion(from: stat)
+            } label: {
+                Text("Use")
+                    .font(.subheadline)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding(10)
+        .frame(width: 220, alignment: .leading)
+        .background(Color(.systemBackground))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.accentColor.opacity(0.35), lineWidth: 1)
+        )
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.05), radius: 3, x: 0, y: 1)
     }
 
     private var secondaryPlaceholder: String {
@@ -195,19 +285,43 @@ struct MaterialGeneratorView: View {
         let recommendations = MaterialsRecommender().recommendMaterials(for: context)
         suggestedMaterials = recommendations
         generated = recommendations.map(materialFromRecommendation)
+        selectedMaterialName = recommendations.first?.name
     }
 
     private func materialFromRecommendation(_ rec: MaterialRecommendation) -> Material {
-        let unitPrice = settingsManager.commonMaterialPrice(for: rec.name) ?? 0
+        let fallbackPrice = settingsManager.commonMaterialPrice(for: rec.name) ?? 0
+        let unitPrice = safeNumber(rec.estimatedUnitCost ?? fallbackPrice)
 
         return Material(
             ownerID: Auth.auth().currentUser?.uid ?? "",
             name: rec.name,
-            quantity: rec.quantity,     // from generator
-            unitCost: unitPrice,        // from settings
+            quantity: safeNumber(rec.quantity),     // from generator
+            unitCost: unitPrice,        // from settings or intelligence
             productURL: nil,
             unit: rec.unit,
             notes: rec.notes
+        )
+    }
+
+    private func applySuggestion(from stats: MaterialUsageStats) {
+        let recommendation = recommendation(from: stats)
+        suggestedMaterials.append(recommendation)
+        generated = makeEstimateMaterials(from: suggestedMaterials)
+        selectedMaterialName = stats.name
+    }
+
+    private func recommendation(from stats: MaterialUsageStats) -> MaterialRecommendation {
+        let suggestedQuantity = stats.averageQuantity.flatMap(safeNumber) ?? 1
+        let unit = stats.mostCommonUnit ?? "unit"
+        let note = "Suggested from your history"
+
+        return MaterialRecommendation(
+            name: stats.name,
+            quantity: suggestedQuantity,
+            unit: unit,
+            category: "Smart suggestion",
+            notes: note,
+            estimatedUnitCost: stats.averageUnitCost.flatMap(safeNumber)
         )
     }
 
