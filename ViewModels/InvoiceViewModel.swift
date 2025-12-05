@@ -48,7 +48,11 @@ class InvoiceViewModel: ObservableObject {
     func delete(_ invoice: Invoice) {
         guard Auth.auth().currentUser != nil else { return }
 
-        db.collection("invoices")
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+
+        db.collection("users")
+            .document(uid)
+            .collection("invoices")
             .document(invoice.id.uuidString)
             .delete { [weak self] error in
                 if let error {
@@ -131,8 +135,9 @@ class InvoiceViewModel: ObservableObject {
 
         guard let uid = user?.uid else { return }
 
-        listener = db.collection("invoices")
-            .whereField("ownerID", isEqualTo: uid)
+        listener = db.collection("users")
+            .document(uid)
+            .collection("invoices")
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self else { return }
 
@@ -179,7 +184,9 @@ class InvoiceViewModel: ObservableObject {
         invoices = sortInvoices(invoices)
 
         do {
-            try db.collection("invoices")
+            try db.collection("users")
+                .document(uid)
+                .collection("invoices")
                 .document(invoiceToSave.id.uuidString)
                 .setData(from: invoiceToSave)
         } catch {

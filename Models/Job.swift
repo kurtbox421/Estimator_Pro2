@@ -9,6 +9,7 @@ import Foundation
 
 struct Job: Identifiable, Codable {
     let id: UUID
+    var ownerID: String
     var name: String
     var category: String
     var laborHours: Double
@@ -23,6 +24,7 @@ struct Job: Identifiable, Codable {
 
     init(
         id: UUID = UUID(),
+        ownerID: String = "",
         name: String,
         category: String,
         laborHours: Double,
@@ -31,6 +33,7 @@ struct Job: Identifiable, Codable {
         clientId: UUID? = nil
     ) {
         self.id = id
+        self.ownerID = ownerID
         self.name = name
         self.category = category
         self.laborHours = laborHours
@@ -42,6 +45,7 @@ struct Job: Identifiable, Codable {
 
     private enum CodingKeys: String, CodingKey {
         case id
+        case ownerID
         case name
         case category
         case laborHours
@@ -49,6 +53,19 @@ struct Job: Identifiable, Codable {
         case materials
         case dateCreated
         case clientId
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        ownerID = try container.decodeIfPresent(String.self, forKey: .ownerID) ?? ""
+        name = try container.decode(String.self, forKey: .name)
+        category = try container.decode(String.self, forKey: .category)
+        laborHours = try container.decode(Double.self, forKey: .laborHours)
+        laborRate = try container.decode(Double.self, forKey: .laborRate)
+        materials = try container.decodeIfPresent([Material].self, forKey: .materials) ?? []
+        dateCreated = try container.decodeIfPresent(Date.self, forKey: .dateCreated) ?? Date()
+        clientId = try container.decodeIfPresent(UUID.self, forKey: .clientId)
     }
 }
 

@@ -53,7 +53,9 @@ final class ClientViewModel: ObservableObject {
     func delete(_ client: Client) {
         guard auth.currentUser != nil else { return }
 
-        db.collection("clients")
+        db.collection("users")
+            .document(auth.currentUser!.uid)
+            .collection("clients")
             .document(client.id.uuidString)
             .delete()
     }
@@ -87,8 +89,9 @@ final class ClientViewModel: ObservableObject {
 
         guard let uid = user?.uid else { return }
 
-        listener = db.collection("clients")
-            .whereField("ownerID", isEqualTo: uid)
+        listener = db.collection("users")
+            .document(uid)
+            .collection("clients")
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self else { return }
 
@@ -125,7 +128,9 @@ final class ClientViewModel: ObservableObject {
         }
 
         do {
-            try db.collection("clients")
+            try db.collection("users")
+                .document(uid)
+                .collection("clients")
                 .document(clientToSave.id.uuidString)
                 .setData(from: clientToSave)
         } catch {

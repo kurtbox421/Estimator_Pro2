@@ -307,7 +307,11 @@ final class MaterialsCatalogStore: ObservableObject {
         resetOverride(for: material.id)
         resetProductURLOverride(for: material.id)
 
-        db.collection("materials")
+        guard let uid = currentUserID else { return }
+
+        db.collection("users")
+            .document(uid)
+            .collection("materials")
             .document(material.id)
             .delete()
     }
@@ -420,8 +424,9 @@ final class MaterialsCatalogStore: ObservableObject {
 
         guard let uid = user?.uid else { return }
 
-        customMaterialsListener = db.collection("materials")
-            .whereField("ownerID", in: [uid, "global"])
+        customMaterialsListener = db.collection("users")
+            .document(uid)
+            .collection("materials")
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self else { return }
 
@@ -436,13 +441,13 @@ final class MaterialsCatalogStore: ObservableObject {
                     }
                 } ?? []
 
-                DispatchQueue.main.async {
-                    self.customMaterials = decoded.filter { $0.ownerID != "global" }
-                }
+                DispatchQueue.main.async { self.customMaterials = decoded }
             }
 
-        preferencesListener = db.collection("materialPreferences")
+        preferencesListener = db.collection("users")
             .document(uid)
+            .collection("materialPreferences")
+            .document("preferences")
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self else { return }
 
@@ -462,10 +467,12 @@ final class MaterialsCatalogStore: ObservableObject {
     }
 
     private func persistCustomMaterial(_ material: MaterialItem) {
-        guard !material.ownerID.isEmpty else { return }
+        guard !material.ownerID.isEmpty, let uid = currentUserID else { return }
 
         do {
-            try db.collection("materials")
+            try db.collection("users")
+                .document(uid)
+                .collection("materials")
                 .document(material.id)
                 .setData(from: material)
         } catch {
@@ -485,8 +492,10 @@ final class MaterialsCatalogStore: ObservableObject {
         )
 
         do {
-            try db.collection("materialPreferences")
+            try db.collection("users")
                 .document(uid)
+                .collection("materialPreferences")
+                .document("preferences")
                 .setData(from: preferences)
         } catch {
             print("Failed to save material preferences: \(error.localizedDescription)")

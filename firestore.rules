@@ -1,36 +1,15 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /invoices/{invoiceId} {
-      allow read, write: if request.auth != null &&
-        ((resource.data.ownerID == request.auth.uid) || (request.resource.data.ownerID == request.auth.uid));
+    // Per-user data siloed under their UID
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
-    match /materials/{materialId} {
-      allow read: if request.auth != null &&
-                  (resource.data.ownerID == request.auth.uid || resource.data.ownerID == "global");
-
-      allow write: if request.auth != null &&
-                   request.resource.data.ownerID == request.auth.uid &&
-                   request.resource.data.ownerID != "global";
-    }
-
-    match /materialPrices/{priceId} {
-      allow read: if request.auth != null &&
-                  (resource.data.ownerID == request.auth.uid || resource.data.ownerID == "global");
-
-      allow write: if request.auth != null &&
-                   request.resource.data.ownerID == request.auth.uid &&
-                   request.resource.data.ownerID != "global";
-    }
-
-    match /materialPreferences/{preferencesId} {
-      allow read, write: if request.auth != null && request.auth.uid == preferencesId;
-    }
-
-    match /clients/{clientId} {
-      allow read, write: if request.auth != null &&
-        ((resource.data.ownerID == request.auth.uid) || (request.resource.data.ownerID == request.auth.uid));
+    // Optional global defaults (read-only for authenticated users)
+    match /defaults/{document=**} {
+      allow read: if request.auth != null;
+      allow write: if false;
     }
   }
 }
