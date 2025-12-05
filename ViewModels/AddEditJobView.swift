@@ -5,6 +5,7 @@
 //  Created by Curtis Bollinger on 11/18/25.
 //
 import SwiftUI
+import FirebaseAuth
 
 struct AddEditJobView: View {
     enum Mode {
@@ -135,12 +136,14 @@ struct AddEditJobView: View {
         // Empty fields default to 0
         let h = debugCheckNaN(parseDouble(labourHours.trimmingCharacters(in: .whitespaces)) ?? 0, label: "job labor hours")
         let r = debugCheckNaN(parseDouble(laborRate.trimmingCharacters(in: .whitespaces)) ?? 0, label: "job labor rate")
+        let ownerID = Auth.auth().currentUser?.uid ?? ""
 
         let trimmedCategory = category.trimmingCharacters(in: .whitespaces)
 
         switch mode {
         case .add:
             let job = Job(
+                ownerID: ownerID,
                 name: trimmedName,
                 category: trimmedCategory,
                 laborHours: h,
@@ -157,6 +160,9 @@ struct AddEditJobView: View {
             updated.laborHours = h
             updated.laborRate = r
             updated.clientId = selectedClientId
+            if updated.ownerID.isEmpty {
+                updated.ownerID = ownerID
+            }
             vm.update(updated)
         }
 

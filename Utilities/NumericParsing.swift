@@ -1,22 +1,33 @@
 import Foundation
 
-func parseDouble(_ text: String?) -> Double? {
+func safeDouble(_ text: String?) -> Double? {
     guard let text else { return nil }
     let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return nil }
-    return Double(trimmed.replacingOccurrences(of: ",", with: "."))
+
+    let normalized = trimmed.replacingOccurrences(of: ",", with: ".")
+    guard let value = Double(normalized) else { return nil }
+    return safeNumber(value)
+}
+
+func parseDouble(_ text: String?) -> Double? {
+    safeDouble(text)
+}
+
+func safeNumber(_ x: Double) -> Double {
+    x.isNaN || x.isInfinite ? 0 : x
 }
 
 func safeDivide(_ numerator: Double, by denominator: Double) -> Double {
     guard denominator != 0, !denominator.isNaN else { return 0 }
     let result = numerator / denominator
-    return result.isNaN || result.isInfinite ? 0 : result
+    return safeNumber(result)
 }
 
 func debugCheckNaN(_ value: Double, label: String) -> Double {
-    if value.isNaN || value.isInfinite {
+    let sanitized = safeNumber(value)
+    if sanitized != value {
         print("⚠️ NaN detected for \(label)")
-        return 0
     }
-    return value
+    return sanitized
 }
