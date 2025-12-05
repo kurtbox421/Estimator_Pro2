@@ -36,7 +36,11 @@ final class SettingsManager: ObservableObject {
         commonMaterials.remove(atOffsets: offsets)
 
         materialsToDelete.forEach { material in
-            db.collection("materialPrices")
+            guard let uid = currentUserID else { return }
+
+            db.collection("users")
+                .document(uid)
+                .collection("materialPrices")
                 .document(material.id.uuidString)
                 .delete()
         }
@@ -84,8 +88,9 @@ final class SettingsManager: ObservableObject {
 
         guard let uid = user?.uid else { return }
 
-        listener = db.collection("materialPrices")
-            .whereField("ownerID", in: [uid, "global"])
+        listener = db.collection("users")
+            .document(uid)
+            .collection("materialPrices")
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self else { return }
 
@@ -100,9 +105,7 @@ final class SettingsManager: ObservableObject {
                     }
                 } ?? []
 
-                DispatchQueue.main.async {
-                    self.commonMaterials = decoded.filter { $0.ownerID != "global" }
-                }
+                DispatchQueue.main.async { self.commonMaterials = decoded }
             }
     }
 
@@ -114,7 +117,9 @@ final class SettingsManager: ObservableObject {
         materialToSave.isDefault = false
 
         do {
-            try db.collection("materialPrices")
+            try db.collection("users")
+                .document(uid)
+                .collection("materialPrices")
                 .document(materialToSave.id.uuidString)
                 .setData(from: materialToSave)
         } catch {
