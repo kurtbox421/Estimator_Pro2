@@ -122,8 +122,8 @@ struct AddEditJobView: View {
         let hoursTrimmed = labourHours.trimmingCharacters(in: .whitespaces)
         let rateTrimmed  = laborRate.trimmingCharacters(in: .whitespaces)
 
-        if !hoursTrimmed.isEmpty && Double(hoursTrimmed) == nil { return false }
-        if !rateTrimmed.isEmpty && Double(rateTrimmed) == nil { return false }
+        if !hoursTrimmed.isEmpty && parseDouble(hoursTrimmed) == nil { return false }
+        if !rateTrimmed.isEmpty && parseDouble(rateTrimmed) == nil { return false }
 
         return true
     }
@@ -133,8 +133,8 @@ struct AddEditJobView: View {
         guard !trimmedName.isEmpty else { return }
 
         // Empty fields default to 0
-        let h = Double(labourHours.trimmingCharacters(in: .whitespaces)) ?? 0
-        let r = Double(laborRate.trimmingCharacters(in: .whitespaces)) ?? 0
+        let h = debugCheckNaN(parseDouble(labourHours.trimmingCharacters(in: .whitespaces)) ?? 0, label: "job labor hours")
+        let r = debugCheckNaN(parseDouble(laborRate.trimmingCharacters(in: .whitespaces)) ?? 0, label: "job labor rate")
 
         let trimmedCategory = category.trimmingCharacters(in: .whitespaces)
 

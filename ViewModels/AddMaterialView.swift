@@ -47,21 +47,24 @@ struct AddMaterialView: View {
 
     private var canSave: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty &&
-        Double(quantity) != nil &&
-        Double(unitCost) != nil
+        parseDouble(quantity) != nil &&
+        parseDouble(unitCost) != nil
     }
 
     private func save() {
-        guard let q = Double(quantity),
-              let u = Double(unitCost),
+        guard let q = parseDouble(quantity),
+              let u = parseDouble(unitCost),
               !name.trimmingCharacters(in: .whitespaces).isEmpty
         else { return }
+
+        let safeQuantity = debugCheckNaN(q, label: "material quantity")
+        let safeUnitCost = debugCheckNaN(u, label: "material unit cost")
 
         let material = Material(
             ownerID: Auth.auth().currentUser?.uid ?? "",
             name: name.trimmingCharacters(in: .whitespaces),
-            quantity: q,
-            unitCost: u
+            quantity: safeQuantity,
+            unitCost: safeUnitCost
         )
 
         onSave(material)

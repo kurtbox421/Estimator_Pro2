@@ -292,15 +292,18 @@ struct AddEditInvoiceView: View {
 
     private var canSaveMaterial: Bool {
         !materialName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        Double(materialQuantity) != nil &&
-        Double(materialUnitCost) != nil &&
+        parseDouble(materialQuantity) != nil &&
+        parseDouble(materialUnitCost) != nil &&
         isValidProductURL(materialProductURL)
     }
 
     private func saveMaterial() {
-        guard let quantity = Double(materialQuantity),
-              let unitCost = Double(materialUnitCost)
+        guard let quantityValue = parseDouble(materialQuantity),
+              let unitCostValue = parseDouble(materialUnitCost)
         else { return }
+
+        let quantity = debugCheckNaN(quantityValue, label: "invoice material quantity")
+        let unitCost = debugCheckNaN(unitCostValue, label: "invoice material unit cost")
 
         let trimmedName = materialName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return }
