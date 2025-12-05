@@ -231,8 +231,8 @@ struct AddEditJobView: View {
         let hoursTrimmed = labourHours.trimmingCharacters(in: .whitespaces)
         let rateTrimmed  = laborRate.trimmingCharacters(in: .whitespaces)
 
-        if !hoursTrimmed.isEmpty && Double(hoursTrimmed) == nil { return false }
-        if !rateTrimmed.isEmpty && Double(rateTrimmed) == nil { return false }
+        if !hoursTrimmed.isEmpty && parseDouble(hoursTrimmed) == nil { return false }
+        if !rateTrimmed.isEmpty && parseDouble(rateTrimmed) == nil { return false }
 
         return materialDrafts.allSatisfy { isValidProductURL($0.productURL) }
     }
@@ -248,8 +248,8 @@ struct AddEditJobView: View {
             let trimmedName = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmedName.isEmpty else { return nil }
 
-            let qty = Double(draft.quantity) ?? 0
-            let cost = Double(draft.unitCost) ?? 0
+            let qty = debugCheckNaN(parseDouble(draft.quantity) ?? 0, label: "draft material quantity")
+            let cost = debugCheckNaN(parseDouble(draft.unitCost) ?? 0, label: "draft material unit cost")
             let productURL = parsedURL(from: draft.productURL)
 
             return Material(
@@ -279,8 +279,8 @@ struct AddEditJobView: View {
         guard !trimmedName.isEmpty else { return }
 
         // Empty fields default to 0
-        let h = Double(labourHours.trimmingCharacters(in: .whitespaces)) ?? 0
-        let r = Double(laborRate.trimmingCharacters(in: .whitespaces)) ?? 0
+        let h = debugCheckNaN(parseDouble(labourHours.trimmingCharacters(in: .whitespaces)) ?? 0, label: "job labor hours")
+        let r = debugCheckNaN(parseDouble(laborRate.trimmingCharacters(in: .whitespaces)) ?? 0, label: "job labor rate")
 
         let trimmedCategory = category.trimmingCharacters(in: .whitespaces)
         let materials = materialsFromDrafts()

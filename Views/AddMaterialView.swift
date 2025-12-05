@@ -105,15 +105,18 @@ struct AddMaterialView: View {
 
     private var canSave: Bool {
         !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        Double(quantityText) != nil &&
-        Double(unitCostText) != nil &&
+        parseDouble(quantityText) != nil &&
+        parseDouble(unitCostText) != nil &&
         isValidProductURLText(productURLText)
     }
 
     private func save() {
-        guard let q = Double(quantityText),
-              let u = Double(unitCostText)
+        guard let q = parseDouble(quantityText),
+              let u = parseDouble(unitCostText)
         else { return }
+
+        let quantity = debugCheckNaN(q, label: "material quantity")
+        let unitCost = debugCheckNaN(u, label: "material unit cost")
 
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return }
@@ -126,8 +129,8 @@ struct AddMaterialView: View {
             id: existingMaterialID ?? UUID(),
             ownerID: uid,
             name: trimmedName,
-            quantity: q,
-            unitCost: u,
+            quantity: quantity,
+            unitCost: unitCost,
             productURL: productURL
         )
 

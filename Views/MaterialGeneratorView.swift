@@ -166,8 +166,8 @@ struct MaterialGeneratorView: View {
     }
 
     private func generateMaterials() {
-        let length = Double(lengthText)
-        let secondary = Double(secondaryText)
+        let length = parseDouble(lengthText)
+        let secondary = parseDouble(secondaryText)
 
         guard length != nil || secondary != nil else {
             validationMessage = "Enter at least one dimension."

@@ -221,7 +221,7 @@ struct MaterialPricingSettingsView: View {
     private var canAddCustomMaterial: Bool {
         let trimmedName = newCustomName.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedUnit = newCustomUnit.trimmingCharacters(in: .whitespacesAndNewlines)
-        let price = Double(newCustomPrice.replacingOccurrences(of: ",", with: "."))
+        let price = parseDouble(newCustomPrice.replacingOccurrences(of: ",", with: "."))
         let trimmedCustomCategoryName = newCustomCategoryName.trimmingCharacters(in: .whitespacesAndNewlines)
         let hasValidCustomCategory = newCustomCategory != .custom || !trimmedCustomCategoryName.isEmpty
 
@@ -231,7 +231,7 @@ struct MaterialPricingSettingsView: View {
     private func addCustomMaterial() {
         let trimmedName = newCustomName.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedUnit = newCustomUnit.trimmingCharacters(in: .whitespacesAndNewlines)
-        let price = Double(newCustomPrice.replacingOccurrences(of: ",", with: ".")) ?? 0
+        let price = debugCheckNaN(parseDouble(newCustomPrice.replacingOccurrences(of: ",", with: ".")) ?? 0, label: "custom material price")
         let trimmedCategoryName = newCustomCategoryName.trimmingCharacters(in: .whitespacesAndNewlines)
         let customCategoryName = newCustomCategory == .custom ? trimmedCategoryName : nil
         let material = materialsStore.addCustomMaterial(

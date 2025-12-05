@@ -63,14 +63,17 @@ struct MaterialEditView: View {
 
     private var canSave: Bool {
         !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        Double(quantityText) != nil &&
-        Double(unitCostText) != nil &&
+        parseDouble(quantityText) != nil &&
+        parseDouble(unitCostText) != nil &&
         isValidProductURLText(productURLText)
     }
 
     private func save() {
-        guard let quantity = Double(quantityText),
-              let unitCost = Double(unitCostText) else { return }
+        guard let quantityValue = parseDouble(quantityText),
+              let unitCostValue = parseDouble(unitCostText) else { return }
+
+        let quantity = debugCheckNaN(quantityValue, label: "material quantity")
+        let unitCost = debugCheckNaN(unitCostValue, label: "material unit cost")
 
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return }

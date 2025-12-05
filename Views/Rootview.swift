@@ -1125,14 +1125,16 @@ struct EstimateDefaultsView: View {
 
     private var canAddMaterial: Bool {
         let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !trimmedName.isEmpty && Double(newPrice) != nil
+        return !trimmedName.isEmpty && parseDouble(newPrice) != nil
     }
 
     private func addMaterial() {
         let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let priceValue = Double(newPrice), !trimmedName.isEmpty else { return }
+        guard let priceValue = parseDouble(newPrice), !trimmedName.isEmpty else { return }
 
-        settingsManager.addMaterial(name: trimmedName, price: priceValue)
+        let safePrice = debugCheckNaN(priceValue, label: "default material price")
+
+        settingsManager.addMaterial(name: trimmedName, price: safePrice)
         newName = ""
         newPrice = ""
     }

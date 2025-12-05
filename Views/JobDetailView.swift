@@ -185,11 +185,14 @@ struct EstimateDetailView: View {
         let hoursString = laborHoursText.replacingOccurrences(of: ",", with: ".")
         let rateString = laborRateText.replacingOccurrences(of: ",", with: ".")
 
-        guard let hours = Double(hoursString),
-              let rate = Double(rateString) else {
+        guard let hoursValue = parseDouble(hoursString),
+              let rateValue = parseDouble(rateString) else {
             showingLaborEditor = false
             return
         }
+
+        let hours = debugCheckNaN(hoursValue, label: "labor hours")
+        let rate = debugCheckNaN(rateValue, label: "labor rate")
 
         estimate.laborHours = hours
         estimate.laborRate = rate
@@ -294,9 +297,9 @@ struct EstimateDetailView: View {
                         .keyboardType(.decimalPad)
                     TextField("Rate per hour", text: $laborRateText)
                         .keyboardType(.decimalPad)
-                    if let hours = Double(laborHoursText.replacingOccurrences(of: ",", with: ".")),
-                       let rate = Double(laborRateText.replacingOccurrences(of: ",", with: ".")) {
-                        let cost = hours * rate
+                    if let hours = parseDouble(laborHoursText.replacingOccurrences(of: ",", with: ".")),
+                       let rate = parseDouble(laborRateText.replacingOccurrences(of: ",", with: ".")) {
+                        let cost = debugCheckNaN(hours * rate, label: "labor cost preview")
                         Text("Labor cost: \(cost.formatted(.currency(code: "USD")))")
                             .foregroundColor(.secondary)
                     }
