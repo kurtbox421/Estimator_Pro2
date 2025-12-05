@@ -55,6 +55,7 @@ struct MaterialRecommendation: Identifiable {
     let unit: String            // "gallon", "sheet", "sq ft", "lf", etc.
     let category: String        // "Paint", "Drywall", "Flooring", "Prep", etc.
     let notes: String?
+    let estimatedUnitCost: Double? = nil
 }
 
 struct MaterialsRecommender {

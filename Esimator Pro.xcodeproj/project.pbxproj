@@ -55,9 +55,10 @@
                 D00200022FFF000200000001 /* MaterialPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00200012FFF000200000001 /* MaterialPreferences.swift */; };
                 D00100022FFF000100000001 /* MaterialsCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100012FFF000100000001 /* MaterialsCatalog.swift */; };
 		D00100042FFF000100000001 /* MaterialQuantityEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100032FFF000100000001 /* MaterialQuantityEngine.swift */; };
-		D00100062FFF000100000001 /* JobMaterialGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100052FFF000100000001 /* JobMaterialGenerator.swift */; };
-		D00100082FFF000100000001 /* MaterialsCatalog.json in Resources */ = {isa = PBXBuildFile; fileRef = D00100072FFF000100000001 /* MaterialsCatalog.json */; };
-		D00100192FFF000100000010 /* MaterialPricingSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100182FFF000100000010 /* MaterialPricingSettingsView.swift */; };
+                D00100062FFF000100000001 /* JobMaterialGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100052FFF000100000001 /* JobMaterialGenerator.swift */; };
+                D00100082FFF000100000001 /* MaterialsCatalog.json in Resources */ = {isa = PBXBuildFile; fileRef = D00100072FFF000100000001 /* MaterialsCatalog.json */; };
+                D00100192FFF000100000010 /* MaterialPricingSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100182FFF000100000010 /* MaterialPricingSettingsView.swift */; };
+                D00300022FFF000300000001 /* MaterialIntelligenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00300012FFF000300000001 /* MaterialIntelligenceStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -102,13 +103,14 @@
 		AA08AA08AA08AA08AA08AA07 /* InvoicePDFGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoicePDFGenerator.swift; sourceTree = "<group>"; };
 		AA09AA09AA09AA09AA09AA08 /* InvoicePDFRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoicePDFRenderer.swift; sourceTree = "<group>"; };
 		AA0AAA0AAA0AAA0AAA0AAA0F /* PDFPreviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFPreviewSheet.swift; sourceTree = "<group>"; };
-		AA0B0B0B0B0B0B0B0B0B0B0A /* EstimateViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EstimateViewModel.swift; sourceTree = "<group>"; };
-		B1E7E0102F01000100000001 /* MaterialEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialEditView.swift; sourceTree = "<group>"; };
-		D00100012FFF000100000001 /* MaterialsCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialsCatalog.swift; sourceTree = "<group>"; };
-		D00100032FFF000100000001 /* MaterialQuantityEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialQuantityEngine.swift; sourceTree = "<group>"; };
-		D00100052FFF000100000001 /* JobMaterialGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobMaterialGenerator.swift; sourceTree = "<group>"; };
-		D00100072FFF000100000001 /* MaterialsCatalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = MaterialsCatalog.json; sourceTree = "<group>"; };
-		D00100182FFF000100000010 /* MaterialPricingSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialPricingSettingsView.swift; sourceTree = "<group>"; };
+                AA0B0B0B0B0B0B0B0B0B0B0A /* EstimateViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EstimateViewModel.swift; sourceTree = "<group>"; };
+                B1E7E0102F01000100000001 /* MaterialEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialEditView.swift; sourceTree = "<group>"; };
+                D00100012FFF000100000001 /* MaterialsCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialsCatalog.swift; sourceTree = "<group>"; };
+                D00100032FFF000100000001 /* MaterialQuantityEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialQuantityEngine.swift; sourceTree = "<group>"; };
+                D00100052FFF000100000001 /* JobMaterialGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobMaterialGenerator.swift; sourceTree = "<group>"; };
+                D00100072FFF000100000001 /* MaterialsCatalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = MaterialsCatalog.json; sourceTree = "<group>"; };
+                D00100182FFF000100000010 /* MaterialPricingSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialPricingSettingsView.swift; sourceTree = "<group>"; };
+                D00300012FFF000300000001 /* MaterialIntelligenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialIntelligenceStore.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -236,14 +238,15 @@
 			path = Utilities;
 			sourceTree = "<group>";
 		};
-		39B8DC642EDB60C0005D0E08 /* Services */ = {
-			isa = PBXGroup;
-			children = (
-				39B8DC632EDB60C0005D0E08 /* PersistenceService.swift */,
-			);
-			path = Services;
-			sourceTree = "<group>";
-		};
+                39B8DC642EDB60C0005D0E08 /* Services */ = {
+                        isa = PBXGroup;
+                        children = (
+                                39B8DC632EDB60C0005D0E08 /* PersistenceService.swift */,
+                                D00300012FFF000300000001 /* MaterialIntelligenceStore.swift */,
+                        );
+                        path = Services;
+                        sourceTree = "<group>";
+                };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -327,10 +330,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				39A395212ECD7EE400D5E76D /* Invoice.swift in Sources */,
-				39B8DC852EDCDB60005D0E08 /* SessionViewModel.swift in Sources */,
-				39B8DC652EDB60C0005D0E08 /* PersistenceService.swift in Sources */,
-				39B8DC832EDCDB50005D0E08 /* AuthManager.swift in Sources */,
-				398D93EC2ECFBAAE00A168FC /* ClientCardViews.swift in Sources */,
+                                39B8DC852EDCDB60005D0E08 /* SessionViewModel.swift in Sources */,
+                                39B8DC652EDB60C0005D0E08 /* PersistenceService.swift in Sources */,
+                                D00300022FFF000300000001 /* MaterialIntelligenceStore.swift in Sources */,
+                                39B8DC832EDCDB50005D0E08 /* AuthManager.swift in Sources */,
+                                398D93EC2ECFBAAE00A168FC /* ClientCardViews.swift in Sources */,
 				39B8DC812EDCD1B8005D0E08 /* NewClientForm.swift in Sources */,
 				397D69672EDE36C7005E0657 /* InvoiceNumberManager.swift in Sources */,
 				3969FD0F2ECD37F10005C1AE /* Material.swift in Sources */,

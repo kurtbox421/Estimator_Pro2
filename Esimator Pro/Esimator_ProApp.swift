@@ -18,6 +18,7 @@ struct EstimatorProApp: App {
     @StateObject private var settingsManager = SettingsManager()
     @StateObject private var session = SessionViewModel()
     @StateObject private var materialsStore = MaterialsCatalogStore()
+    @StateObject private var materialIntelligence = MaterialIntelligenceStore()
 
     @State private var showingSplash = true
 
@@ -45,6 +46,7 @@ struct EstimatorProApp: App {
                     .environmentObject(companySettings)
                     .environmentObject(settingsManager)
                     .environmentObject(materialsStore)
+                    .environmentObject(materialIntelligence)
                 }
 
                 if showingSplash && !session.isLoading {
@@ -56,6 +58,7 @@ struct EstimatorProApp: App {
             .onAppear(perform: dismissSplashAfterDelay)
             .environmentObject(session)
             .environmentObject(materialsStore)
+            .environmentObject(materialIntelligence)
         }
     }
 
