@@ -4,6 +4,7 @@ import FirebaseAuth
 struct MaterialGeneratorView: View {
     @EnvironmentObject private var jobVM: JobViewModel
     @EnvironmentObject private var settingsManager: SettingsManager
+    @EnvironmentObject private var materialsStore: MaterialsCatalogStore
     @EnvironmentObject private var materialInsights: MaterialIntelligenceStore
     @Environment(\.dismiss) private var dismiss
 
@@ -294,8 +295,7 @@ struct MaterialGeneratorView: View {
     }
 
     private func materialFromRecommendation(_ rec: MaterialRecommendation) -> Material {
-        let fallbackPrice = settingsManager.commonMaterialPrice(for: rec.name) ?? 0
-        let unitPrice = safeNumber(rec.estimatedUnitCost ?? fallbackPrice)
+        let unitPrice = resolvedUnitCost(for: rec)
 
         return Material(
             ownerID: Auth.auth().currentUser?.uid ?? "",
@@ -305,6 +305,20 @@ struct MaterialGeneratorView: View {
             productURL: nil,
             unit: rec.unit,
             notes: rec.notes
+        )
+    }
+
+    private func resolvedUnitCost(for recommendation: MaterialRecommendation) -> Double {
+        let match = materialsStore.material(matchingName: recommendation.name)
+        let overridePrice = match.flatMap { materialsStore.override(for: $0.id) }
+        let defaultTemplatePrice = match?.defaultUnitCost
+
+        return safeNumber(
+            overridePrice
+            ?? recommendation.estimatedUnitCost
+            ?? defaultTemplatePrice
+            ?? settingsManager.commonMaterialPrice(for: recommendation.name)
+            ?? 0
         )
     }
 
