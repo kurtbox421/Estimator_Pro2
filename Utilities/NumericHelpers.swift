@@ -2,15 +2,15 @@ import Foundation
 
 /// Parse a `Double` from user-entered text, normalizing common formatting.
 /// - Parameter text: Raw text input that may contain whitespace or comma decimals.
-/// - Returns: A parsed `Double` or `nil` when the value is empty or cannot be parsed.
+/// - Returns: A parsed, finite `Double` or `nil` when the value is empty or cannot be parsed.
 func parseDouble(_ text: String?) -> Double? {
     guard let text else { return nil }
     let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return nil }
 
     let normalized = trimmed.replacingOccurrences(of: ",", with: ".")
-    guard let value = Double(normalized) else { return nil }
-    return safeNumber(value)
+    guard let rawValue = Double(normalized) else { return nil }
+    return sanitizeParsedNumber(rawValue)
 }
 
 /// Prevents propagation of invalid numeric values by normalizing NaN or infinity to zero.
@@ -24,6 +24,15 @@ func debugCheckNaN(_ value: Double, label: String) -> Double {
         return 0
     }
     return value
+}
+
+/// Normalizes a parsed number to `nil` when it is not finite.
+/// Keeps logging and normalization responsibilities in one place so callers avoid
+/// duplicating NaN and infinity checks.
+/// - Parameter value: The numeric value to inspect.
+/// - Returns: `nil` when the value is NaN or infinite; otherwise the original value.
+private func sanitizeParsedNumber(_ value: Double) -> Double? {
+    value.isFinite ? value : nil
 }
 
 /// Normalizes a numeric value so UI and calculations never receive NaN or infinity.
