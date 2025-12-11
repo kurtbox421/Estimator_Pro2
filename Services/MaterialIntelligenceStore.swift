@@ -95,12 +95,12 @@ final class MaterialIntelligenceStore: ObservableObject {
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self else { return }
                 if let error {
-                    logger.error("Failed to fetch jobs: \(error.localizedDescription)")
+                    self.logger.error("Failed to fetch jobs: \(error.localizedDescription)")
                     return
                 }
 
                 guard let snapshot else {
-                    logger.error("Failed to fetch jobs: missing snapshot")
+                    self.logger.error("Failed to fetch jobs: missing snapshot")
                     return
                 }
 
@@ -108,13 +108,13 @@ final class MaterialIntelligenceStore: ObservableObject {
                     do {
                         return try document.data(as: Job.self)
                     } catch {
-                        logger.error("Failed to decode job \(document.documentID): \(error.localizedDescription)")
+                        self.logger.error("Failed to decode job \(document.documentID): \(error.localizedDescription)")
                         return nil
                     }
                 }
 
-                cachedJobs = jobs
-                rebuildStats()
+                self.cachedJobs = jobs
+                self.rebuildStats()
             }
 
         invoicesListener = db.collection("users")
@@ -123,12 +123,12 @@ final class MaterialIntelligenceStore: ObservableObject {
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self else { return }
                 if let error {
-                    logger.error("Failed to fetch invoices: \(error.localizedDescription)")
+                    self.logger.error("Failed to fetch invoices: \(error.localizedDescription)")
                     return
                 }
 
                 guard let snapshot else {
-                    logger.error("Failed to fetch invoices: missing snapshot")
+                    self.logger.error("Failed to fetch invoices: missing snapshot")
                     return
                 }
 
@@ -136,13 +136,13 @@ final class MaterialIntelligenceStore: ObservableObject {
                     do {
                         return try document.data(as: Invoice.self)
                     } catch {
-                        logger.error("Failed to decode invoice \(document.documentID): \(error.localizedDescription)")
+                        self.logger.error("Failed to decode invoice \(document.documentID): \(error.localizedDescription)")
                         return nil
                     }
                 }
 
-                cachedInvoices = invoices
-                rebuildStats()
+                self.cachedInvoices = invoices
+                self.rebuildStats()
             }
     }
 
