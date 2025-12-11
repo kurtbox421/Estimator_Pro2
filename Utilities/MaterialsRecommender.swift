@@ -1,6 +1,6 @@
 import Foundation
 
-enum MaterialJobType: CaseIterable, Identifiable {
+enum MaterialJobType: String, CaseIterable, Identifiable, Codable {
     case interiorWallBuild
     case lvpFlooring
     case paintRoom
@@ -11,6 +11,8 @@ enum MaterialJobType: CaseIterable, Identifiable {
     case roofShingleReplacement
 
     var id: Self { self }
+
+    static let defaultJobType: MaterialJobType = .paintRoom
 
     var jobTag: MaterialJobTag {
         switch self {

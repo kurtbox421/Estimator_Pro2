@@ -160,29 +160,29 @@ struct MaterialItem: Identifiable, Codable, Hashable {
         category: MaterialCategory,
         customCategoryName: String?,
         unit: String,
-            defaultUnitCost: Double,
-            productURL: URL?,
-            coverageQuantity: Double? = nil,
-            coverageUnit: String? = nil,
-            wasteFactor: Double,
-            quantityRuleKey: String?,
-            jobType: MaterialJobType? = nil
-        ) {
-            self.id = id
-            self.ownerID = ownerID
-            self.isDefault = isDefault
-            self.name = name
+        defaultUnitCost: Double,
+        productURL: URL?,
+        coverageQuantity: Double? = nil,
+        coverageUnit: String? = nil,
+        wasteFactor: Double,
+        quantityRuleKey: String?,
+        jobType: MaterialJobType? = nil
+    ) {
+        self.id = id
+        self.ownerID = ownerID
+        self.isDefault = isDefault
+        self.name = name
         self.category = category
         self.customCategoryName = customCategoryName
-            self.unit = unit
-            self.defaultUnitCost = defaultUnitCost
-            self.productURL = productURL
-            self.coverageQuantity = coverageQuantity
-            self.coverageUnit = coverageUnit
-            self.wasteFactor = wasteFactor
-            self.quantityRuleKey = quantityRuleKey
-            self.jobType = jobType ?? MaterialItem.defaultJobType(for: category)
-        }
+        self.unit = unit
+        self.defaultUnitCost = defaultUnitCost
+        self.productURL = productURL
+        self.coverageQuantity = coverageQuantity
+        self.coverageUnit = coverageUnit
+        self.wasteFactor = wasteFactor
+        self.quantityRuleKey = quantityRuleKey
+        self.jobType = jobType ?? MaterialItem.defaultJobType(for: category)
+    }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -200,15 +200,13 @@ struct MaterialItem: Identifiable, Codable, Hashable {
         coverageUnit = try container.decodeIfPresent(String.self, forKey: .coverageUnit)
         wasteFactor = try container.decode(Double.self, forKey: .wasteFactor)
         quantityRuleKey = try container.decodeIfPresent(String.self, forKey: .quantityRuleKey)
-        if let decodedJobType = try container.decodeIfPresent(MaterialJobType.self, forKey: .jobType) {
-            jobType = decodedJobType
-        } else if let legacyTags = try container.decodeIfPresent([MaterialJobTag].self, forKey: .jobTags),
-                  let firstTag = legacyTags.first,
-                  let mappedJobType = MaterialJobType(jobTag: firstTag) {
-            jobType = mappedJobType
-        } else {
-            jobType = MaterialItem.defaultJobType(for: category)
-        }
+
+        let legacyJobType = try container.decodeIfPresent([MaterialJobTag].self, forKey: .jobTags)?
+            .compactMap(MaterialJobType.init(jobTag:))
+            .first
+        jobType = try container.decodeIfPresent(MaterialJobType.self, forKey: .jobType)
+            ?? legacyJobType
+            ?? MaterialItem.defaultJobType(for: category)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -229,7 +227,7 @@ struct MaterialItem: Identifiable, Codable, Hashable {
         case jobTags
     }
 
-    private static func defaultJobType(for category: MaterialCategory) -> MaterialJobType {
+    static func defaultJobType(for category: MaterialCategory) -> MaterialJobType {
         switch category {
         case .lumberFraming, .sheetgoods, .drywallBacker, .insulation, .hardwareFasteners, .hardwareConnectors:
             return .interiorWallBuild
