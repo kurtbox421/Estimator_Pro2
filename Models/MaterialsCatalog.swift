@@ -249,6 +249,54 @@ final class MaterialsCatalogStore: ObservableObject {
         material(matchingName: materialName)
     }
 
+    func preferredMaterial(
+        for generatorID: String?,
+        category: MaterialCategory,
+        nameKeywords: [String] = [],
+        preferredUnits: [String] = []
+    ) -> MaterialItem? {
+        let candidates = materials(in: category)
+        let keywordLowercased = nameKeywords.map { $0.lowercased() }
+        let preferredUnitLowercased = preferredUnits.map { $0.lowercased() }
+
+        func score(_ item: MaterialItem) -> Int {
+            var value = 0
+
+            if !item.isDefault { value += 4 }
+            if let generatorID, item.id == generatorID { value += 3 }
+
+            if preferredUnitLowercased.contains(where: { unit in
+                item.unit.lowercased().contains(unit)
+            }) {
+                value += 2
+            }
+
+            if keywordLowercased.contains(where: { keyword in
+                item.name.lowercased().contains(keyword)
+            }) {
+                value += 1
+            }
+
+            return value
+        }
+
+        if let best = candidates.max(by: { score($0) < score($1) }) {
+            return best
+        }
+
+        let keywordFallback = materials.first { item in
+            keywordLowercased.contains(where: { item.name.lowercased().contains($0) })
+        }
+
+        if let keywordFallback { return keywordFallback }
+
+        if let generatorID {
+            return materials.first { $0.id == generatorID }
+        }
+
+        return nil
+    }
+
     func pricePerUnit(for materialName: String) -> Double? {
         guard let material = pricing(for: materialName) else { return nil }
         return price(for: material)
