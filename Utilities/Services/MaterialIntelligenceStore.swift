@@ -3,18 +3,6 @@ import FirebaseAuth
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 
-// MARK: - Helpers
-
-/// Safely normalize numeric values so we don't propagate NaN / nil garbage
-private func safeNumber(_ value: Double?) -> Double {
-    guard let value, value.isFinite else { return 0 }
-    return value
-}
-
-private func safeNumber(_ value: Double) -> Double {
-    value.isFinite ? value : 0
-}
-
 // MARK: - Models
 
 struct MaterialUsageStats: Identifiable, Hashable {
@@ -245,8 +233,8 @@ private struct MaterialStatsBuilder {
     ) -> MaterialStatsBuilder {
         var copy = self
         copy.usageCount += 1
-        copy.totalQuantity += safeNumber(quantity)
-        copy.totalUnitCost += safeNumber(unitCost)
+        copy.totalQuantity += safeNumber(quantity) ?? 0
+        copy.totalUnitCost += safeNumber(unitCost) ?? 0
         copy.lastUsedAt = max(copy.lastUsedAt ?? .distantPast, lastUsed ?? .distantPast)
 
         let trimmedType = jobType.trimmingCharacters(in: .whitespacesAndNewlines)
