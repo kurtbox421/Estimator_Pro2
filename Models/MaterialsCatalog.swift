@@ -143,7 +143,7 @@ struct MaterialItem: Identifiable, Codable, Hashable {
     let coverageUnit: String?      // Unit the coverageQuantity is expressed in (sq ft, lf, etc.)
     let wasteFactor: Double        // 0.10 for 10%
     let quantityRuleKey: String?   // optional, allows manual-only items
-    let jobTags: [MaterialJobTag]?
+    let jobType: MaterialJobType
 
     var displayCategory: String {
         if category == .custom, let customCategoryName, !customCategoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -166,7 +166,7 @@ struct MaterialItem: Identifiable, Codable, Hashable {
             coverageUnit: String? = nil,
             wasteFactor: Double,
             quantityRuleKey: String?,
-            jobTags: [MaterialJobTag]? = nil
+            jobType: MaterialJobType? = nil
         ) {
             self.id = id
             self.ownerID = ownerID
@@ -181,7 +181,7 @@ struct MaterialItem: Identifiable, Codable, Hashable {
             self.coverageUnit = coverageUnit
             self.wasteFactor = wasteFactor
             self.quantityRuleKey = quantityRuleKey
-            self.jobTags = jobTags
+            self.jobType = jobType ?? MaterialItem.defaultJobType(for: category)
         }
 
     init(from decoder: Decoder) throws {
@@ -200,7 +200,15 @@ struct MaterialItem: Identifiable, Codable, Hashable {
         coverageUnit = try container.decodeIfPresent(String.self, forKey: .coverageUnit)
         wasteFactor = try container.decode(Double.self, forKey: .wasteFactor)
         quantityRuleKey = try container.decodeIfPresent(String.self, forKey: .quantityRuleKey)
-        jobTags = try container.decodeIfPresent([MaterialJobTag].self, forKey: .jobTags)
+        if let decodedJobType = try container.decodeIfPresent(MaterialJobType.self, forKey: .jobType) {
+            jobType = decodedJobType
+        } else if let legacyTags = try container.decodeIfPresent([MaterialJobTag].self, forKey: .jobTags),
+                  let firstTag = legacyTags.first,
+                  let mappedJobType = MaterialJobType(jobTag: firstTag) {
+            jobType = mappedJobType
+        } else {
+            jobType = MaterialItem.defaultJobType(for: category)
+        }
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -217,42 +225,32 @@ struct MaterialItem: Identifiable, Codable, Hashable {
         case coverageUnit
         case wasteFactor
         case quantityRuleKey
+        case jobType
         case jobTags
     }
 
-    var resolvedJobTags: [MaterialJobTag] {
-        if let jobTags, !jobTags.isEmpty { return jobTags }
-        return inferredJobTags(for: category)
-    }
-
-    private func inferredJobTags(for category: MaterialCategory) -> [MaterialJobTag] {
+    private static func defaultJobType(for category: MaterialCategory) -> MaterialJobType {
         switch category {
         case .lumberFraming, .sheetgoods, .drywallBacker, .insulation, .hardwareFasteners, .hardwareConnectors:
-            return [.interiorWallBuild]
+            return .interiorWallBuild
         case .flooring:
-            return [.lvpFlooring, .basicBathroomRemodel]
-        case .paint:
-            return [.paintRoom, .exteriorPaint, .basicBathroomRemodel]
-        case .sealants:
-            return [.paintRoom, .lvpFlooring, .interiorWallBuild, .windowInstall, .basicBathroomRemodel]
+            return .lvpFlooring
+        case .paint, .sealants, .trimFinish:
+            return .paintRoom
         case .tileMaterials, .tile:
-            return [.tileBacksplash, .basicBathroomRemodel]
-        case .trimFinish:
-            return [.interiorWallBuild, .lvpFlooring, .paintRoom]
-        case .concreteMasonry:
-            return [.deckSurfaceReplace]
-        case .exteriorDecking, .exteriorStructural:
-            return [.deckBuild, .deckSurfaceReplace]
+            return .tileBacksplash
+        case .concreteMasonry, .exteriorDecking, .exteriorStructural:
+            return .deckBuild
         case .exteriorFlashing:
-            return [.windowInstall, .roofShingleReplacement]
+            return .roofShingleReplacement
         case .electrical:
-            return [.interiorWallBuild, .basicBathroomRemodel]
+            return .interiorWallBuild
         case .plumbing:
-            return [.basicBathroomRemodel]
+            return .basicBathroomRemodel
         case .hardwareMisc:
-            return MaterialJobTag.allCases
+            return .interiorWallBuild
         case .custom:
-            return MaterialJobTag.allCases
+            return .interiorWallBuild
         }
     }
 
@@ -358,7 +356,7 @@ final class MaterialsCatalogStore: ObservableObject {
     }
 
     private func templateType(for items: [MaterialItem]) -> MaterialGroupTemplateType {
-        let tags = items.flatMap { $0.resolvedJobTags }
+        let tags = items.map { $0.jobType.jobTag }
 
         if let mostCommon = tags.reduce(into: [:]) { counts, tag in
             counts[tag, default: 0] += 1
@@ -503,7 +501,7 @@ final class MaterialsCatalogStore: ObservableObject {
                 coverageUnit: coverageUnit,
                 wasteFactor: 0,
                 quantityRuleKey: nil,
-                jobTags: nil
+                jobType: MaterialItem.defaultJobType(for: category)
             )
         }
 
@@ -521,7 +519,7 @@ final class MaterialsCatalogStore: ObservableObject {
             coverageUnit: coverageUnit,
             wasteFactor: 0,
             quantityRuleKey: nil,
-            jobTags: nil
+            jobType: MaterialItem.defaultJobType(for: category)
         )
 
         customMaterials.append(newMaterial)
@@ -570,12 +568,13 @@ final class MaterialsCatalogStore: ObservableObject {
             updatedCustomCategoryName = material.customCategoryName
         }
 
+        let resolvedCategory = category ?? material.category
         let updated = MaterialItem(
             id: material.id,
             ownerID: material.ownerID,
             isDefault: material.isDefault,
             name: name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? material.name,
-            category: category ?? material.category,
+            category: resolvedCategory,
             customCategoryName: updatedCustomCategoryName,
             unit: unit?.trimmingCharacters(in: .whitespacesAndNewlines) ?? material.unit,
             defaultUnitCost: defaultUnitCost ?? material.defaultUnitCost,
@@ -584,7 +583,7 @@ final class MaterialsCatalogStore: ObservableObject {
             coverageUnit: updatedCoverageUnit,
             wasteFactor: material.wasteFactor,
             quantityRuleKey: material.quantityRuleKey,
-            jobTags: material.jobTags
+            jobType: category != nil ? MaterialItem.defaultJobType(for: resolvedCategory) : material.jobType
         )
 
         customMaterials[index] = updated
@@ -629,7 +628,7 @@ final class MaterialsCatalogStore: ObservableObject {
         in categories: [MaterialCategory]? = nil
     ) -> [MaterialItem] {
         materials.filter { item in
-            guard item.resolvedJobTags.contains(jobTag) else { return false }
+            guard item.jobType.jobTag == jobTag else { return false }
 
             if let categories {
                 return categories.contains(item.category)
@@ -637,6 +636,16 @@ final class MaterialsCatalogStore: ObservableObject {
 
             return true
         }
+    }
+
+    func materials(
+        for jobType: MaterialJobType,
+        in categories: [MaterialCategory]? = nil
+    ) -> [MaterialItem] {
+        materials(
+            for: jobType.jobTag,
+            in: categories
+        )
     }
 
     func material(withID id: String) -> MaterialItem? {
@@ -711,7 +720,7 @@ final class MaterialsCatalogStore: ObservableObject {
             coverageUnit: material.coverageUnit,
             wasteFactor: material.wasteFactor,
             quantityRuleKey: material.quantityRuleKey,
-            jobTags: material.jobTags
+            jobType: material.jobType
         )
     }
 

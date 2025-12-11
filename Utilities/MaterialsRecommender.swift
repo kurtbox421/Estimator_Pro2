@@ -25,6 +25,21 @@ enum MaterialJobType: CaseIterable, Identifiable {
         }
     }
 
+    init?(jobTag: MaterialJobTag) {
+        switch jobTag {
+        case .interiorWallBuild: self = .interiorWallBuild
+        case .lvpFlooring: self = .lvpFlooring
+        case .paintRoom: self = .paintRoom
+        case .basicBathroomRemodel: self = .basicBathroomRemodel
+        case .exteriorPaint: self = .exteriorPaint
+        case .tileBacksplash: self = .tileBacksplash
+        case .deckBuild: self = .deckBuild
+        case .roofShingleReplacement: self = .roofShingleReplacement
+        case .deckSurfaceReplace, .windowInstall:
+            return nil
+        }
+    }
+
     var displayName: String {
         switch self {
         case .interiorWallBuild:    return "Interior Wall Build"
@@ -93,12 +108,12 @@ struct MaterialsRecommender {
 
     func recommendMaterials(for context: JobContext) -> [MaterialRecommendation] {
         let taggedMaterials = catalog.materials(
-            for: context.jobType.jobTag,
+            for: context.jobType,
             in: allowedCategories(for: context.jobType)
         )
 
         if taggedMaterials.isEmpty {
-            return legacyRecommendations(for: context)
+            return []
         }
 
         let quantityContext = quantityContext(from: context)
