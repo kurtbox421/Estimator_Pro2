@@ -63,6 +63,8 @@ struct MaterialItem: Identifiable, Codable, Hashable {
     let unit: String               // "each", "sheet", "sqft", "linear_ft", "bag", etc.
     let defaultUnitCost: Double
     let productURL: URL?
+    let coverageQuantity: Double?  // Optional logical coverage (e.g. 30 sq ft per box)
+    let coverageUnit: String?      // Unit the coverageQuantity is expressed in (sq ft, lf, etc.)
     let wasteFactor: Double        // 0.10 for 10%
     let quantityRuleKey: String?   // optional, allows manual-only items
 
@@ -83,6 +85,8 @@ struct MaterialItem: Identifiable, Codable, Hashable {
         unit: String,
         defaultUnitCost: Double,
         productURL: URL?,
+        coverageQuantity: Double? = nil,
+        coverageUnit: String? = nil,
         wasteFactor: Double,
         quantityRuleKey: String?
     ) {
@@ -95,6 +99,8 @@ struct MaterialItem: Identifiable, Codable, Hashable {
         self.unit = unit
         self.defaultUnitCost = defaultUnitCost
         self.productURL = productURL
+        self.coverageQuantity = coverageQuantity
+        self.coverageUnit = coverageUnit
         self.wasteFactor = wasteFactor
         self.quantityRuleKey = quantityRuleKey
     }
@@ -111,6 +117,8 @@ struct MaterialItem: Identifiable, Codable, Hashable {
         unit = try container.decode(String.self, forKey: .unit)
         defaultUnitCost = try container.decode(Double.self, forKey: .defaultUnitCost)
         productURL = try container.decodeIfPresent(URL.self, forKey: .productURL)
+        coverageQuantity = try container.decodeIfPresent(Double.self, forKey: .coverageQuantity)
+        coverageUnit = try container.decodeIfPresent(String.self, forKey: .coverageUnit)
         wasteFactor = try container.decode(Double.self, forKey: .wasteFactor)
         quantityRuleKey = try container.decodeIfPresent(String.self, forKey: .quantityRuleKey)
     }
@@ -125,6 +133,8 @@ struct MaterialItem: Identifiable, Codable, Hashable {
         case unit
         case defaultUnitCost
         case productURL
+        case coverageQuantity
+        case coverageUnit
         case wasteFactor
         case quantityRuleKey
     }
@@ -230,9 +240,25 @@ final class MaterialsCatalogStore: ObservableObject {
     }
 
     func normalizedPrice(forName name: String) -> (override: Double?, defaultPrice: Double?) {
-        guard let material = material(matchingName: name) else { return (nil, nil) }
+        guard let material = material(matchingName: name) else { return (nil, nil) } 
         let overridePrice = override(for: material.id)
         return (overridePrice, material.defaultUnitCost)
+    }
+
+    func pricing(for materialName: String) -> MaterialItem? {
+        material(matchingName: materialName)
+    }
+
+    func pricePerUnit(for materialName: String) -> Double? {
+        guard let material = pricing(for: materialName) else { return nil }
+        return price(for: material)
+    }
+
+    func coverage(for materialName: String) -> (quantity: Double, unit: String)? {
+        guard let material = pricing(for: materialName),
+              let quantity = material.coverageQuantity,
+              let unit = material.coverageUnit else { return nil }
+        return (quantity, unit)
     }
 
     func normalizeMaterialKey(_ name: String) -> String {
@@ -253,7 +279,9 @@ final class MaterialsCatalogStore: ObservableObject {
         unitCost: Double,
         category: MaterialCategory,
         customCategoryName: String? = nil,
-        productURL: URL? = nil
+        productURL: URL? = nil,
+        coverageQuantity: Double? = nil,
+        coverageUnit: String? = nil
     ) -> MaterialItem {
         guard let uid = Auth.auth().currentUser?.uid else {
             print("Attempted to add custom material without authenticated user")
@@ -267,6 +295,8 @@ final class MaterialsCatalogStore: ObservableObject {
                 unit: unit,
                 defaultUnitCost: unitCost,
                 productURL: productURL,
+                coverageQuantity: coverageQuantity,
+                coverageUnit: coverageUnit,
                 wasteFactor: 0,
                 quantityRuleKey: nil
             )
@@ -282,6 +312,8 @@ final class MaterialsCatalogStore: ObservableObject {
             unit: unit.trimmingCharacters(in: .whitespacesAndNewlines),
             defaultUnitCost: unitCost,
             productURL: productURL,
+            coverageQuantity: coverageQuantity,
+            coverageUnit: coverageUnit,
             wasteFactor: 0,
             quantityRuleKey: nil
         )
@@ -298,7 +330,9 @@ final class MaterialsCatalogStore: ObservableObject {
         defaultUnitCost: Double? = nil,
         category: MaterialCategory? = nil,
         customCategoryName: String?? = nil,
-        productURL: URL?? = nil
+        productURL: URL?? = nil,
+        coverageQuantity: Double?? = nil,
+        coverageUnit: String?? = nil
     ) {
         guard let index = customMaterials.firstIndex(where: { $0.id == material.id }) else { return }
 
@@ -307,6 +341,20 @@ final class MaterialsCatalogStore: ObservableObject {
             updatedProductURL = productURL
         } else {
             updatedProductURL = material.productURL
+        }
+
+        let updatedCoverageQuantity: Double?
+        if let coverageQuantity {
+            updatedCoverageQuantity = coverageQuantity ?? material.coverageQuantity
+        } else {
+            updatedCoverageQuantity = material.coverageQuantity
+        }
+
+        let updatedCoverageUnit: String?
+        if let coverageUnit {
+            updatedCoverageUnit = coverageUnit ?? material.coverageUnit
+        } else {
+            updatedCoverageUnit = material.coverageUnit
         }
 
         let updatedCustomCategoryName: String?
@@ -326,6 +374,8 @@ final class MaterialsCatalogStore: ObservableObject {
             unit: unit?.trimmingCharacters(in: .whitespacesAndNewlines) ?? material.unit,
             defaultUnitCost: defaultUnitCost ?? material.defaultUnitCost,
             productURL: updatedProductURL,
+            coverageQuantity: updatedCoverageQuantity,
+            coverageUnit: updatedCoverageUnit,
             wasteFactor: material.wasteFactor,
             quantityRuleKey: material.quantityRuleKey
         )
@@ -435,6 +485,8 @@ final class MaterialsCatalogStore: ObservableObject {
             unit: material.unit,
             defaultUnitCost: material.defaultUnitCost,
             productURL: override ?? material.productURL,
+            coverageQuantity: material.coverageQuantity,
+            coverageUnit: material.coverageUnit,
             wasteFactor: material.wasteFactor,
             quantityRuleKey: material.quantityRuleKey
         )
