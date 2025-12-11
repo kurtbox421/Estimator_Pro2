@@ -104,10 +104,13 @@ struct AddMaterialView: View {
     }
 
     private var canSave: Bool {
-        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        parseDouble(quantityText) != nil &&
-        parseDouble(unitCostText) != nil &&
-        isValidProductURLText(productURLText)
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedName.isEmpty else { return false }
+        guard parseDouble(quantityText) != nil else { return false }
+        guard parseDouble(unitCostText) != nil else { return false }
+
+        return isValidProductURLText(productURLText)
     }
 
     private func save() {
