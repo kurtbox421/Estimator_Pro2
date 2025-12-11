@@ -44,10 +44,7 @@ struct JobMaterialGenerator {
         context: QuantityContext
     ) -> [GeneratedMaterial] {
         let taggedMaterials = catalog.materials(for: jobType.jobTag)
-        let fallbackMaterials = materialIDs(for: jobType).compactMap { catalog.material(withID: $0) }
-        let materials = taggedMaterials.isEmpty ? fallbackMaterials : taggedMaterials
-
-        return materials.compactMap { material in
+        return taggedMaterials.compactMap { material in
             let qty = min(engine.quantity(for: material, context: context), maxRecommendedQuantity(for: material))
             guard qty > 0 else { return nil }
             return GeneratedMaterial(
@@ -72,8 +69,7 @@ struct JobMaterialGenerator {
             catalog.materials(for: jobType.jobTag).map { $0.id }
         }
 
-        let fallbackIDs = JobType.allCases.flatMap { materialIDs(for: $0) }
-        let ids = (taggedIDs.isEmpty ? fallbackIDs : taggedIDs) + catalog.customMaterialIDs
+        let ids = taggedIDs + catalog.customMaterialIDs
 
         var uniqueOrderedIDs: [String] = []
         var seen: Set<String> = []
