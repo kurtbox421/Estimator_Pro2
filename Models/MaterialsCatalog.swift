@@ -524,8 +524,19 @@ final class MaterialsCatalogStore: ObservableObject {
         materials.filter { $0.category == category }
     }
 
-    func materials(for jobTag: MaterialJobTag) -> [MaterialItem] {
-        materials.filter { $0.resolvedJobTags.contains(jobTag) }
+    func materials(
+        for jobTag: MaterialJobTag,
+        in categories: [MaterialCategory]? = nil
+    ) -> [MaterialItem] {
+        materials.filter { item in
+            guard item.resolvedJobTags.contains(jobTag) else { return false }
+
+            if let categories {
+                return categories.contains(item.category)
+            }
+
+            return true
+        }
     }
 
     func material(withID id: String) -> MaterialItem? {
