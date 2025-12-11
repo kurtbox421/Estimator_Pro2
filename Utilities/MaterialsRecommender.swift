@@ -12,6 +12,19 @@ enum MaterialJobType: CaseIterable, Identifiable {
 
     var id: Self { self }
 
+    var jobTag: MaterialJobTag {
+        switch self {
+        case .interiorWallBuild: return .interiorWallBuild
+        case .lvpFlooring: return .lvpFlooring
+        case .paintRoom: return .paintRoom
+        case .basicBathroomRemodel: return .basicBathroomRemodel
+        case .exteriorPaint: return .exteriorPaint
+        case .tileBacksplash: return .tileBacksplash
+        case .deckBuild: return .deckBuild
+        case .roofShingleReplacement: return .roofShingleReplacement
+        }
+    }
+
     var displayName: String {
         switch self {
         case .interiorWallBuild:    return "Interior Wall Build"
@@ -76,8 +89,64 @@ enum GeneratorMaterialKey: String {
 struct MaterialsRecommender {
 
     let catalog: MaterialsCatalogStore
+    private let quantityEngine = MaterialQuantityEngine()
 
     func recommendMaterials(for context: JobContext) -> [MaterialRecommendation] {
+        let taggedMaterials = catalog.materials(for: context.jobType.jobTag)
+
+        if taggedMaterials.isEmpty {
+            return legacyRecommendations(for: context)
+        }
+
+        let quantityContext = quantityContext(from: context)
+
+        return taggedMaterials.compactMap { material in
+            let quantity = quantityEngine.quantity(for: material, context: quantityContext)
+            guard quantity > 0 else { return nil }
+
+            return MaterialRecommendation(
+                name: material.name,
+                quantity: quantity,
+                unit: material.unit,
+                category: material.displayCategory,
+                notes: coverageNote(for: material),
+                estimatedUnitCost: catalog.price(for: material)
+            )
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func quantityContext(from ctx: JobContext) -> QuantityContext {
+        let length = ctx.lengthFeet ?? 0
+        let width = ctx.secondaryFeet ?? 0
+        let height = ctx.heightFeet ?? ctx.secondaryFeet ?? 0
+        let area = ctx.areaSqFt ?? (length * width)
+        let perimeter = (length > 0 && width > 0) ? 2 * (length + width) : ctx.secondaryFeet.map { 2 * (length + $0) }
+
+        return QuantityContext(
+            wallLengthFt: length,
+            wallHeightFt: height,
+            roomFloorAreaSqFt: area,
+            roomPerimeterFt: perimeter,
+            deckAreaSqFt: area,
+            deckLengthFt: length,
+            deckJoistSpanFt: nil,
+            concreteVolumeCuFt: nil,
+            openingCount: ctx.doorCount + ctx.windowCount,
+            bathroomCount: ctx.jobType == .basicBathroomRemodel ? 1 : nil,
+            tileAreaSqFt: area
+        )
+    }
+
+    private func coverageNote(for material: MaterialItem) -> String? {
+        guard let coverageQuantity = material.coverageQuantity,
+              let coverageUnit = material.coverageUnit else { return nil }
+
+        return "~\(Int(coverageQuantity)) \(coverageUnit) per \(material.unit)"
+    }
+
+    private func legacyRecommendations(for context: JobContext) -> [MaterialRecommendation] {
         switch context.jobType {
         case .paintRoom:
             return recommendInteriorPaint(for: context)
@@ -99,8 +168,6 @@ struct MaterialsRecommender {
             return recommendRoofing(for: context)
         }
     }
-
-    // MARK: - Helpers
 
     private func recommendInteriorPaint(for ctx: JobContext) -> [MaterialRecommendation] {
         let length = ctx.lengthFeet ?? 0

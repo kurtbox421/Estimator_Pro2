@@ -53,6 +53,21 @@ enum MaterialCategory: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+enum MaterialJobTag: String, Codable, CaseIterable, Identifiable {
+    case interiorWallBuild
+    case lvpFlooring
+    case paintRoom
+    case basicBathroomRemodel
+    case deckSurfaceReplace
+    case windowInstall
+    case exteriorPaint
+    case tileBacksplash
+    case deckBuild
+    case roofShingleReplacement
+
+    var id: String { rawValue }
+}
+
 struct MaterialItem: Identifiable, Codable, Hashable {
     let id: String
     var ownerID: String
@@ -67,6 +82,7 @@ struct MaterialItem: Identifiable, Codable, Hashable {
     let coverageUnit: String?      // Unit the coverageQuantity is expressed in (sq ft, lf, etc.)
     let wasteFactor: Double        // 0.10 for 10%
     let quantityRuleKey: String?   // optional, allows manual-only items
+    let jobTags: [MaterialJobTag]?
 
     var displayCategory: String {
         if category == .custom, let customCategoryName, !customCategoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -83,27 +99,29 @@ struct MaterialItem: Identifiable, Codable, Hashable {
         category: MaterialCategory,
         customCategoryName: String?,
         unit: String,
-        defaultUnitCost: Double,
-        productURL: URL?,
-        coverageQuantity: Double? = nil,
-        coverageUnit: String? = nil,
-        wasteFactor: Double,
-        quantityRuleKey: String?
-    ) {
-        self.id = id
-        self.ownerID = ownerID
-        self.isDefault = isDefault
-        self.name = name
+            defaultUnitCost: Double,
+            productURL: URL?,
+            coverageQuantity: Double? = nil,
+            coverageUnit: String? = nil,
+            wasteFactor: Double,
+            quantityRuleKey: String?,
+            jobTags: [MaterialJobTag]? = nil
+        ) {
+            self.id = id
+            self.ownerID = ownerID
+            self.isDefault = isDefault
+            self.name = name
         self.category = category
         self.customCategoryName = customCategoryName
-        self.unit = unit
-        self.defaultUnitCost = defaultUnitCost
-        self.productURL = productURL
-        self.coverageQuantity = coverageQuantity
-        self.coverageUnit = coverageUnit
-        self.wasteFactor = wasteFactor
-        self.quantityRuleKey = quantityRuleKey
-    }
+            self.unit = unit
+            self.defaultUnitCost = defaultUnitCost
+            self.productURL = productURL
+            self.coverageQuantity = coverageQuantity
+            self.coverageUnit = coverageUnit
+            self.wasteFactor = wasteFactor
+            self.quantityRuleKey = quantityRuleKey
+            self.jobTags = jobTags
+        }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -121,6 +139,7 @@ struct MaterialItem: Identifiable, Codable, Hashable {
         coverageUnit = try container.decodeIfPresent(String.self, forKey: .coverageUnit)
         wasteFactor = try container.decode(Double.self, forKey: .wasteFactor)
         quantityRuleKey = try container.decodeIfPresent(String.self, forKey: .quantityRuleKey)
+        jobTags = try container.decodeIfPresent([MaterialJobTag].self, forKey: .jobTags)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -137,6 +156,43 @@ struct MaterialItem: Identifiable, Codable, Hashable {
         case coverageUnit
         case wasteFactor
         case quantityRuleKey
+        case jobTags
+    }
+
+    var resolvedJobTags: [MaterialJobTag] {
+        if let jobTags, !jobTags.isEmpty { return jobTags }
+        return inferredJobTags(for: category)
+    }
+
+    private func inferredJobTags(for category: MaterialCategory) -> [MaterialJobTag] {
+        switch category {
+        case .lumberFraming, .sheetgoods, .drywallBacker, .insulation, .hardwareFasteners, .hardwareConnectors:
+            return [.interiorWallBuild]
+        case .flooring:
+            return [.lvpFlooring, .basicBathroomRemodel]
+        case .paint:
+            return [.paintRoom, .exteriorPaint, .basicBathroomRemodel]
+        case .sealants:
+            return [.paintRoom, .lvpFlooring, .interiorWallBuild, .windowInstall, .basicBathroomRemodel]
+        case .tileMaterials, .tile:
+            return [.tileBacksplash, .basicBathroomRemodel]
+        case .trimFinish:
+            return [.interiorWallBuild, .lvpFlooring, .paintRoom]
+        case .concreteMasonry:
+            return [.deckSurfaceReplace]
+        case .exteriorDecking, .exteriorStructural:
+            return [.deckBuild, .deckSurfaceReplace]
+        case .exteriorFlashing:
+            return [.windowInstall, .roofShingleReplacement]
+        case .electrical:
+            return [.interiorWallBuild, .basicBathroomRemodel]
+        case .plumbing:
+            return [.basicBathroomRemodel]
+        case .hardwareMisc:
+            return MaterialJobTag.allCases
+        case .custom:
+            return MaterialJobTag.allCases
+        }
     }
 }
 
@@ -346,7 +402,8 @@ final class MaterialsCatalogStore: ObservableObject {
                 coverageQuantity: coverageQuantity,
                 coverageUnit: coverageUnit,
                 wasteFactor: 0,
-                quantityRuleKey: nil
+                quantityRuleKey: nil,
+                jobTags: nil
             )
         }
 
@@ -363,7 +420,8 @@ final class MaterialsCatalogStore: ObservableObject {
             coverageQuantity: coverageQuantity,
             coverageUnit: coverageUnit,
             wasteFactor: 0,
-            quantityRuleKey: nil
+            quantityRuleKey: nil,
+            jobTags: nil
         )
 
         customMaterials.append(newMaterial)
@@ -425,7 +483,8 @@ final class MaterialsCatalogStore: ObservableObject {
             coverageQuantity: updatedCoverageQuantity,
             coverageUnit: updatedCoverageUnit,
             wasteFactor: material.wasteFactor,
-            quantityRuleKey: material.quantityRuleKey
+            quantityRuleKey: material.quantityRuleKey,
+            jobTags: material.jobTags
         )
 
         customMaterials[index] = updated
@@ -463,6 +522,10 @@ final class MaterialsCatalogStore: ObservableObject {
 
     func materials(in category: MaterialCategory) -> [MaterialItem] {
         materials.filter { $0.category == category }
+    }
+
+    func materials(for jobTag: MaterialJobTag) -> [MaterialItem] {
+        materials.filter { $0.resolvedJobTags.contains(jobTag) }
     }
 
     func material(withID id: String) -> MaterialItem? {
@@ -536,7 +599,8 @@ final class MaterialsCatalogStore: ObservableObject {
             coverageQuantity: material.coverageQuantity,
             coverageUnit: material.coverageUnit,
             wasteFactor: material.wasteFactor,
-            quantityRuleKey: material.quantityRuleKey
+            quantityRuleKey: material.quantityRuleKey,
+            jobTags: material.jobTags
         )
     }
 
