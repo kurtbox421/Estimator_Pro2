@@ -189,7 +189,7 @@ struct MaterialItem: Identifiable, Codable, Hashable {
 
         id = try container.decode(String.self, forKey: .id)
         ownerID = try container.decodeIfPresent(String.self, forKey: .ownerID) ?? "global"
-        isDefault = try container.decodeIfPresent(Bool.self, forKey: .isDefault) ?? (ownerID == "global")
+        isDefault = try container.decodeIfPresent(Bool.self, forKey: .isDefault) ?? true
         name = try container.decode(String.self, forKey: .name)
         category = try container.decode(MaterialCategory.self, forKey: .category)
         customCategoryName = try container.decodeIfPresent(String.self, forKey: .customCategoryName)
@@ -198,15 +198,9 @@ struct MaterialItem: Identifiable, Codable, Hashable {
         productURL = try container.decodeIfPresent(URL.self, forKey: .productURL)
         coverageQuantity = try container.decodeIfPresent(Double.self, forKey: .coverageQuantity)
         coverageUnit = try container.decodeIfPresent(String.self, forKey: .coverageUnit)
-        wasteFactor = try container.decode(Double.self, forKey: .wasteFactor)
+        wasteFactor = try container.decodeIfPresent(Double.self, forKey: .wasteFactor) ?? 0
         quantityRuleKey = try container.decodeIfPresent(String.self, forKey: .quantityRuleKey)
-
-        let legacyJobType = try container.decodeIfPresent([MaterialJobTag].self, forKey: .jobTags)?
-            .compactMap(MaterialJobType.init(jobTag:))
-            .first
-        jobType = try container.decodeIfPresent(MaterialJobType.self, forKey: .jobType)
-            ?? legacyJobType
-            ?? MaterialItem.defaultJobType(for: category)
+        jobType = try container.decodeIfPresent(MaterialJobType.self, forKey: .jobType) ?? .interiorWallBuild
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -224,7 +218,25 @@ struct MaterialItem: Identifiable, Codable, Hashable {
         case wasteFactor
         case quantityRuleKey
         case jobType
-        case jobTags
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        try container.encode(id, forKey: .id)
+        try container.encode(ownerID, forKey: .ownerID)
+        try container.encode(isDefault, forKey: .isDefault)
+        try container.encode(name, forKey: .name)
+        try container.encode(category, forKey: .category)
+        try container.encodeIfPresent(customCategoryName, forKey: .customCategoryName)
+        try container.encode(unit, forKey: .unit)
+        try container.encode(defaultUnitCost, forKey: .defaultUnitCost)
+        try container.encodeIfPresent(productURL, forKey: .productURL)
+        try container.encodeIfPresent(coverageQuantity, forKey: .coverageQuantity)
+        try container.encodeIfPresent(coverageUnit, forKey: .coverageUnit)
+        try container.encode(wasteFactor, forKey: .wasteFactor)
+        try container.encodeIfPresent(quantityRuleKey, forKey: .quantityRuleKey)
+        try container.encode(jobType, forKey: .jobType)
     }
 
     static func defaultJobType(for category: MaterialCategory) -> MaterialJobType {
