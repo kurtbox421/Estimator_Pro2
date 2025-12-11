@@ -2,10 +2,12 @@ import Foundation
 import SwiftUI
 import os.log
 
+/// Handles generation and preview management for estimate PDFs.
+@MainActor
 class EstimateViewModel: ObservableObject {
     @Published var previewURL: URL?
     @Published var previewError: String?
-    @Published var isShowingPreview: Bool = false
+    @Published var isShowingPreview = false
 
     private let logger = Logger(subsystem: "com.estimatorpro.estimate", category: "EstimateViewModel")
 
