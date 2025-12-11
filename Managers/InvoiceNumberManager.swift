@@ -9,9 +9,9 @@ final class InvoiceNumberManager {
 
     func generateInvoiceNumber() -> String {
         let defaults = UserDefaults.standard
-        let last = defaults.integer(forKey: defaultsKey)   // 0 if not set
+        let last = defaults.integer(forKey: defaultsKey) // 0 if not set
         let next = last + 1
         defaults.set(next, forKey: defaultsKey)
-        return String(format: "%03d", next)                // 001, 002, ...
+        return String(format: "%03d", next) // 001, 002, ...
     }
 }
