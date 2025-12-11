@@ -1,12 +1,16 @@
 import Foundation
 
-/// Parse a `Double` from user-entered text.
-/// - Parameter text: Raw text input that may contain whitespace.
+/// Parse a `Double` from user-entered text, normalizing common formatting.
+/// - Parameter text: Raw text input that may contain whitespace or comma decimals.
 /// - Returns: A parsed `Double` or `nil` when the value is empty or cannot be parsed.
-func parseDouble(_ text: String) -> Double? {
+func parseDouble(_ text: String?) -> Double? {
+    guard let text else { return nil }
     let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return nil }
-    return Double(trimmed)
+
+    let normalized = trimmed.replacingOccurrences(of: ",", with: ".")
+    guard let value = Double(normalized) else { return nil }
+    return safeNumber(value)
 }
 
 /// Prevents propagation of invalid numeric values by normalizing NaN or infinity to zero.
