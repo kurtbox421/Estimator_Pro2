@@ -12,18 +12,11 @@ struct MaterialPricingSettingsView: View {
     @State private var newCustomCategory: MaterialCategory = MaterialCategory.allCases.first(where: { $0 != .custom }) ?? .paint
     @State private var showingAddMaterialSheet = false
 
-    private var generatorMaterials: [MaterialItem] {
-        let generator = JobMaterialGenerator(catalog: materialsStore)
-        let ids = generator.allMaterialIDs()
-        return ids.compactMap { materialsStore.material(withID: $0) }
-    }
-
     private var groupedMaterials: [(category: String, items: [MaterialItem])] {
-        let grouped = Dictionary(grouping: generatorMaterials, by: { $0.displayCategory })
-        return grouped.keys.sorted().compactMap { key in
-            guard let items = grouped[key]?.sorted(by: { $0.name < $1.name }) else { return nil }
-            return (key, items)
-        }
+        materialsStore.materialGroups.sorted { $0.sortOrder < $1.sortOrder }
+            .map { group in
+                (group.name, materialsStore.materials(in: group))
+            }
     }
 
     var body: some View {
@@ -135,7 +128,7 @@ struct MaterialPricingSettingsView: View {
 
     private func syncOverrides() {
         var values: [String: Double] = [:]
-        generatorMaterials.forEach { material in
+        materialsStore.materials.forEach { material in
             values[material.id] = materialsStore.price(for: material)
         }
         overrideValues = values
@@ -143,7 +136,7 @@ struct MaterialPricingSettingsView: View {
 
     private func syncProductURLTexts() {
         var values: [String: String] = [:]
-        generatorMaterials.forEach { material in
+        materialsStore.materials.forEach { material in
             values[material.id] = materialsStore.productURL(for: material)?.absoluteString ?? ""
         }
         productURLTexts = values
