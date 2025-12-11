@@ -53,6 +53,67 @@ enum MaterialCategory: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+enum MaterialGroupTemplateType: String, Codable, CaseIterable, Identifiable {
+    case interiorWallBuild
+    case lvpFlooring
+    case paintRoom
+    case basicBathroomRemodel
+    case exteriorPaint
+    case tileBacksplash
+    case deckBuild
+    case roofShingleReplacement
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .interiorWallBuild: return "Interior Wall Build"
+        case .lvpFlooring: return "LVP Flooring"
+        case .paintRoom: return "Paint Room"
+        case .basicBathroomRemodel: return "Basic Bathroom Remodel"
+        case .exteriorPaint: return "Exterior Paint"
+        case .tileBacksplash: return "Tile Backsplash"
+        case .deckBuild: return "Deck Build"
+        case .roofShingleReplacement: return "Roof Shingle Replacement"
+        }
+    }
+
+    var jobType: MaterialJobType {
+        switch self {
+        case .interiorWallBuild: return .interiorWallBuild
+        case .lvpFlooring: return .lvpFlooring
+        case .paintRoom: return .paintRoom
+        case .basicBathroomRemodel: return .basicBathroomRemodel
+        case .exteriorPaint: return .exteriorPaint
+        case .tileBacksplash: return .tileBacksplash
+        case .deckBuild: return .deckBuild
+        case .roofShingleReplacement: return .roofShingleReplacement
+        }
+    }
+
+    init?(jobTag: MaterialJobTag) {
+        switch jobTag {
+        case .interiorWallBuild: self = .interiorWallBuild
+        case .lvpFlooring: self = .lvpFlooring
+        case .paintRoom: self = .paintRoom
+        case .basicBathroomRemodel: self = .basicBathroomRemodel
+        case .deckSurfaceReplace: self = .deckBuild
+        case .windowInstall: self = .exteriorPaint
+        case .exteriorPaint: self = .exteriorPaint
+        case .tileBacksplash: self = .tileBacksplash
+        case .deckBuild: self = .deckBuild
+        case .roofShingleReplacement: self = .roofShingleReplacement
+        }
+    }
+}
+
+struct MaterialGroup: Identifiable, Codable, Hashable {
+    var id: String
+    var name: String
+    var sortOrder: Int
+    var templateType: MaterialGroupTemplateType
+}
+
 enum MaterialJobTag: String, Codable, CaseIterable, Identifiable {
     case interiorWallBuild
     case lvpFlooring
@@ -194,6 +255,10 @@ struct MaterialItem: Identifiable, Codable, Hashable {
             return MaterialJobTag.allCases
         }
     }
+
+    var groupIdentifier: String {
+        displayCategory.lowercased().replacingOccurrences(of: " ", with: "_")
+    }
 }
 
 struct MaterialsCatalog: Codable {
@@ -232,6 +297,19 @@ final class MaterialsCatalogStore: ObservableObject {
     private var preferencesListener: ListenerRegistration?
     private var currentUserID: String?
     private var isApplyingRemoteUpdate = false
+
+    var materialGroups: [MaterialGroup] {
+        let grouped = Dictionary(grouping: materials) { $0.displayCategory }
+        return grouped.keys.sorted().enumerated().compactMap { index, key in
+            guard let items = grouped[key] else { return nil }
+            return MaterialGroup(
+                id: key.lowercased().replacingOccurrences(of: " ", with: "_"),
+                name: key,
+                sortOrder: index,
+                templateType: templateType(for: items)
+            )
+        }
+    }
 
     init(database: Firestore = Firestore.firestore()) {
         self.db = database
@@ -277,6 +355,28 @@ final class MaterialsCatalogStore: ObservableObject {
             .filter { !removedMaterialIDs.contains($0.id) }
             .map { applyProductURLOverride(to: $0) }
         materials = filteredBase + filteredCustom
+    }
+
+    private func templateType(for items: [MaterialItem]) -> MaterialGroupTemplateType {
+        let tags = items.flatMap { $0.resolvedJobTags }
+
+        if let mostCommon = tags.reduce(into: [:]) { counts, tag in
+            counts[tag, default: 0] += 1
+        }.max(by: { $0.value < $1.value })?.key,
+           let template = MaterialGroupTemplateType(jobTag: mostCommon) {
+            return template
+        }
+
+        if let firstTag = tags.first, let template = MaterialGroupTemplateType(jobTag: firstTag) {
+            return template
+        }
+
+        return .interiorWallBuild
+    }
+
+    func materials(in group: MaterialGroup) -> [MaterialItem] {
+        materials.filter { $0.displayCategory == group.name }
+            .sorted { $0.name < $1.name }
     }
 
     // MARK: - Material lookup / normalization

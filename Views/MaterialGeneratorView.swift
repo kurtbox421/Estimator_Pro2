@@ -8,7 +8,7 @@ struct MaterialGeneratorView: View {
     @EnvironmentObject private var materialInsights: MaterialIntelligenceStore
     @Environment(\.dismiss) private var dismiss
 
-    @State private var selectedJobType: MaterialJobType = .interiorWallBuild
+    @State private var selectedGroupID: String?
     @State private var lengthText: String = ""
     @State private var secondaryText: String = ""
     @State private var suggestedMaterials: [MaterialRecommendation] = []
@@ -17,32 +17,49 @@ struct MaterialGeneratorView: View {
     @State private var validationMessage: String?
     @State private var selectedMaterialName: String?
 
+    private var orderedGroups: [MaterialGroup] {
+        materialsStore.materialGroups.sorted { $0.sortOrder < $1.sortOrder }
+    }
+
+    private var selectedGroup: MaterialGroup? {
+        let groups = orderedGroups
+        guard !groups.isEmpty else { return nil }
+        let activeID = selectedGroupID ?? groups.first?.id
+        return groups.first(where: { $0.id == activeID })
+    }
+
+    private var selectedTemplate: MaterialGroupTemplateType {
+        selectedGroup?.templateType ?? .interiorWallBuild
+    }
+
     var body: some View {
         Form {
             smartSuggestionsSection
 
             Section {
+                let groups = orderedGroups
+
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        ForEach(MaterialJobType.allCases) { type in
+                        ForEach(groups) { group in
                             Button {
-                                selectedJobType = type
+                                selectedGroupID = group.id
                             } label: {
-                                Text(type.displayName)
+                                Text(group.name)
                                     .font(.subheadline)
                                     .padding(.vertical, 6)
                                     .padding(.horizontal, 12)
                                     .background(
-                                        selectedJobType == type
-                                        ? Color.accentColor.opacity(0.15)
-                                        : Color.clear
+                                        selectedGroupID == group.id || (selectedGroupID == nil && group.id == groups.first?.id)
+                                            ? Color.accentColor.opacity(0.15)
+                                            : Color.clear
                                     )
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 10)
                                             .stroke(
-                                                selectedJobType == type
-                                                ? Color.accentColor
-                                                : Color.secondary.opacity(0.4),
+                                                selectedGroupID == group.id || (selectedGroupID == nil && group.id == groups.first?.id)
+                                                    ? Color.accentColor
+                                                    : Color.secondary.opacity(0.4),
                                                 lineWidth: 1
                                             )
                                     )
@@ -156,11 +173,16 @@ struct MaterialGeneratorView: View {
                 }
             }
         }
+        .onAppear {
+            if selectedGroupID == nil {
+                selectedGroupID = orderedGroups.first?.id
+            }
+        }
     }
 
     private var smartSuggestionsSection: some View {
         let frequent = materialInsights.frequentlyUsedMaterials(limit: 6)
-        let jobSpecific = materialInsights.materials(forJobType: selectedJobType.displayName, limit: 6)
+        let jobSpecific = materialInsights.materials(forJobType: selectedTemplate.displayName, limit: 6)
         let paired = selectedMaterialName.flatMap { materialInsights.commonlyUsed(withMaterialName: $0, limit: 6) } ?? []
 
         return Section("SMART SUGGESTIONS") {
@@ -175,7 +197,7 @@ struct MaterialGeneratorView: View {
             }
 
             if !jobSpecific.isEmpty {
-                suggestionGroup(title: "Suggested for \(selectedJobType.displayName)", stats: jobSpecific)
+                suggestionGroup(title: "Suggested for \(selectedTemplate.displayName)", stats: jobSpecific)
             }
 
             if !paired.isEmpty {
@@ -241,7 +263,7 @@ struct MaterialGeneratorView: View {
     }
 
     private var secondaryPlaceholder: String {
-        switch selectedJobType {
+        switch selectedTemplate {
         case .interiorWallBuild:
             return "Height"
         case .lvpFlooring:
@@ -265,6 +287,13 @@ struct MaterialGeneratorView: View {
         let length = parseDouble(lengthText)
         let secondary = parseDouble(secondaryText)
 
+        guard let group = selectedGroup else {
+            validationMessage = "Add materials in Material Pricing to create job types."
+            generated = []
+            suggestedMaterials = []
+            return
+        }
+
         guard length != nil || secondary != nil else {
             validationMessage = "Enter at least one dimension."
             generated = []
@@ -275,7 +304,7 @@ struct MaterialGeneratorView: View {
         validationMessage = nil
 
         let context = JobContext(
-            jobType: selectedJobType,
+            jobType: group.templateType.jobType,
             lengthFeet: length,
             secondaryFeet: secondary,
             heightFeet: nil,
@@ -332,7 +361,7 @@ struct MaterialGeneratorView: View {
 
     private func createNewEstimateFromSuggestedMaterials() {
         let materials = makeEstimateMaterials(from: suggestedMaterials)
-        _ = jobVM.createEstimate(from: materials, jobType: selectedJobType)
+        _ = jobVM.createEstimate(from: materials, jobType: selectedTemplate.jobType)
         dismiss()
     }
 
