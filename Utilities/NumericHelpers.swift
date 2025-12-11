@@ -38,18 +38,14 @@ private func sanitizeParsedNumber(_ value: Double) -> Double? {
 /// Normalizes a numeric value so UI and calculations never receive NaN or infinity.
 /// - Parameter value: Any `Double` value.
 /// - Returns: `0` when the value is not finite; otherwise the original value.
-private func sanitizeNumber(_ value: Double) -> Double {
+func safeNumber(_ value: Double) -> Double {
     value.isFinite ? value : 0
 }
 
-func safeNumber(_ value: Double) -> Double {
-    sanitizeNumber(value)
-}
-
-/// Overload that passes through `nil` while sanitizing real values.
+/// Passes through `nil` while sanitizing real values using `safeNumber`.
 /// - Parameter value: Optional numeric input.
 /// - Returns: `nil` when the input is `nil`; otherwise a finite value.
-func safeNumber(_ value: Double?) -> Double? {
+func safeOptionalNumber(_ value: Double?) -> Double? {
     guard let value else { return nil }
-    return sanitizeNumber(value)
+    return safeNumber(value)
 }

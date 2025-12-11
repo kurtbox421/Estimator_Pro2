@@ -233,8 +233,8 @@ private struct MaterialStatsBuilder {
     ) -> MaterialStatsBuilder {
         var copy = self
         copy.usageCount += 1
-        copy.totalQuantity += safeNumber(quantity) ?? 0
-        copy.totalUnitCost += safeNumber(unitCost) ?? 0
+        copy.totalQuantity += safeOptionalNumber(quantity) ?? 0
+        copy.totalUnitCost += safeOptionalNumber(unitCost) ?? 0
         copy.lastUsedAt = max(copy.lastUsedAt ?? .distantPast, lastUsed ?? .distantPast)
 
         let trimmedType = jobType.trimmingCharacters(in: .whitespacesAndNewlines)
