@@ -20,6 +20,17 @@ enum JobType: String, CaseIterable, Identifiable {
         case .windowInstall:       return "Window Install"
         }
     }
+
+    var jobTag: MaterialJobTag {
+        switch self {
+        case .interiorWall: return .interiorWallBuild
+        case .lvpFloor: return .lvpFlooring
+        case .paintRoom: return .paintRoom
+        case .basicBathRemodel: return .basicBathroomRemodel
+        case .deckSurfaceReplace: return .deckSurfaceReplace
+        case .windowInstall: return .windowInstall
+        }
+    }
 }
 
 /// Connects job types -> list of material IDs + provided context
@@ -32,10 +43,11 @@ struct JobMaterialGenerator {
         for jobType: JobType,
         context: QuantityContext
     ) -> [GeneratedMaterial] {
-        let materialIDs = materialIDs(for: jobType) + catalog.customMaterialIDs
+        let taggedMaterials = catalog.materials(for: jobType.jobTag)
+        let fallbackMaterials = materialIDs(for: jobType).compactMap { catalog.material(withID: $0) }
+        let materials = taggedMaterials.isEmpty ? fallbackMaterials : taggedMaterials
 
-        return materialIDs.compactMap { id in
-            guard let material = catalog.material(withID: id) else { return nil }
+        return materials.compactMap { material in
             let qty = min(engine.quantity(for: material, context: context), maxRecommendedQuantity(for: material))
             guard qty > 0 else { return nil }
             return GeneratedMaterial(
@@ -56,7 +68,12 @@ struct JobMaterialGenerator {
     }
 
     func allMaterialIDs() -> [String] {
-        let ids = JobType.allCases.flatMap { materialIDs(for: $0) } + catalog.customMaterialIDs
+        let taggedIDs = JobType.allCases.flatMap { jobType in
+            catalog.materials(for: jobType.jobTag).map { $0.id }
+        }
+
+        let fallbackIDs = JobType.allCases.flatMap { materialIDs(for: $0) }
+        let ids = (taggedIDs.isEmpty ? fallbackIDs : taggedIDs) + catalog.customMaterialIDs
 
         var uniqueOrderedIDs: [String] = []
         var seen: Set<String> = []
