@@ -25,8 +25,12 @@ func debugCheckNaN(_ value: Double, label: String) -> Double {
 /// Normalizes a numeric value so UI and calculations never receive NaN or infinity.
 /// - Parameter value: Any `Double` value.
 /// - Returns: `0` when the value is not finite; otherwise the original value.
-func safeNumber(_ value: Double) -> Double {
+private func sanitizeNumber(_ value: Double) -> Double {
     value.isFinite ? value : 0
+}
+
+func safeNumber(_ value: Double) -> Double {
+    sanitizeNumber(value)
 }
 
 /// Overload that passes through `nil` while sanitizing real values.
@@ -34,5 +38,5 @@ func safeNumber(_ value: Double) -> Double {
 /// - Returns: `nil` when the input is `nil`; otherwise a finite value.
 func safeNumber(_ value: Double?) -> Double? {
     guard let value else { return nil }
-    return safeNumber(value)
+    return sanitizeNumber(value)
 }
