@@ -58,7 +58,24 @@ struct MaterialRecommendation: Identifiable {
     var estimatedUnitCost: Double? = nil
 }
 
+private struct ResolvedGeneratorMaterial {
+    let name: String
+    let pricingUnit: String
+    let coverageQuantity: Double?
+    let coverageUnit: String?
+    let notes: String?
+    let estimatedUnitCost: Double?
+}
+
+enum GeneratorMaterialKey: String {
+    case lvpFlooring = "lvp-floor-7x48"
+    case foamUnderlayment = "underlayment-foam"
+    case shoeMoulding = "trim-base-35"
+}
+
 struct MaterialsRecommender {
+
+    let catalog: MaterialsCatalogStore
 
     func recommendMaterials(for context: JobContext) -> [MaterialRecommendation] {
         switch context.jobType {
@@ -237,29 +254,125 @@ struct MaterialsRecommender {
         let perimeter = 2 * (length + width)
         let mouldingLF = perimeter.rounded(.up)
 
+        let flooringMaterial = resolveMaterial(
+            key: .lvpFlooring,
+            fallbackName: "LVP Flooring 7\"x48\" Planks",
+            fallbackUnit: "sq ft",
+            category: .flooring,
+            notes: "Includes \(Int(waste * 100))% waste; ~30 sq ft per box",
+            preferredUnits: ["box"],
+            nameKeywords: ["floor"]
+        )
+
+        let underlayment = resolveMaterial(
+            key: .foamUnderlayment,
+            fallbackName: "Foam Underlayment (100 sq ft roll)",
+            fallbackUnit: "roll",
+            category: .flooring,
+            notes: "100 sq ft per roll",
+            preferredUnits: ["roll"],
+            nameKeywords: ["underlayment"]
+        )
+
+        let moulding = resolveMaterial(
+            key: .shoeMoulding,
+            fallbackName: "Shoe moulding / quarter round",
+            fallbackUnit: "lf",
+            category: .trimFinish,
+            notes: "Perimeter coverage",
+            preferredUnits: ["lf"],
+            nameKeywords: ["shoe", "quarter"]
+        )
+
+        let flooringCoverage = flooringMaterial.coverageQuantity ?? (flooringMaterial.pricingUnit.lowercased().contains("box") ? 30 : nil)
+        let flooringNote = flooringCoverage.flatMap { coverage in
+            let coverageUnit = flooringMaterial.coverageUnit ?? "sq ft"
+            return "~\(Int(coverage)) \(coverageUnit) per \(flooringMaterial.pricingUnit)"
+        }
+
+        let flooringQuantity: Double
+        let flooringUnit: String
+
+        if let coverage = flooringCoverage { // convert to purchase units when we know coverage
+            flooringQuantity = (flooringQty / coverage).rounded(.up)
+            flooringUnit = flooringMaterial.pricingUnit
+        } else {
+            flooringQuantity = flooringQty
+            flooringUnit = flooringMaterial.pricingUnit
+        }
+
         return [
             MaterialRecommendation(
-                name: "LVP Flooring 7\"x48\" Planks",
-                quantity: flooringQty,
-                unit: "sq ft",
-                category: "Flooring",
-                notes: "Includes \(Int(waste * 100))% waste; ~30 sq ft per box"
+                name: flooringMaterial.name,
+                quantity: flooringQuantity,
+                unit: flooringUnit,
+                category: MaterialCategory.flooring.displayName,
+                notes: flooringMaterial.notes ?? flooringNote,
+                estimatedUnitCost: flooringMaterial.estimatedUnitCost
             ),
             MaterialRecommendation(
-                name: "Foam Underlayment (100 sq ft roll)",
+                name: underlayment.name,
                 quantity: underlaymentRolls,
-                unit: "roll",
-                category: "Flooring",
-                notes: "100 sq ft per roll"
+                unit: underlayment.pricingUnit,
+                category: MaterialCategory.flooring.displayName,
+                notes: underlayment.notes,
+                estimatedUnitCost: underlayment.estimatedUnitCost
             ),
             MaterialRecommendation(
-                name: "Shoe moulding / quarter round",
+                name: moulding.name,
                 quantity: mouldingLF,
-                unit: "lf",
-                category: "Trim",
-                notes: "Perimeter coverage"
+                unit: moulding.pricingUnit,
+                category: MaterialCategory.trimFinish.displayName,
+                notes: moulding.notes,
+                estimatedUnitCost: moulding.estimatedUnitCost
             )
         ]
+    }
+
+    private func resolveMaterial(
+        key: GeneratorMaterialKey,
+        fallbackName: String,
+        fallbackUnit: String,
+        category: MaterialCategory,
+        notes: String?,
+        preferredUnits: [String],
+        nameKeywords: [String]
+    ) -> ResolvedGeneratorMaterial {
+        let matchedMaterial = catalog.preferredMaterial(
+            for: key.rawValue,
+            category: category,
+            nameKeywords: nameKeywords,
+            preferredUnits: preferredUnits
+        )
+
+        let name = matchedMaterial?.name ?? fallbackName
+        let unit = matchedMaterial?.unit ?? fallbackUnit
+        let estimatedUnitCost = matchedMaterial.map { catalog.price(for: $0) }
+
+        let autoCoverageNote: String?
+        if let matchedMaterial,
+           let coverage = matchedMaterial.coverageQuantity,
+           let coverageUnit = matchedMaterial.coverageUnit {
+            autoCoverageNote = "~\(Int(coverage)) \(coverageUnit) per \(matchedMaterial.unit)"
+        } else {
+            autoCoverageNote = nil
+        }
+
+        let resolvedNotes: String?
+        if let notes, !notes.isEmpty {
+            resolvedNotes = notes
+        } else {
+            resolvedNotes = autoCoverageNote
+        }
+
+        return ResolvedGeneratorMaterial(
+            name: name,
+            pricingUnit: unit,
+            coverageQuantity: matchedMaterial?.coverageQuantity,
+            coverageUnit: matchedMaterial?.coverageUnit,
+            notes: resolvedNotes,
+            estimatedUnitCost: estimatedUnitCost
+        )
     }
 
     private func recommendExteriorPaint(for ctx: JobContext) -> [MaterialRecommendation] {

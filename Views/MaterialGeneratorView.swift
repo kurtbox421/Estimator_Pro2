@@ -288,7 +288,8 @@ struct MaterialGeneratorView: View {
             notes: nil
         )
 
-        let recommendations = MaterialsRecommender().recommendMaterials(for: context)
+        let recommendations = MaterialsRecommender(catalog: materialsStore)
+            .recommendMaterials(for: context)
         suggestedMaterials = recommendations
         generated = recommendations.map(materialFromRecommendation)
         selectedMaterialName = recommendations.first?.name

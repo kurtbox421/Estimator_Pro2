@@ -31,7 +31,7 @@ struct MaterialResolutionHelper {
             } else {
                 notes = coverageNote
             }
-        } else if let pricingItem {
+        } else if let pricingItem, unitsMatch(recommendation.unit, pricingItem.unit) {
             resolvedUnit = pricingItem.unit
         }
 
