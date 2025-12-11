@@ -112,11 +112,11 @@ struct MaterialsRecommender {
 
         var recommendations: [MaterialRecommendation] = [
             MaterialRecommendation(
-                name: "Interior wall paint",
+                name: "Interior Wall Paint (Eggshell, 1 gal)",
                 quantity: roundedGallons,
                 unit: "gallon",
                 category: "Paint",
-                notes: "Approx. \(Int(totalArea)) sq ft, \(coats) coat(s)"
+                notes: "Approx. \(Int(totalArea)) sq ft, \(coats) coat(s); ~350 sq ft/gal"
             )
         ]
 
@@ -124,11 +124,11 @@ struct MaterialsRecommender {
             let primerGallons = max(1.0, ((rawGallons * 1.05) * 2).rounded(.up) / 2)
             recommendations.append(
                 MaterialRecommendation(
-                    name: "Primer",
+                    name: "Primer (1 gal)",
                     quantity: primerGallons,
                     unit: "gallon",
                     category: "Paint",
-                    notes: "Coverage for ~\(Int(totalArea)) sq ft"
+                    notes: "Coverage for ~\(Int(totalArea)) sq ft at ~350 sq ft/gal"
                 )
             )
         }
@@ -239,14 +239,14 @@ struct MaterialsRecommender {
 
         return [
             MaterialRecommendation(
-                name: "Flooring (e.g. LVP)",
+                name: "LVP Flooring 7\"x48\" Planks",
                 quantity: flooringQty,
                 unit: "sq ft",
                 category: "Flooring",
-                notes: "Includes \(Int(waste * 100))% waste"
+                notes: "Includes \(Int(waste * 100))% waste; ~30 sq ft per box"
             ),
             MaterialRecommendation(
-                name: "Underlayment",
+                name: "Foam Underlayment (100 sq ft roll)",
                 quantity: underlaymentRolls,
                 unit: "roll",
                 category: "Flooring",

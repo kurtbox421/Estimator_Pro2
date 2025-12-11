@@ -94,8 +94,10 @@
       "id": "lvp-floor-7x48",
       "name": "LVP Flooring 7\"x48\" Planks",
       "category": "flooring",
-      "unit": "sqft",
-      "defaultUnitCost": 3.50,
+      "unit": "box",
+      "defaultUnitCost": 95.00,
+      "coverageQuantity": 30,
+      "coverageUnit": "sq ft",
       "wasteFactor": 0.1,
       "quantityRuleKey": "flooring_10pct_waste"
     },

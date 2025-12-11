@@ -61,6 +61,7 @@
                 D00100192FFF000100000010 /* MaterialPricingSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100182FFF000100000010 /* MaterialPricingSettingsView.swift */; };
                 D00200022FFF000200000001 /* MaterialPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00200012FFF000200000001 /* MaterialPreferences.swift */; };
                 D003000A2FFF000300000001 /* NumericHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00300092FFF000300000001 /* NumericHelpers.swift */; };
+                D003000C2FFF000300000001 /* MaterialResolutionHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D003000B2FFF000300000001 /* MaterialResolutionHelper.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -115,6 +116,7 @@
                 D00100182FFF000100000010 /* MaterialPricingSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialPricingSettingsView.swift; sourceTree = "<group>"; };
                 D00200012FFF000200000001 /* MaterialPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialPreferences.swift; sourceTree = "<group>"; };
                 D00300092FFF000300000001 /* NumericHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NumericHelpers.swift; sourceTree = "<group>"; };
+                D003000B2FFF000300000001 /* MaterialResolutionHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialResolutionHelper.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -239,6 +241,7 @@
                                 AA08AA08AA08AA08AA08AA07 /* InvoicePDFGenerator.swift */,
                                 39B8DC642EDB60C0005D0E08 /* Services */,
                                 D00300092FFF000300000001 /* NumericHelpers.swift */,
+                                D003000B2FFF000300000001 /* MaterialResolutionHelper.swift */,
                         );
                         path = Utilities;
                         sourceTree = "<group>";
@@ -382,6 +385,7 @@
                                 39B8DC962EDCE6D4005D0E08 /* AuthScreenView.swift in Sources */,
                                 398D93EE2ECFC27900A168FC /* (null) in Sources */,
                                 D003000A2FFF000300000001 /* NumericHelpers.swift in Sources */,
+                                D003000C2FFF000300000001 /* MaterialResolutionHelper.swift in Sources */,
                                 39B8DCAE2EDCF57E005D0E08 /* JobDocumentLayout.swift in Sources */,
                                 39A395232ECD7EFF00D5E76D /* AddEditInvoiceView.swift in Sources */,
                         );

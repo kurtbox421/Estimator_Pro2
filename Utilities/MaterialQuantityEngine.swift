@@ -83,8 +83,9 @@ struct MaterialQuantityEngine {
         let base = computeBaseQuantity(for: key, context: context)
         // Apply waste factor from material definition
         let withWaste = base * (1.0 + material.wasteFactor)
+        let converted = applyCoverageConversion(withWaste, material: material)
         // Round to sensible units depending on the material
-        return roundedQuantity(withWaste, unit: material.unit)
+        return roundedQuantity(converted, unit: material.unit)
     }
 
     private func computeBaseQuantity(for key: QuantityRuleKey, context: QuantityContext) -> Double {
@@ -241,5 +242,12 @@ struct MaterialQuantityEngine {
         default:
             return (value * 100).rounded(.up) / 100.0
         }
+    }
+
+    private func applyCoverageConversion(_ quantity: Double, material: MaterialItem) -> Double {
+        guard let coverage = material.coverageQuantity,
+              coverage > 0 else { return quantity }
+
+        return (quantity / coverage).rounded(.up)
     }
 }

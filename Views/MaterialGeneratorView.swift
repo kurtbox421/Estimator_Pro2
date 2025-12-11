@@ -295,30 +295,11 @@ struct MaterialGeneratorView: View {
     }
 
     private func materialFromRecommendation(_ rec: MaterialRecommendation) -> Material {
-        let unitPrice = resolvedUnitCost(for: rec)
-
-        return Material(
+        MaterialResolutionHelper.material(
+            from: rec,
+            catalog: materialsStore,
             ownerID: Auth.auth().currentUser?.uid ?? "",
-            name: rec.name,
-            quantity: safeNumber(rec.quantity),     // from generator
-            unitCost: unitPrice,        // from settings or intelligence
-            productURL: nil,
-            unit: rec.unit,
-            notes: rec.notes
-        )
-    }
-
-    private func resolvedUnitCost(for recommendation: MaterialRecommendation) -> Double {
-        let match = materialsStore.material(matchingName: recommendation.name)
-        let overridePrice = match.flatMap { materialsStore.override(for: $0.id) }
-        let defaultTemplatePrice = match?.defaultUnitCost
-
-        return safeNumber(
-            overridePrice
-            ?? recommendation.estimatedUnitCost
-            ?? defaultTemplatePrice
-            ?? settingsManager.commonMaterialPrice(for: recommendation.name)
-            ?? 0
+            fallbackUnitCost: settingsManager.commonMaterialPrice(for: rec.name)
         )
     }
 
