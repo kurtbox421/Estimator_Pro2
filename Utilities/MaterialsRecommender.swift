@@ -92,7 +92,10 @@ struct MaterialsRecommender {
     private let quantityEngine = MaterialQuantityEngine()
 
     func recommendMaterials(for context: JobContext) -> [MaterialRecommendation] {
-        let taggedMaterials = catalog.materials(for: context.jobType.jobTag)
+        let taggedMaterials = catalog.materials(
+            for: context.jobType.jobTag,
+            in: allowedCategories(for: context.jobType)
+        )
 
         if taggedMaterials.isEmpty {
             return legacyRecommendations(for: context)
@@ -116,6 +119,76 @@ struct MaterialsRecommender {
     }
 
     // MARK: - Helpers
+
+    private func allowedCategories(for jobType: MaterialJobType) -> [MaterialCategory] {
+        switch jobType {
+        case .interiorWallBuild:
+            return [
+                .lumberFraming,
+                .sheetgoods,
+                .drywallBacker,
+                .insulation,
+                .hardwareFasteners,
+                .hardwareConnectors,
+                .trimFinish,
+                .electrical,
+                .sealants
+            ]
+        case .lvpFlooring:
+            return [
+                .flooring,
+                .trimFinish,
+                .sealants,
+                .hardwareFasteners
+            ]
+        case .paintRoom:
+            return [
+                .paint,
+                .sealants,
+                .trimFinish
+            ]
+        case .basicBathroomRemodel:
+            return [
+                .tile,
+                .tileMaterials,
+                .flooring,
+                .sealants,
+                .plumbing,
+                .electrical,
+                .paint,
+                .trimFinish
+            ]
+        case .exteriorPaint:
+            return [
+                .paint,
+                .sealants,
+                .hardwareFasteners
+            ]
+        case .tileBacksplash:
+            return [
+                .tile,
+                .tileMaterials,
+                .sealants,
+                .trimFinish
+            ]
+        case .deckBuild:
+            return [
+                .exteriorDecking,
+                .exteriorStructural,
+                .hardwareFasteners,
+                .hardwareConnectors,
+                .exteriorFlashing,
+                .concreteMasonry
+            ]
+        case .roofShingleReplacement:
+            return [
+                .exteriorFlashing,
+                .hardwareFasteners,
+                .exteriorStructural,
+                .sheetgoods
+            ]
+        }
+    }
 
     private func quantityContext(from ctx: JobContext) -> QuantityContext {
         let length = ctx.lengthFeet ?? 0
