@@ -316,7 +316,7 @@ struct MaterialGeneratorView: View {
     }
 
     private func recommendation(from stats: MaterialUsageStats) -> MaterialRecommendation {
-        let suggestedQuantity = stats.averageQuantity.flatMap(safeNumber) ?? 1
+        let suggestedQuantity = stats.averageQuantity.map { safeNumber($0) } ?? 1
         let unit = stats.mostCommonUnit ?? "unit"
         let note = "Suggested from your history"
 
@@ -326,7 +326,7 @@ struct MaterialGeneratorView: View {
             unit: unit,
             category: "Smart suggestion",
             notes: note,
-            estimatedUnitCost: stats.averageUnitCost.flatMap(safeNumber)
+            estimatedUnitCost: stats.averageUnitCost.map { safeNumber($0) }
         )
     }
 
