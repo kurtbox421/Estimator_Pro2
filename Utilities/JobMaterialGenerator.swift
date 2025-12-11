@@ -1,6 +1,6 @@
 import Foundation
 
-enum JobType: String, CaseIterable, Identifiable {
+enum JobType: String, CaseIterable, Identifiable, Codable {
     case interiorWall
     case lvpFloor
     case paintRoom
@@ -9,6 +9,8 @@ enum JobType: String, CaseIterable, Identifiable {
     case windowInstall
 
     var id: String { rawValue }
+
+    static let defaultType: JobType = .paintRoom
 
     var displayName: String {
         switch self {
