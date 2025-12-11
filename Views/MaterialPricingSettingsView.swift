@@ -11,16 +11,38 @@ struct MaterialPricingSettingsView: View {
     @State private var newCustomCategoryName: String = ""
     @State private var newCustomCategory: MaterialCategory = MaterialCategory.allCases.first(where: { $0 != .custom }) ?? .paint
     @State private var showingAddMaterialSheet = false
+    @State private var selectedTemplate: MaterialGroupTemplateType?
 
     private var groupedMaterials: [(category: String, items: [MaterialItem])] {
-        materialsStore.materialGroups.sorted { $0.sortOrder < $1.sortOrder }
-            .map { group in
-                (group.name, materialsStore.materials(in: group))
-            }
+        filteredGroups.map { group in
+            (group.name, materialsStore.materials(in: group))
+        }
+    }
+
+    private var availableTemplates: [MaterialGroupTemplateType] {
+        Array(Set(materialsStore.materialGroups.map { $0.templateType }))
+            .sorted { $0.displayName < $1.displayName }
+    }
+
+    private var filteredGroups: [MaterialGroup] {
+        let groups = materialsStore.materialGroups.sorted { $0.sortOrder < $1.sortOrder }
+        guard let selectedTemplate else { return groups }
+        return groups.filter { $0.templateType == selectedTemplate }
     }
 
     var body: some View {
         List {
+            if !availableTemplates.isEmpty {
+                Section("Job type") {
+                    Picker("Job type", selection: $selectedTemplate) {
+                        ForEach(availableTemplates) { template in
+                            Text(template.displayName).tag(Optional.some(template))
+                        }
+                    }
+                    .pickerStyle(.menu)
+                }
+            }
+
             Section {
                 Text("Customize the unit prices used when materials are generated from the templates above. Your overrides will be saved and applied every time the generator is used.")
                     .font(.footnote)
@@ -60,6 +82,9 @@ struct MaterialPricingSettingsView: View {
         .onAppear {
             syncOverrides()
             syncProductURLTexts()
+            if selectedTemplate == nil {
+                selectedTemplate = availableTemplates.first
+            }
         }
         .onChange(of: newCustomCategory, initial: false) { _, newValue in
             if newValue != .custom {
@@ -69,6 +94,9 @@ struct MaterialPricingSettingsView: View {
         .onChange(of: materialsStore.materials, initial: false) { _, _ in
             syncOverrides()
             syncProductURLTexts()
+            if let selectedTemplate, !availableTemplates.contains(selectedTemplate) {
+                self.selectedTemplate = availableTemplates.first
+            }
         }
         .sheet(isPresented: $showingAddMaterialSheet) {
             NavigationStack {
