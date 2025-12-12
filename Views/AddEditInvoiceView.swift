@@ -174,7 +174,7 @@ struct AddEditInvoiceView: View {
                     .disabled(!isValid)
             }
         }
-        .onChange(of: selectedClientId) { newValue in
+        .onChange(of: selectedClientId) { _, newValue in
             guard let id = newValue, let client = clientVM.clients.first(where: { $0.id == id }) else {
                 clientName = ""
                 return
