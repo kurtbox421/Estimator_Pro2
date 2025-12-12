@@ -15,6 +15,7 @@
 		3969FD0F2ECD37F10005C1AE /* Material.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3969FD0E2ECD37F10005C1AE /* Material.swift */; };
 		3969FD152ECD3F410005C1AE /* AddMaterialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3969FD142ECD3F410005C1AE /* AddMaterialView.swift */; };
 		397D69672EDE36C7005E0657 /* InvoiceNumberManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397D69662EDE36C7005E0657 /* InvoiceNumberManager.swift */; };
+		398AE90C2EECC2450082B0DE /* PDFActivityItemSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398AE90B2EECC2450082B0DE /* PDFActivityItemSource.swift */; };
 		398D93D42ECE8FFC00A168FC /* ClientViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398D93D32ECE8FFC00A168FC /* ClientViewModel.swift */; };
 		398D93D62ECE902900A168FC /* Client.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398D93D52ECE902900A168FC /* Client.swift */; };
 		398D93EC2ECFBAAE00A168FC /* ClientCardViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398D93EB2ECFBAAE00A168FC /* ClientCardViews.swift */; };
@@ -49,22 +50,21 @@
 		AA04AA04AA04AA04AA04AA04 /* SavedMaterial.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA03AA03AA03AA03AA03AA03 /* SavedMaterial.swift */; };
 		AA06AA06AA06AA06AA06AA06 /* CompanySettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA05AA05AA05AA05AA05AA05 /* CompanySettingsStore.swift */; };
 		AA07AA07AA07AA07AA07AA07 /* InvoicePDFPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA07AA07AA07AA07AA07AA06 /* InvoicePDFPreviewView.swift */; };
-                AA08AA08AA08AA08AA08AA08 /* InvoicePDFGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA08AA08AA08AA08AA08AA07 /* InvoicePDFGenerator.swift */; };
-                AA09AA09AA09AA09AA09AA09 /* InvoicePDFRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA09AA09AA09AA09AA09AA08 /* InvoicePDFRenderer.swift */; };
-                AA0AAA0AAA0AAA0AAA0AAA0 /* PDFPreviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0AAA0AAA0AAA0AAA0AAA0F /* PDFPreviewSheet.swift */; };
-                AA0B0B0B0B0B0B0B0B0B0B0B /* EstimateViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0B0B0B0B0B0B0B0B0B0B0A /* EstimateViewModel.swift */; };
-                D00400022FFF000400000001 /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00400012FFF000400000001 /* ShareSheet.swift */; };
-                D00400042FFF000400000001 /* PDFTempWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00400032FFF000400000001 /* PDFTempWriter.swift */; };
-                B1E7E0112F01000100000001 /* MaterialEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E7E0102F01000100000001 /* MaterialEditView.swift */; };
-                D00100022FFF000100000001 /* MaterialsCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100012FFF000100000001 /* MaterialsCatalog.swift */; };
-                D00100042FFF000100000001 /* MaterialQuantityEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100032FFF000100000001 /* MaterialQuantityEngine.swift */; };
-                D00100062FFF000100000001 /* JobMaterialGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100052FFF000100000001 /* JobMaterialGenerator.swift */; };
-                D00100082FFF000100000001 /* MaterialsCatalog.json in Resources */ = {isa = PBXBuildFile; fileRef = D00100072FFF000100000001 /* MaterialsCatalog.json */; };
-                D00100192FFF000100000010 /* MaterialPricingSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100182FFF000100000010 /* MaterialPricingSettingsView.swift */; };
-                D00200022FFF000200000001 /* MaterialPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00200012FFF000200000001 /* MaterialPreferences.swift */; };
-                D003000A2FFF000300000001 /* NumericHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00300092FFF000300000001 /* NumericHelpers.swift */; };
-                D003000C2FFF000300000001 /* MaterialResolutionHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D003000B2FFF000300000001 /* MaterialResolutionHelper.swift */; };
-                D00A00022FFF100100000001 /* PDFActivityItemSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00A00012FFF100100000001 /* PDFActivityItemSource.swift */; };
+		AA08AA08AA08AA08AA08AA08 /* InvoicePDFGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA08AA08AA08AA08AA08AA07 /* InvoicePDFGenerator.swift */; };
+		AA09AA09AA09AA09AA09AA09 /* InvoicePDFRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA09AA09AA09AA09AA09AA08 /* InvoicePDFRenderer.swift */; };
+		AA0AAA0AAA0AAA0AAA0AAA0 /* PDFPreviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0AAA0AAA0AAA0AAA0AAA0F /* PDFPreviewSheet.swift */; };
+		AA0B0B0B0B0B0B0B0B0B0B0B /* EstimateViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0B0B0B0B0B0B0B0B0B0B0A /* EstimateViewModel.swift */; };
+		B1E7E0112F01000100000001 /* MaterialEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E7E0102F01000100000001 /* MaterialEditView.swift */; };
+		D00100022FFF000100000001 /* MaterialsCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100012FFF000100000001 /* MaterialsCatalog.swift */; };
+		D00100042FFF000100000001 /* MaterialQuantityEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100032FFF000100000001 /* MaterialQuantityEngine.swift */; };
+		D00100062FFF000100000001 /* JobMaterialGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100052FFF000100000001 /* JobMaterialGenerator.swift */; };
+		D00100082FFF000100000001 /* MaterialsCatalog.json in Resources */ = {isa = PBXBuildFile; fileRef = D00100072FFF000100000001 /* MaterialsCatalog.json */; };
+		D00100192FFF000100000010 /* MaterialPricingSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100182FFF000100000010 /* MaterialPricingSettingsView.swift */; };
+		D00200022FFF000200000001 /* MaterialPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00200012FFF000200000001 /* MaterialPreferences.swift */; };
+		D003000A2FFF000300000001 /* NumericHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00300092FFF000300000001 /* NumericHelpers.swift */; };
+		D003000C2FFF000300000001 /* MaterialResolutionHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D003000B2FFF000300000001 /* MaterialResolutionHelper.swift */; };
+		D00400022FFF000400000001 /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00400012FFF000400000001 /* ShareSheet.swift */; };
+		D00400042FFF000400000001 /* PDFTempWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00400032FFF000400000001 /* PDFTempWriter.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -77,6 +77,7 @@
 		3969FD0E2ECD37F10005C1AE /* Material.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Material.swift; sourceTree = "<group>"; };
 		3969FD142ECD3F410005C1AE /* AddMaterialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddMaterialView.swift; sourceTree = "<group>"; };
 		397D69662EDE36C7005E0657 /* InvoiceNumberManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoiceNumberManager.swift; sourceTree = "<group>"; };
+		398AE90B2EECC2450082B0DE /* PDFActivityItemSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFActivityItemSource.swift; sourceTree = "<group>"; };
 		398D93D32ECE8FFC00A168FC /* ClientViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientViewModel.swift; sourceTree = "<group>"; };
 		398D93D52ECE902900A168FC /* Client.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Client.swift; sourceTree = "<group>"; };
 		398D93EB2ECFBAAE00A168FC /* ClientCardViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientCardViews.swift; sourceTree = "<group>"; };
@@ -106,23 +107,22 @@
 		AA01AA01AA01AA01AA01AA01 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
 		AA03AA03AA03AA03AA03AA03 /* SavedMaterial.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedMaterial.swift; sourceTree = "<group>"; };
 		AA05AA05AA05AA05AA05AA05 /* CompanySettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanySettingsStore.swift; sourceTree = "<group>"; };
-                AA07AA07AA07AA07AA07AA06 /* InvoicePDFPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoicePDFPreviewView.swift; sourceTree = "<group>"; };
-                AA08AA08AA08AA08AA08AA07 /* InvoicePDFGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoicePDFGenerator.swift; sourceTree = "<group>"; };
-                AA09AA09AA09AA09AA09AA08 /* InvoicePDFRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoicePDFRenderer.swift; sourceTree = "<group>"; };
-                AA0AAA0AAA0AAA0AAA0AAA0F /* PDFPreviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFPreviewSheet.swift; sourceTree = "<group>"; };
-                AA0B0B0B0B0B0B0B0B0B0B0A /* EstimateViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EstimateViewModel.swift; sourceTree = "<group>"; };
-                D00A00012FFF100100000001 /* PDFActivityItemSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFActivityItemSource.swift; sourceTree = "<group>"; };
-                D00400012FFF000400000001 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
-                D00400032FFF000400000001 /* PDFTempWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFTempWriter.swift; sourceTree = "<group>"; };
-                B1E7E0102F01000100000001 /* MaterialEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialEditView.swift; sourceTree = "<group>"; };
+		AA07AA07AA07AA07AA07AA06 /* InvoicePDFPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoicePDFPreviewView.swift; sourceTree = "<group>"; };
+		AA08AA08AA08AA08AA08AA07 /* InvoicePDFGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoicePDFGenerator.swift; sourceTree = "<group>"; };
+		AA09AA09AA09AA09AA09AA08 /* InvoicePDFRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoicePDFRenderer.swift; sourceTree = "<group>"; };
+		AA0AAA0AAA0AAA0AAA0AAA0F /* PDFPreviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFPreviewSheet.swift; sourceTree = "<group>"; };
+		AA0B0B0B0B0B0B0B0B0B0B0A /* EstimateViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EstimateViewModel.swift; sourceTree = "<group>"; };
+		B1E7E0102F01000100000001 /* MaterialEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialEditView.swift; sourceTree = "<group>"; };
 		D00100012FFF000100000001 /* MaterialsCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialsCatalog.swift; sourceTree = "<group>"; };
 		D00100032FFF000100000001 /* MaterialQuantityEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialQuantityEngine.swift; sourceTree = "<group>"; };
-                D00100052FFF000100000001 /* JobMaterialGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobMaterialGenerator.swift; sourceTree = "<group>"; };
-                D00100072FFF000100000001 /* MaterialsCatalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = MaterialsCatalog.json; sourceTree = "<group>"; };
-                D00100182FFF000100000010 /* MaterialPricingSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialPricingSettingsView.swift; sourceTree = "<group>"; };
-                D00200012FFF000200000001 /* MaterialPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialPreferences.swift; sourceTree = "<group>"; };
-                D00300092FFF000300000001 /* NumericHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NumericHelpers.swift; sourceTree = "<group>"; };
-                D003000B2FFF000300000001 /* MaterialResolutionHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialResolutionHelper.swift; sourceTree = "<group>"; };
+		D00100052FFF000100000001 /* JobMaterialGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobMaterialGenerator.swift; sourceTree = "<group>"; };
+		D00100072FFF000100000001 /* MaterialsCatalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = MaterialsCatalog.json; sourceTree = "<group>"; };
+		D00100182FFF000100000010 /* MaterialPricingSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialPricingSettingsView.swift; sourceTree = "<group>"; };
+		D00200012FFF000200000001 /* MaterialPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialPreferences.swift; sourceTree = "<group>"; };
+		D00300092FFF000300000001 /* NumericHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NumericHelpers.swift; sourceTree = "<group>"; };
+		D003000B2FFF000300000001 /* MaterialResolutionHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialResolutionHelper.swift; sourceTree = "<group>"; };
+		D00400012FFF000400000001 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
+		D00400032FFF000400000001 /* PDFTempWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFTempWriter.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -219,14 +219,14 @@
 				39E0A0102F00000100000001 /* ImportDataView.swift */,
 				3969FD082ECD36E10005C1AE /* JobListView.swift */,
 				3969FD0A2ECD37000005C1AE /* AddEditJobView.swift */,
-                                3969FD142ECD3F410005C1AE /* AddMaterialView.swift */,
-                                B1E7E0102F01000100000001 /* MaterialEditView.swift */,
-                                3969FD0C2ECD372A0005C1AE /* JobDetailView.swift */,
-                                D00A00012FFF100100000001 /* PDFActivityItemSource.swift */,
-                                D00400012FFF000400000001 /* ShareSheet.swift */,
-                        );
-                        path = Views;
-                        sourceTree = "<group>";
+				3969FD142ECD3F410005C1AE /* AddMaterialView.swift */,
+				B1E7E0102F01000100000001 /* MaterialEditView.swift */,
+				3969FD0C2ECD372A0005C1AE /* JobDetailView.swift */,
+				398AE90B2EECC2450082B0DE /* PDFActivityItemSource.swift */,
+				D00400012FFF000400000001 /* ShareSheet.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
 		};
 		3969FD062ECD368D0005C1AE /* Managers */ = {
 			isa = PBXGroup;
@@ -240,21 +240,21 @@
 			isa = PBXGroup;
 			children = (
 				39E46E9E2EE240D80096D2A4 /* firestore.rules */,
-                                39CCEF492EE12DAD0075521B /* MaterialsRecommender.swift */,
-                                AA09AA09AA09AA09AA09AA08 /* InvoicePDFRenderer.swift */,
-                                39B8DC722EDB6F4D005D0E08 /* MaterialSuggestionEngine.swift */,
-                                D00100032FFF000100000001 /* MaterialQuantityEngine.swift */,
-                                D00100052FFF000100000001 /* JobMaterialGenerator.swift */,
-                                39B8DC702EDB6779005D0E08 /* Formatting.swift */,
-                                AA08AA08AA08AA08AA08AA07 /* InvoicePDFGenerator.swift */,
-                                39B8DC642EDB60C0005D0E08 /* Services */,
-                                D00300092FFF000300000001 /* NumericHelpers.swift */,
-                                D003000B2FFF000300000001 /* MaterialResolutionHelper.swift */,
-                                D00400032FFF000400000001 /* PDFTempWriter.swift */,
-                        );
-                        path = Utilities;
-                        sourceTree = "<group>";
-                };
+				39CCEF492EE12DAD0075521B /* MaterialsRecommender.swift */,
+				AA09AA09AA09AA09AA09AA08 /* InvoicePDFRenderer.swift */,
+				39B8DC722EDB6F4D005D0E08 /* MaterialSuggestionEngine.swift */,
+				D00100032FFF000100000001 /* MaterialQuantityEngine.swift */,
+				D00100052FFF000100000001 /* JobMaterialGenerator.swift */,
+				39B8DC702EDB6779005D0E08 /* Formatting.swift */,
+				AA08AA08AA08AA08AA08AA07 /* InvoicePDFGenerator.swift */,
+				39B8DC642EDB60C0005D0E08 /* Services */,
+				D00300092FFF000300000001 /* NumericHelpers.swift */,
+				D003000B2FFF000300000001 /* MaterialResolutionHelper.swift */,
+				D00400032FFF000400000001 /* PDFTempWriter.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
 		39B8DC642EDB60C0005D0E08 /* Services */ = {
 			isa = PBXGroup;
 			children = (
@@ -349,6 +349,7 @@
 			files = (
 				39B5C6192EEA574000291220 /* MaterialIntelligenceStore.swift in Sources */,
 				39A395212ECD7EE400D5E76D /* Invoice.swift in Sources */,
+				398AE90C2EECC2450082B0DE /* PDFActivityItemSource.swift in Sources */,
 				39B8DC852EDCDB60005D0E08 /* SessionViewModel.swift in Sources */,
 				39B8DC652EDB60C0005D0E08 /* PersistenceService.swift in Sources */,
 				39B8DC832EDCDB50005D0E08 /* AuthManager.swift in Sources */,
@@ -367,13 +368,12 @@
 				39B8DC732EDB6F4D005D0E08 /* MaterialSuggestionEngine.swift in Sources */,
 				3969FD0D2ECD372A0005C1AE /* JobDetailView.swift in Sources */,
 				3969FD022ECD36190005C1AE /* JobViewModel.swift in Sources */,
-                                39B8DC712EDB6779005D0E08 /* Formatting.swift in Sources */,
-                                AA09AA09AA09AA09AA09AA09 /* InvoicePDFRenderer.swift in Sources */,
-                                AA08AA08AA08AA08AA08AA08 /* InvoicePDFGenerator.swift in Sources */,
-                                AA0AAA0AAA0AAA0AAA0AAA0 /* PDFPreviewSheet.swift in Sources */,
-                                D00A00022FFF100100000001 /* PDFActivityItemSource.swift in Sources */,
-                                D00400042FFF000400000001 /* PDFTempWriter.swift in Sources */,
-                                D00100022FFF000100000001 /* MaterialsCatalog.swift in Sources */,
+				39B8DC712EDB6779005D0E08 /* Formatting.swift in Sources */,
+				AA09AA09AA09AA09AA09AA09 /* InvoicePDFRenderer.swift in Sources */,
+				AA08AA08AA08AA08AA08AA08 /* InvoicePDFGenerator.swift in Sources */,
+				AA0AAA0AAA0AAA0AAA0AAA0 /* PDFPreviewSheet.swift in Sources */,
+				D00400042FFF000400000001 /* PDFTempWriter.swift in Sources */,
+				D00100022FFF000100000001 /* MaterialsCatalog.swift in Sources */,
 				D00200022FFF000200000001 /* MaterialPreferences.swift in Sources */,
 				3969FD152ECD3F410005C1AE /* AddMaterialView.swift in Sources */,
 				39B8DC752EDB6FC4005D0E08 /* MaterialGeneratorView.swift in Sources */,
@@ -383,26 +383,26 @@
 				D00100062FFF000100000001 /* JobMaterialGenerator.swift in Sources */,
 				AA06AA06AA06AA06AA06AA06 /* CompanySettingsStore.swift in Sources */,
 				398D93D62ECE902900A168FC /* Client.swift in Sources */,
-                                398D93D42ECE8FFC00A168FC /* ClientViewModel.swift in Sources */,
-                                AA04AA04AA04AA04AA04AA04 /* SavedMaterial.swift in Sources */,
-                                398D94022ECFCEFE00A168FC /* InvoiceDetailView.swift in Sources */,
-                                D00400022FFF000400000001 /* ShareSheet.swift in Sources */,
-                                B1E7E0112F01000100000001 /* MaterialEditView.swift in Sources */,
+				398D93D42ECE8FFC00A168FC /* ClientViewModel.swift in Sources */,
+				AA04AA04AA04AA04AA04AA04 /* SavedMaterial.swift in Sources */,
+				398D94022ECFCEFE00A168FC /* InvoiceDetailView.swift in Sources */,
+				D00400022FFF000400000001 /* ShareSheet.swift in Sources */,
+				B1E7E0112F01000100000001 /* MaterialEditView.swift in Sources */,
 				AA07AA07AA07AA07AA07AA07 /* InvoicePDFPreviewView.swift in Sources */,
 				3969FD002ECD35E60005C1AE /* Job.swift in Sources */,
 				39CCEF4A2EE12DAD0075521B /* MaterialsRecommender.swift in Sources */,
-                                39E0A0112F00000100000001 /* ImportDataView.swift in Sources */,
-                                3969FD092ECD36E10005C1AE /* JobListView.swift in Sources */,
-                                39A3951D2ECD7EB500D5E76D /* SplashScreenView.swift in Sources */,
-                                39B8DC962EDCE6D4005D0E08 /* AuthScreenView.swift in Sources */,
-                                398D93EE2ECFC27900A168FC /* (null) in Sources */,
-                                D003000A2FFF000300000001 /* NumericHelpers.swift in Sources */,
-                                D003000C2FFF000300000001 /* MaterialResolutionHelper.swift in Sources */,
-                                39B8DCAE2EDCF57E005D0E08 /* JobDocumentLayout.swift in Sources */,
-                                39A395232ECD7EFF00D5E76D /* AddEditInvoiceView.swift in Sources */,
-                        );
-                        runOnlyForDeploymentPostprocessing = 0;
-                };
+				39E0A0112F00000100000001 /* ImportDataView.swift in Sources */,
+				3969FD092ECD36E10005C1AE /* JobListView.swift in Sources */,
+				39A3951D2ECD7EB500D5E76D /* SplashScreenView.swift in Sources */,
+				39B8DC962EDCE6D4005D0E08 /* AuthScreenView.swift in Sources */,
+				398D93EE2ECFC27900A168FC /* (null) in Sources */,
+				D003000A2FFF000300000001 /* NumericHelpers.swift in Sources */,
+				D003000C2FFF000300000001 /* MaterialResolutionHelper.swift in Sources */,
+				39B8DCAE2EDCF57E005D0E08 /* JobDocumentLayout.swift in Sources */,
+				39A395232ECD7EFF00D5E76D /* AddEditInvoiceView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
