@@ -57,7 +57,6 @@
                 B1E7E0112F01000100000001 /* MaterialEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E7E0102F01000100000001 /* MaterialEditView.swift */; };
                 417F12F378444C99BAD178E0 /* EmailTemplateSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4A4D7919D79412D88ED443B /* EmailTemplateSettingsView.swift */; };
                 EBAF6EC9C54F46FE9BA55665 /* EmailTemplateSettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64B8AB8123854E578A12EEE7 /* EmailTemplateSettingsStore.swift */; };
-                0237A15AEE514863BCF4CE58 /* EmailTemplateRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73944857DD1D48F2B8A75D5D /* EmailTemplateRenderer.swift */; };
                 D00100022FFF000100000001 /* MaterialsCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100012FFF000100000001 /* MaterialsCatalog.swift */; };
 		D00100042FFF000100000001 /* MaterialQuantityEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100032FFF000100000001 /* MaterialQuantityEngine.swift */; };
 		D00100062FFF000100000001 /* JobMaterialGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100052FFF000100000001 /* JobMaterialGenerator.swift */; };
@@ -118,7 +117,6 @@
                 B1E7E0102F01000100000001 /* MaterialEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialEditView.swift; sourceTree = "<group>"; };
                 E4A4D7919D79412D88ED443B /* EmailTemplateSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailTemplateSettingsView.swift; sourceTree = "<group>"; };
                 64B8AB8123854E578A12EEE7 /* EmailTemplateSettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailTemplateSettingsStore.swift; sourceTree = "<group>"; };
-                73944857DD1D48F2B8A75D5D /* EmailTemplateRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailTemplateRenderer.swift; sourceTree = "<group>"; };
                 D00100012FFF000100000001 /* MaterialsCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialsCatalog.swift; sourceTree = "<group>"; };
 		D00100032FFF000100000001 /* MaterialQuantityEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialQuantityEngine.swift; sourceTree = "<group>"; };
 		D00100052FFF000100000001 /* JobMaterialGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobMaterialGenerator.swift; sourceTree = "<group>"; };
@@ -254,11 +252,10 @@
                                 D00100032FFF000100000001 /* MaterialQuantityEngine.swift */,
                                 D00100052FFF000100000001 /* JobMaterialGenerator.swift */,
                                 39B8DC702EDB6779005D0E08 /* Formatting.swift */,
-                                73944857DD1D48F2B8A75D5D /* EmailTemplateRenderer.swift */,
                                 AA08AA08AA08AA08AA08AA07 /* InvoicePDFGenerator.swift */,
                                 39B8DC642EDB60C0005D0E08 /* Services */,
-				D00300092FFF000300000001 /* NumericHelpers.swift */,
-				D003000B2FFF000300000001 /* MaterialResolutionHelper.swift */,
+                                D00300092FFF000300000001 /* NumericHelpers.swift */,
+                                D003000B2FFF000300000001 /* MaterialResolutionHelper.swift */,
 				D00400032FFF000400000001 /* PDFTempWriter.swift */,
 			);
 			path = Utilities;
@@ -375,9 +372,8 @@
                                 39B8DC8B2EDCDB7C005D0E08 /* SignInView.swift in Sources */,
                                 AA02AA02AA02AA02AA02AA02 /* SettingsManager.swift in Sources */,
                                 39B8DC732EDB6F4D005D0E08 /* MaterialSuggestionEngine.swift in Sources */,
-                                0237A15AEE514863BCF4CE58 /* EmailTemplateRenderer.swift in Sources */,
                                 3969FD0D2ECD372A0005C1AE /* JobDetailView.swift in Sources */,
-				3969FD022ECD36190005C1AE /* JobViewModel.swift in Sources */,
+                                3969FD022ECD36190005C1AE /* JobViewModel.swift in Sources */,
 				39B8DC712EDB6779005D0E08 /* Formatting.swift in Sources */,
 				AA09AA09AA09AA09AA09AA09 /* InvoicePDFRenderer.swift in Sources */,
 				AA08AA08AA08AA08AA08AA08 /* InvoicePDFGenerator.swift in Sources */,

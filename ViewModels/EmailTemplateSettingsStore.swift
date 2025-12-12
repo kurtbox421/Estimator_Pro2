@@ -6,26 +6,61 @@ private enum EmailTemplateStorage {
 }
 
 struct EmailTemplateSettings: Codable {
-    var defaultEmailSubject: String
-    var defaultEmailBody: String
+    var defaultEmailMessage: String
 
     static let standard = EmailTemplateSettings(
-        defaultEmailSubject: "{{documentType}} {{invoiceNumber}}{{estimateNumber}} - {{jobName}}",
-        defaultEmailBody: """
-Hi {{clientName}},
+        defaultEmailMessage: """
+Hi,
 
-Attached is your {{documentType}} for {{jobName}}.
-Let me know if you have any questions.
+Attached is your estimate/invoice. Let me know if you have any questions.
 
-Thanks,
-{{companyName}}
+Thanks!
 """
     )
+
+    enum CodingKeys: String, CodingKey {
+        case defaultEmailMessage
+        case defaultEmailSubject
+        case defaultEmailBody
+    }
+
+    init(defaultEmailMessage: String) {
+        self.defaultEmailMessage = defaultEmailMessage
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        if let message = try container.decodeIfPresent(String.self, forKey: .defaultEmailMessage) {
+            defaultEmailMessage = message
+            return
+        }
+
+        let legacySubject = try container.decodeIfPresent(String.self, forKey: .defaultEmailSubject) ?? ""
+        let legacyBody = try container.decodeIfPresent(String.self, forKey: .defaultEmailBody) ?? ""
+
+        let subject = legacySubject.trimmingCharacters(in: .whitespacesAndNewlines)
+        let body = legacyBody.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if subject.isEmpty && body.isEmpty {
+            defaultEmailMessage = EmailTemplateSettings.standard.defaultEmailMessage
+        } else if subject.isEmpty {
+            defaultEmailMessage = body
+        } else if body.isEmpty {
+            defaultEmailMessage = subject
+        } else {
+            defaultEmailMessage = subject + "\n\n" + body
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(defaultEmailMessage, forKey: .defaultEmailMessage)
+    }
 }
 
 final class EmailTemplateSettingsStore: ObservableObject {
-    @Published var defaultEmailSubject: String
-    @Published var defaultEmailBody: String
+    @Published var defaultEmailMessage: String
 
     private let persistence: PersistenceService
     private var cancellables: Set<AnyCancellable> = []
@@ -34,11 +69,9 @@ final class EmailTemplateSettingsStore: ObservableObject {
         self.persistence = persistence
 
         if let stored: EmailTemplateSettings = persistence.load(EmailTemplateSettings.self, from: EmailTemplateStorage.fileName) {
-            defaultEmailSubject = stored.defaultEmailSubject
-            defaultEmailBody = stored.defaultEmailBody
+            defaultEmailMessage = stored.defaultEmailMessage
         } else {
-            defaultEmailSubject = EmailTemplateSettings.standard.defaultEmailSubject
-            defaultEmailBody = EmailTemplateSettings.standard.defaultEmailBody
+            defaultEmailMessage = EmailTemplateSettings.standard.defaultEmailMessage
         }
 
         bindPersistence()
@@ -50,17 +83,16 @@ final class EmailTemplateSettingsStore: ObservableObject {
     }
 
     private func bindPersistence() {
-        Publishers.CombineLatest($defaultEmailSubject, $defaultEmailBody)
+        $defaultEmailMessage
             .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
-            .sink { [weak self] subject, body in
-                let settings = EmailTemplateSettings(defaultEmailSubject: subject, defaultEmailBody: body)
+            .sink { [weak self] message in
+                let settings = EmailTemplateSettings(defaultEmailMessage: message)
                 self?.persistence.save(settings, to: EmailTemplateStorage.fileName)
             }
             .store(in: &cancellables)
     }
 
     private func apply(settings: EmailTemplateSettings) {
-        defaultEmailSubject = settings.defaultEmailSubject
-        defaultEmailBody = settings.defaultEmailBody
+        defaultEmailMessage = settings.defaultEmailMessage
     }
 }

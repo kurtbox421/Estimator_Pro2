@@ -1068,7 +1068,7 @@ struct SettingsTabView: View {
                 NavigationLink {
                     EmailTemplateSettingsView()
                 } label: {
-                    SettingRow(icon: "envelope.fill", title: "Email template")
+                    SettingRow(icon: "envelope.fill", title: "Email message")
                 }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
