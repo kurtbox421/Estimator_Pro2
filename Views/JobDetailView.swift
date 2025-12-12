@@ -532,16 +532,6 @@ private struct EstimateSummaryCard: View {
                         }
 
                         HStack(spacing: 8) {
-                            Label("Estimate", systemImage: "doc.text")
-                                .font(.caption.weight(.semibold))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(
-                                    Capsule()
-                                        .fill(Color.white.opacity(0.16))
-                                )
-                                .foregroundColor(.white)
-
                             Button(action: editLaborAction) {
                                 Label("Edit Labor", systemImage: "wrench.and.screwdriver")
                                     .font(.caption.weight(.semibold))
