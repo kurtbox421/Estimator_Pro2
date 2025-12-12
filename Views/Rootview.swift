@@ -108,50 +108,31 @@ struct RootView: View {
     // MARK: Header
 
     private var topBar: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                segmentedControl
+        let isCompact = horizontalSizeClass == .compact
 
-                Spacer(minLength: 12)
+        return Group {
+            if isCompact {
+                VStack(alignment: .leading, spacing: 10) {
+                    Picker("Tab", selection: $selectedTab) {
+                        ForEach(AppTab.allCases, id: \.self) { tab in
+                            Text(tab.rawValue).tag(tab)
+                        }
+                    }
+                    .pickerStyle(.segmented)
 
+                    HStack {
+                        Spacer()
+                        actionButtons
+                    }
+                    .padding(.top, 8)
+                }
+            } else {
                 HStack(spacing: 12) {
-                    if selectedTab != .settings {
-                        Button {
-                            switch selectedTab {
-                            case .estimates:
-                                showingNewEstimate = true
-                            case .invoices:
-                                showingNewInvoice = true
-                            case .clients:
-                                showingNewClient = true
-                            case .settings:
-                                break
-                            }
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: 18, weight: .semibold))
-                                .padding(10)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(Color.white.opacity(0.95))
-                                )
-                        }
-                    }
+                    segmentedControl
 
-                    if selectedTab == .estimates {
-                        Button {
-                            showingMaterialGenerator = true
-                        } label: {
-                            Image(systemName: "wand.and.stars")
-                                .font(.system(size: 18, weight: .semibold))
-                                .padding(10)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(Color.purple)
-                                )
-                                .foregroundColor(.white)
-                        }
-                    }
+                    Spacer(minLength: 12)
+
+                    actionButtons
                 }
             }
         }
@@ -162,6 +143,48 @@ struct RootView: View {
             segmentedButtons(isCompact: horizontalSizeClass == .compact)
                 .fixedSize(horizontal: true, vertical: false)
                 .padding(.horizontal, 2)
+        }
+    }
+
+    private var actionButtons: some View {
+        HStack(spacing: 12) {
+            if selectedTab != .settings {
+                Button {
+                    switch selectedTab {
+                    case .estimates:
+                        showingNewEstimate = true
+                    case .invoices:
+                        showingNewInvoice = true
+                    case .clients:
+                        showingNewClient = true
+                    case .settings:
+                        break
+                    }
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 18, weight: .semibold))
+                        .padding(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(Color.white.opacity(0.95))
+                        )
+                }
+            }
+
+            if selectedTab == .estimates {
+                Button {
+                    showingMaterialGenerator = true
+                } label: {
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 18, weight: .semibold))
+                        .padding(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(Color.purple)
+                        )
+                        .foregroundColor(.white)
+                }
+            }
         }
     }
 
