@@ -113,7 +113,7 @@ struct AddEditJobView: View {
                         Label("New client…", systemImage: "person.badge.plus")
                             .tag(ClientSelection.newClient)
                     }
-                    .onChange(of: clientSelection) { newSelection in
+                    .onChange(of: clientSelection) { _, newSelection in
                         switch newSelection {
                         case .unassigned:
                             selectedClientId = nil
@@ -143,14 +143,14 @@ struct AddEditJobView: View {
                     ForEach($materialDrafts) { $draft in
                         VStack(alignment: .leading, spacing: 4) {
                             TextField("Description", text: $draft.name)
-                                .onChange(of: draft.name) { _ in
+                                .onChange(of: draft.name) { _, _ in
                                     applyCommonMaterialPriceIfNeeded(for: draft.id)
                                 }
 
                             HStack {
                                 TextField("Qty", text: $draft.quantity)
                                     .keyboardType(.decimalPad)
-                                    .onChange(of: draft.quantity) { _ in
+                                    .onChange(of: draft.quantity) { _, _ in
                                         applyCommonMaterialPriceIfNeeded(for: draft.id)
                                     }
 
