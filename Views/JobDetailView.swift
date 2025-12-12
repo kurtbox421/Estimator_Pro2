@@ -15,6 +15,7 @@ struct JobDetailView: View {
     @EnvironmentObject private var estimateVM: EstimateViewModel
     @EnvironmentObject private var clientVM: ClientViewModel
     @EnvironmentObject private var companySettings: CompanySettingsStore
+    @EnvironmentObject private var emailTemplateSettings: EmailTemplateSettingsStore
 
     @Binding var estimate: Job
     @State private var createdInvoice: Invoice?
@@ -315,13 +316,31 @@ struct JobDetailView: View {
                 return
             }
 
+            let context = EmailTemplateContext(
+                clientName: client(for: estimate)?.name ?? "",
+                jobName: estimate.name,
+                documentType: "Estimate",
+                invoiceNumber: "",
+                estimateNumber: String(estimate.id.uuidString.prefix(8)),
+                total: estimate.total.currencyFormatted,
+                companyName: companySettings.companyName
+            )
+
+            let (subject, body) = renderEmailTemplate(
+                subject: emailTemplateSettings.defaultEmailSubject,
+                body: emailTemplateSettings.defaultEmailBody,
+                context: context
+            )
+
+            let message = composeShareMessage(subject: subject, body: body)
+
             let shareItem = PDFActivityItemSource(
                 url: shareURL,
-                title: "Estimate \(estimate.name)"
+                title: subject.isEmpty ? "Estimate \(estimate.name)" : subject
             )
 
             DispatchQueue.main.async {
-                shareItems = [shareItem]
+                shareItems = [message, shareItem]
                 isShowingShareSheet = true
             }
         } catch {
@@ -405,6 +424,12 @@ struct JobDetailView: View {
         else { return }
 
         UIApplication.shared.open(url)
+    }
+
+    private func composeShareMessage(subject: String, body: String) -> String {
+        if subject.isEmpty { return body }
+        if body.isEmpty { return subject }
+        return subject + "\n\n" + body
     }
 
     // MARK: - Labor editor sheet

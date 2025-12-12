@@ -1066,6 +1066,14 @@ struct SettingsTabView: View {
                 .listRowSeparator(.hidden)
 
                 NavigationLink {
+                    EmailTemplateSettingsView()
+                } label: {
+                    SettingRow(icon: "envelope.fill", title: "Email template")
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+
+                NavigationLink {
                     MaterialPricingSettingsView()
                 } label: {
                     SettingRow(icon: "dollarsign.circle.fill", title: "Material generator pricing")

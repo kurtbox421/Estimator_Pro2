@@ -7,6 +7,7 @@ struct InvoiceDetailView: View {
     @EnvironmentObject var clientVM: ClientViewModel
     @EnvironmentObject var invoiceVM: InvoiceViewModel
     @EnvironmentObject var companySettings: CompanySettingsStore
+    @EnvironmentObject var emailTemplateSettings: EmailTemplateSettingsStore
 
     // MARK: - Binding
 
@@ -214,13 +215,31 @@ struct InvoiceDetailView: View {
                 return
             }
 
+            let context = EmailTemplateContext(
+                clientName: client?.name ?? invoice.clientName,
+                jobName: invoice.title,
+                documentType: "Invoice",
+                invoiceNumber: invoice.invoiceNumber,
+                estimateNumber: "",
+                total: invoice.amount.currencyFormatted,
+                companyName: companySettings.companyName
+            )
+
+            let (subject, body) = renderEmailTemplate(
+                subject: emailTemplateSettings.defaultEmailSubject,
+                body: emailTemplateSettings.defaultEmailBody,
+                context: context
+            )
+
+            let message = composeShareMessage(subject: subject, body: body)
+
             let shareItem = PDFActivityItemSource(
                 url: shareURL,
-                title: "Invoice \(invoice.invoiceNumber)"
+                title: subject.isEmpty ? "Invoice \(invoice.invoiceNumber)" : subject
             )
 
             DispatchQueue.main.async {
-                shareItems = [shareItem]
+                shareItems = [message, shareItem]
                 isShowingShareSheet = true
             }
         } catch {
@@ -255,6 +274,12 @@ struct InvoiceDetailView: View {
         else { return }
 
         UIApplication.shared.open(url)
+    }
+
+    private func composeShareMessage(subject: String, body: String) -> String {
+        if subject.isEmpty { return body }
+        if body.isEmpty { return subject }
+        return subject + "\n\n" + body
     }
 
     private func assignClient(_ client: Client) {
