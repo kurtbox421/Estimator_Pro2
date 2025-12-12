@@ -28,69 +28,36 @@ struct MaterialPricingSettingsView: View {
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            VStack(spacing: 0) {
-                if !groupedMaterials.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Jump to section")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal)
-
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(groupedMaterials, id: \.group.id) { section in
-                                    Button {
-                                        withAnimation {
-                                            proxy.scrollTo(section.group.id, anchor: .top)
-                                        }
-                                    } label: {
-                                        Text(section.group.name)
-                                            .font(.footnote)
-                                            .padding(.vertical, 8)
-                                            .padding(.horizontal, 12)
-                                            .background(Color(.systemGray5))
-                                            .foregroundColor(.primary)
-                                            .clipShape(Capsule())
-                                    }
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
-                        .padding(.vertical, 8)
-                    }
+        VStack(spacing: 0) {
+            List {
+                Section {
+                    Text("Customize the unit prices used when materials are generated from the templates above. Your overrides will be saved and applied every time the generator is used.")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .listRowBackground(Color.clear)
                 }
 
-                List {
-                    Section {
-                        Text("Customize the unit prices used when materials are generated from the templates above. Your overrides will be saved and applied every time the generator is used.")
-                            .font(.footnote)
-                            .foregroundColor(.secondary)
-                            .listRowBackground(Color.clear)
-                    }
-
-                    ForEach(groupedMaterials, id: \.group.id) { group in
-                        Section(group.group.name) {
-                            ForEach(group.items, id: \.id) { material in
-                                MaterialPricingRow(
-                                    material: material,
-                                    price: priceBinding(for: material),
-                                    productURL: productURLBinding(for: material),
-                                    resetOverride: {
-                                        materialsStore.resetOverride(for: material.id)
-                                        overrideValues[material.id] = material.defaultUnitCost
-                                    },
-                                    onEdit: { startEditing(material) },
-                                    onDelete: {
-                                        deleteTarget = material
-                                        isShowingDeleteConfirm = true
-                                    },
-                                    store: materialsStore
-                                )
-                            }
+                ForEach(groupedMaterials, id: \.group.id) { group in
+                    Section(group.group.name) {
+                        ForEach(group.items, id: \.id) { material in
+                            MaterialPricingRow(
+                                material: material,
+                                price: priceBinding(for: material),
+                                productURL: productURLBinding(for: material),
+                                resetOverride: {
+                                    materialsStore.resetOverride(for: material.id)
+                                    overrideValues[material.id] = material.defaultUnitCost
+                                },
+                                onEdit: { startEditing(material) },
+                                onDelete: {
+                                    deleteTarget = material
+                                    isShowingDeleteConfirm = true
+                                },
+                                store: materialsStore
+                            )
                         }
-                        .id(group.group.id)
                     }
+                    .id(group.group.id)
                 }
             }
         }
