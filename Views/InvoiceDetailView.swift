@@ -215,31 +215,13 @@ struct InvoiceDetailView: View {
                 return
             }
 
-            let context = EmailTemplateContext(
-                clientName: client?.name ?? invoice.clientName,
-                jobName: invoice.title,
-                documentType: "Invoice",
-                invoiceNumber: invoice.invoiceNumber,
-                estimateNumber: "",
-                total: invoice.amount.currencyFormatted,
-                companyName: companySettings.companyName
-            )
-
-            let (subject, body) = renderEmailTemplate(
-                subject: emailTemplateSettings.defaultEmailSubject,
-                body: emailTemplateSettings.defaultEmailBody,
-                context: context
-            )
-
-            let message = composeShareMessage(subject: subject, body: body)
-
             let shareItem = PDFActivityItemSource(
                 url: shareURL,
-                title: subject.isEmpty ? "Invoice \(invoice.invoiceNumber)" : subject
+                title: "Invoice \(invoice.invoiceNumber)"
             )
 
             DispatchQueue.main.async {
-                shareItems = [message, shareItem]
+                shareItems = [emailMessageToShare(), shareItem]
                 isShowingShareSheet = true
             }
         } catch {
@@ -276,10 +258,17 @@ struct InvoiceDetailView: View {
         UIApplication.shared.open(url)
     }
 
-    private func composeShareMessage(subject: String, body: String) -> String {
-        if subject.isEmpty { return body }
-        if body.isEmpty { return subject }
-        return subject + "\n\n" + body
+    private func emailMessageToShare() -> String {
+        let normalized = emailTemplateSettings.defaultEmailMessage
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if normalized.isEmpty {
+            return "Attached is your document."
+        }
+
+        return normalized
     }
 
     private func assignClient(_ client: Client) {

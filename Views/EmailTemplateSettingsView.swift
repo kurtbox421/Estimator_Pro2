@@ -3,36 +3,27 @@ import SwiftUI
 struct EmailTemplateSettingsView: View {
     @EnvironmentObject private var emailTemplateSettings: EmailTemplateSettingsStore
 
-    private let placeholderTokens: [String] = [
-        "{{clientName}}",
-        "{{jobName}}",
-        "{{documentType}} (Invoice/Estimate)",
-        "{{invoiceNumber}}",
-        "{{estimateNumber}}",
-        "{{total}}",
-        "{{companyName}}"
-    ]
-
     var body: some View {
         List {
-            Section("Subject") {
-                TextField("Email subject", text: $emailTemplateSettings.defaultEmailSubject)
-            }
+            Section {
+                VStack(alignment: .leading, spacing: 12) {
+                    TextEditor(text: $emailTemplateSettings.defaultEmailMessage)
+                        .frame(minHeight: 180)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.secondary.opacity(0.2))
+                        )
 
-            Section("Message body") {
-                TextEditor(text: $emailTemplateSettings.defaultEmailBody)
-                    .frame(minHeight: 180)
-            }
-
-            Section("Available placeholders") {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(placeholderTokens, id: \.self) { token in
-                        Text(token)
-                            .font(.subheadline)
+                    HStack {
+                        Spacer()
+                        Text("\(emailTemplateSettings.defaultEmailMessage.count) characters")
+                            .font(.footnote)
                             .foregroundColor(.secondary)
                     }
                 }
                 .padding(.vertical, 6)
+            } header: {
+                Text("Email message")
             }
 
             Section {
@@ -48,6 +39,6 @@ struct EmailTemplateSettingsView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .navigationTitle("Email Template")
+        .navigationTitle("Email Message")
     }
 }
