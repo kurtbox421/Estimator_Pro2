@@ -398,6 +398,8 @@ private struct InvoiceDocumentCard: View {
     let editAction: () -> Void
     let statusAction: () -> Void
 
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     var body: some View {
         RoundedCard {
             VStack(alignment: .leading, spacing: 12) {
@@ -413,29 +415,56 @@ private struct InvoiceDocumentCard: View {
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.8))
 
-                HStack(spacing: 12) {
-                    Button(action: previewAction) {
-                        Label("Preview Invoice", systemImage: "doc.text.magnifyingglass")
-                    }
-                    .buttonStyle(PrimaryBlueButton())
+                if horizontalSizeClass == .compact {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
+                        Button(action: previewAction) {
+                            Label("Preview Invoice", systemImage: "doc.text.magnifyingglass")
+                        }
+                        .buttonStyle(PrimaryBlueButton())
 
-                    Button(action: shareAction) {
-                        Label("Share / Email PDF", systemImage: "square.and.arrow.up")
-                    }
-                    .buttonStyle(PrimaryBlueButton())
+                        Button(action: shareAction) {
+                            Label("Share / Email PDF", systemImage: "square.and.arrow.up")
+                        }
+                        .buttonStyle(PrimaryBlueButton())
 
-                    Button(action: editAction) {
-                        Label("Edit Invoice", systemImage: "square.and.pencil")
-                    }
-                    .buttonStyle(PrimaryBlueButton())
+                        Button(action: editAction) {
+                            Label("Edit Invoice", systemImage: "square.and.pencil")
+                        }
+                        .buttonStyle(PrimaryBlueButton())
 
-                    Button(action: statusAction) {
-                        Label(
-                            invoice.status == .sent ? "Mark as Draft" : "Mark as Sent",
-                            systemImage: invoice.status == .sent ? "arrow.uturn.backward" : "paperplane.fill"
-                        )
+                        Button(action: statusAction) {
+                            Label(
+                                invoice.status == .sent ? "Mark as Draft" : "Mark as Sent",
+                                systemImage: invoice.status == .sent ? "arrow.uturn.backward" : "paperplane.fill"
+                            )
+                        }
+                        .buttonStyle(PrimaryBlueButton())
                     }
-                    .buttonStyle(PrimaryBlueButton())
+                } else {
+                    HStack(spacing: 12) {
+                        Button(action: previewAction) {
+                            Label("Preview Invoice", systemImage: "doc.text.magnifyingglass")
+                        }
+                        .buttonStyle(PrimaryBlueButton())
+
+                        Button(action: shareAction) {
+                            Label("Share / Email PDF", systemImage: "square.and.arrow.up")
+                        }
+                        .buttonStyle(PrimaryBlueButton())
+
+                        Button(action: editAction) {
+                            Label("Edit Invoice", systemImage: "square.and.pencil")
+                        }
+                        .buttonStyle(PrimaryBlueButton())
+
+                        Button(action: statusAction) {
+                            Label(
+                                invoice.status == .sent ? "Mark as Draft" : "Mark as Sent",
+                                systemImage: invoice.status == .sent ? "arrow.uturn.backward" : "paperplane.fill"
+                            )
+                        }
+                        .buttonStyle(PrimaryBlueButton())
+                    }
                 }
             }
         }
