@@ -177,8 +177,22 @@ struct MaterialsRecommender {
     private func coverageNote(for material: MaterialItem) -> String? {
         guard let coverageQuantity = material.coverageQuantity,
               let coverageUnit = material.coverageUnit else { return nil }
+        let wasteText: String
+        if material.wasteFactor > 0 {
+            let percent = Int(material.wasteFactor * 100)
+            wasteText = "Includes \(percent)% waste · "
+        } else {
+            wasteText = ""
+        }
 
-        return "~\(Int(coverageQuantity)) \(coverageUnit) per \(material.unit)"
+        return "\(wasteText)\(formattedCoverage(coverageQuantity)) \(coverageUnit) per \(material.unit)"
+    }
+
+    private func formattedCoverage(_ value: Double) -> String {
+        if value.rounded(.down) == value {
+            return String(Int(value))
+        }
+        return String(format: "%.2f", value)
     }
 
     private func legacyRecommendations(for context: JobContext) -> [MaterialRecommendation] {

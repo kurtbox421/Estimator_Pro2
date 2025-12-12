@@ -107,6 +107,8 @@
       "category": "flooring",
       "unit": "roll",
       "defaultUnitCost": 45.00,
+      "coverageQuantity": 100,
+      "coverageUnit": "sq ft",
       "wasteFactor": 0.1,
       "quantityRuleKey": "roll_coverage_100sqft"
     },

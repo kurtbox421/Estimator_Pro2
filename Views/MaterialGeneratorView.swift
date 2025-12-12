@@ -178,6 +178,8 @@ struct MaterialGeneratorView: View {
                 selectedGroupID = orderedGroups.first?.id
             }
         }
+        .onChange(of: lengthText) { _, _ in regenerateAfterDimensionChange() }
+        .onChange(of: secondaryText) { _, _ in regenerateAfterDimensionChange() }
     }
 
     private var smartSuggestionsSection: some View {
@@ -330,6 +332,14 @@ struct MaterialGeneratorView: View {
         debugGuardForGroupConsistency(recommendations, selectedGroup: group)
         generated = recommendations.map(materialFromRecommendation)
         selectedMaterialName = recommendations.first?.name
+    }
+
+    private func regenerateAfterDimensionChange() {
+        guard !suggestedMaterials.isEmpty || !generated.isEmpty else {
+            validationMessage = nil
+            return
+        }
+        generateMaterials()
     }
 
     private func materialFromRecommendation(_ rec: MaterialRecommendation) -> Material {
