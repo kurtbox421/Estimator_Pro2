@@ -734,6 +734,8 @@ struct ClientDetailView: View {
                     phoneAction: callClient,
                     emailAction: emailClient
                 )
+
+                projectsSection
             }
             .padding(.horizontal, 24)
             .padding(.top, 24)
@@ -807,16 +809,152 @@ struct ClientDetailView: View {
         showingEditSheet = false
     }
 
-    private var assignedJobs: [Job] {
-        jobVM.jobs.filter { $0.clientId == client.id }
+    private var clientJobs: [Job] {
+        jobVM.jobs
+            .filter { $0.clientId == client.id }
+            .sorted { $0.dateCreated > $1.dateCreated }
     }
 
-    private var assignedInvoices: [Invoice] {
-        invoiceVM.invoices.filter { $0.clientID == client.id }
+    private var clientInvoices: [Invoice] {
+        invoiceVM.invoices
+            .filter { $0.clientID == client.id }
+            .sorted { lhs, rhs in
+                switch (lhs.dueDate, rhs.dueDate) {
+                case let (.some(lhsDate), .some(rhsDate)) where lhsDate != rhsDate:
+                    return lhsDate > rhsDate
+                case (.some, .none):
+                    return true
+                case (.none, .some):
+                    return false
+                default:
+                    return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
+                }
+            }
     }
 
     private var projectCount: Int {
-        assignedJobs.count + assignedInvoices.count
+        clientJobs.count + clientInvoices.count
+    }
+
+    @ViewBuilder
+    private var projectsSection: some View {
+        RoundedCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Label("Projects", systemImage: "briefcase.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.white)
+
+                    Spacer()
+
+                    Text(Client.jobSummary(for: projectCount))
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.white.opacity(0.85))
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 10)
+                        .background(Color.white.opacity(0.08))
+                        .clipShape(Capsule())
+                }
+
+                if clientJobs.isEmpty && clientInvoices.isEmpty {
+                    Text("No projects assigned yet")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.7))
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(clientJobs) { job in
+                            NavigationLink {
+                                JobDetailView(job: job)
+                            } label: {
+                                ProjectRow(
+                                    title: job.name,
+                                    subtitle: job.category,
+                                    amount: job.total,
+                                    date: job.dateCreated,
+                                    badge: "Estimate"
+                                )
+                            }
+                            .buttonStyle(.plain)
+
+                            if !(job.id == clientJobs.last?.id && clientInvoices.isEmpty) {
+                                Divider().overlay(Color.white.opacity(0.12))
+                            }
+                        }
+
+                        ForEach(clientInvoices) { invoice in
+                            if let invoiceBinding = binding(forInvoice: invoice.id) {
+                                NavigationLink {
+                                    InvoiceDetailView(invoice: invoiceBinding)
+                                } label: {
+                                    ProjectRow(
+                                        title: invoice.title,
+                                        subtitle: invoice.invoiceNumber,
+                                        amount: invoice.amount,
+                                        date: invoice.dueDate,
+                                        badge: "Invoice"
+                                    )
+                                }
+                                .buttonStyle(.plain)
+
+                                if invoice.id != clientInvoices.last?.id {
+                                    Divider().overlay(Color.white.opacity(0.12))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func binding(forInvoice id: UUID) -> Binding<Invoice>? {
+        guard let index = invoiceVM.invoices.firstIndex(where: { $0.id == id }) else { return nil }
+        return $invoiceVM.invoices[index]
+    }
+}
+
+private struct ProjectRow: View {
+    let title: String
+    let subtitle: String
+    let amount: Double
+    let date: Date?
+    let badge: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.white)
+
+                    Text(badge)
+                        .font(.caption2.weight(.semibold))
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 8)
+                        .foregroundColor(.white)
+                        .background(Color.white.opacity(0.12))
+                        .clipShape(Capsule())
+                }
+
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.75))
+
+                if let date {
+                    Text(date, style: .date)
+                        .font(.caption2)
+                        .foregroundColor(.white.opacity(0.6))
+                }
+            }
+
+            Spacer()
+
+            Text("$\(amount, specifier: "%.2f")")
+                .font(.subheadline.weight(.bold))
+                .foregroundColor(.orange)
+        }
+        .padding(.vertical, 10)
     }
 }
 
