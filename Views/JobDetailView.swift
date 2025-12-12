@@ -584,6 +584,16 @@ struct EstimateCustomerCard: View {
     let assignAction: () -> Void
     let changeAction: (() -> Void)?
 
+    init(
+        client: Client?,
+        assignAction: @escaping () -> Void = {},
+        changeAction: (() -> Void)? = nil
+    ) {
+        self.client = client
+        self.assignAction = assignAction
+        self.changeAction = changeAction
+    }
+
     var body: some View {
         RoundedCard {
             VStack(alignment: .leading, spacing: 12) {
