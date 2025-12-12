@@ -301,6 +301,13 @@ struct MaterialGeneratorView: View {
             return
         }
 
+        guard !materialsStore.items(inGroupID: group.id).isEmpty else {
+            validationMessage = "Add materials in Material Pricing to create job types."
+            generated = []
+            suggestedMaterials = []
+            return
+        }
+
         validationMessage = nil
 
         let context = JobContext(
@@ -318,8 +325,9 @@ struct MaterialGeneratorView: View {
         )
 
         let recommendations = MaterialsRecommender(catalog: materialsStore)
-            .recommendMaterials(for: context)
+            .recommendMaterials(for: group, context: context)
         suggestedMaterials = recommendations
+        debugGuardForGroupConsistency(recommendations, selectedGroup: group)
         generated = recommendations.map(materialFromRecommendation)
         selectedMaterialName = recommendations.first?.name
     }
@@ -351,6 +359,7 @@ struct MaterialGeneratorView: View {
             unit: unit,
             category: "Smart suggestion",
             notes: note,
+            sourceGroupID: selectedGroup?.id ?? "",
             estimatedUnitCost: stats.averageUnitCost.map { safeNumber($0) }
         )
     }
@@ -368,5 +377,16 @@ struct MaterialGeneratorView: View {
     private func addSuggestedMaterials(to job: Job) {
         let materials = makeEstimateMaterials(from: suggestedMaterials)
         jobVM.appendMaterials(materials, to: job.id)
+    }
+
+    private func debugGuardForGroupConsistency(_ recommendations: [MaterialRecommendation], selectedGroup: MaterialGroup) {
+        let invalid = recommendations.filter { $0.sourceGroupID != selectedGroup.id }
+        if !invalid.isEmpty {
+            print("❌ Generator leakage: selectedGroup=\(selectedGroup.name) (\(selectedGroup.id))")
+            invalid.forEach { item in
+                print("  - \(item.name) sourceGroupID=\(item.sourceGroupID)")
+            }
+            assertionFailure("Suggested materials include items not in selected group")
+        }
     }
 }
