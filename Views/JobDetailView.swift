@@ -603,6 +603,8 @@ private struct EstimateDocumentCard: View {
     let editAction: () -> Void
     let convertAction: () -> Void
 
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
     var body: some View {
         RoundedCard {
             VStack(alignment: .leading, spacing: 12) {
@@ -618,29 +620,56 @@ private struct EstimateDocumentCard: View {
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.8))
 
-                HStack(spacing: 12) {
-                    Button(action: previewAction) {
-                        Label("Preview Estimate", systemImage: "doc.text.magnifyingglass")
-                    }
-                    .buttonStyle(PrimaryBlueButton())
-                    .disabled(estimate == nil)
+                if horizontalSizeClass == .compact {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
+                        Button(action: previewAction) {
+                            Label("Preview Estimate", systemImage: "doc.text.magnifyingglass")
+                        }
+                        .buttonStyle(PrimaryBlueButton())
+                        .disabled(estimate == nil)
 
-                    Button(action: shareAction) {
-                        Label("Share / Email PDF", systemImage: "square.and.arrow.up")
-                    }
-                    .buttonStyle(PrimaryBlueButton())
-                    .disabled(estimate == nil)
+                        Button(action: shareAction) {
+                            Label("Share / Email PDF", systemImage: "square.and.arrow.up")
+                        }
+                        .buttonStyle(PrimaryBlueButton())
+                        .disabled(estimate == nil)
 
-                    Button(action: editAction) {
-                        Label("Edit Estimate", systemImage: "square.and.pencil")
-                    }
-                    .buttonStyle(PrimaryBlueButton())
-                    .disabled(estimate == nil)
+                        Button(action: editAction) {
+                            Label("Edit Estimate", systemImage: "square.and.pencil")
+                        }
+                        .buttonStyle(PrimaryBlueButton())
+                        .disabled(estimate == nil)
 
-                    Button(action: convertAction) {
-                        Label("Convert to Invoice", systemImage: "doc.richtext")
+                        Button(action: convertAction) {
+                            Label("Convert to Invoice", systemImage: "doc.richtext")
+                        }
+                        .buttonStyle(PrimaryBlueButton())
                     }
-                    .buttonStyle(PrimaryBlueButton())
+                } else {
+                    HStack(spacing: 12) {
+                        Button(action: previewAction) {
+                            Label("Preview Estimate", systemImage: "doc.text.magnifyingglass")
+                        }
+                        .buttonStyle(PrimaryBlueButton())
+                        .disabled(estimate == nil)
+
+                        Button(action: shareAction) {
+                            Label("Share / Email PDF", systemImage: "square.and.arrow.up")
+                        }
+                        .buttonStyle(PrimaryBlueButton())
+                        .disabled(estimate == nil)
+
+                        Button(action: editAction) {
+                            Label("Edit Estimate", systemImage: "square.and.pencil")
+                        }
+                        .buttonStyle(PrimaryBlueButton())
+                        .disabled(estimate == nil)
+
+                        Button(action: convertAction) {
+                            Label("Convert to Invoice", systemImage: "doc.richtext")
+                        }
+                        .buttonStyle(PrimaryBlueButton())
+                    }
                 }
             }
         }
