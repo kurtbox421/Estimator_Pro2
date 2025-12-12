@@ -138,6 +138,13 @@ struct MaterialsRecommender {
             let quantity = quantityEngine.quantity(for: material, context: quantityContext)
             guard quantity > 0 else { return nil }
 
+            if let debug = quantityEngine.debugCoverageComputation(for: material, context: quantityContext) {
+                print("🧮 Material: \(material.name)")
+                print("    requirementSqFt: \(quantityContext.roomFloorAreaSqFt ?? 0) · requirementLf: \(quantityContext.roomPerimeterFt ?? 0)")
+                print("    coverage: \(debug.coverageQuantity) \(debug.coverageUnit) · waste: \(debug.wasteFactor)")
+                print("    computed quantity: \(debug.computed)")
+            }
+
             return MaterialRecommendation(
                 name: material.name,
                 quantity: quantity,

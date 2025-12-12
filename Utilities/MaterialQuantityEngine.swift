@@ -75,10 +75,7 @@ enum QuantityRuleKey: String {
 struct MaterialQuantityEngine {
 
     func quantity(for material: MaterialItem, context: QuantityContext) -> Double {
-        guard let key = QuantityRuleKey(from: material.quantityRuleKey) else {
-            // If no rule, default to 1 so it at least shows up.
-            return 1
-        }
+        let key = QuantityRuleKey(from: material.quantityRuleKey)
 
         if let coverageQuantity = material.coverageQuantity,
            coverageQuantity > 0,
@@ -93,12 +90,43 @@ struct MaterialQuantityEngine {
             return roundedQuantity(computed, unit: material.unit)
         }
 
+        guard let key else {
+            // If no rule, default to 1 so it at least shows up.
+            return 1
+        }
+
         let base = computeBaseQuantity(for: key, context: context)
         // Apply waste factor from material definition
         let withWaste = base * (1.0 + material.wasteFactor)
         let converted = applyCoverageConversion(withWaste, material: material)
         // Round to sensible units depending on the material
         return roundedQuantity(converted, unit: material.unit)
+    }
+
+    func debugCoverageComputation(
+        for material: MaterialItem,
+        context: QuantityContext
+    ) -> (requirement: Double, coverageUnit: String, coverageQuantity: Double, wasteFactor: Double, computed: Double)? {
+        let key = QuantityRuleKey(from: material.quantityRuleKey)
+
+        guard let coverageQuantity = material.coverageQuantity,
+              coverageQuantity > 0,
+              let coverageUnit = normalizedUnit(material.coverageUnit),
+              let requirement = coverageRequirement(for: key, context: context, coverageUnit: coverageUnit) else { return nil }
+
+        let computed = computeQuantity(
+            requirement: requirement,
+            coverageQuantity: coverageQuantity,
+            wasteFactor: material.wasteFactor
+        )
+
+        return (
+            requirement: requirement,
+            coverageUnit: coverageUnit,
+            coverageQuantity: coverageQuantity,
+            wasteFactor: material.wasteFactor,
+            computed: roundedQuantity(computed, unit: material.unit)
+        )
     }
 
     private func computeBaseQuantity(for key: QuantityRuleKey, context: QuantityContext) -> Double {
@@ -258,7 +286,36 @@ struct MaterialQuantityEngine {
     }
 
     private func coverageRequirement(
-        for key: QuantityRuleKey,
+        for key: QuantityRuleKey?,
+        context: QuantityContext,
+        coverageUnit: String
+    ) -> Double? {
+        if let key,
+           let requirement = coverageRequirement(forKey: key, context: context, coverageUnit: coverageUnit) {
+            return requirement
+        }
+
+        switch coverageUnit {
+        case "sqft":
+            return context.roomFloorAreaSqFt
+                ?? context.tileAreaSqFt
+                ?? context.deckAreaSqFt
+                ?? context.wallLengthFt.flatMap { length in
+                    context.wallHeightFt.map { $0 * length }
+                }
+        case "lf":
+            return context.roomPerimeterFt
+                ?? context.deckLengthFt
+                ?? context.wallLengthFt
+        case "each":
+            return context.openingCount.map { Double($0) } ?? 1
+        default:
+            return nil
+        }
+    }
+
+    private func coverageRequirement(
+        forKey key: QuantityRuleKey,
         context: QuantityContext,
         coverageUnit: String
     ) -> Double? {
