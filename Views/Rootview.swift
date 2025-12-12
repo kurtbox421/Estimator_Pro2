@@ -529,6 +529,7 @@ struct InvoicesTabView: View {
 struct ClientsTabView: View {
     @EnvironmentObject private var clientVM: ClientViewModel
     @EnvironmentObject private var jobVM: JobViewModel
+    @EnvironmentObject private var invoiceVM: InvoiceViewModel
     private let rowInsets = EdgeInsets(top: 0, leading: 24, bottom: 12, trailing: 24)
 
     var body: some View {
@@ -536,7 +537,7 @@ struct ClientsTabView: View {
             // one row per client
             ForEach(clientVM.clients.indices, id: \.self) { index in
                 let client = clientVM.clients[index]
-                let jobCount = jobVM.jobCount(for: client)
+                let jobCount = projectCount(for: client)
 
                 NavigationLink {
                     ClientDetailView(client: $clientVM.clients[index])
@@ -570,6 +571,13 @@ struct ClientsTabView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+    }
+
+    private func projectCount(for client: Client) -> Int {
+        let jobsForClient = jobVM.jobs.filter { $0.clientId == client.id }
+        let invoicesForClient = invoiceVM.invoices.filter { $0.clientID == client.id }
+
+        return jobsForClient.count + invoicesForClient.count
     }
 }
 
@@ -708,19 +716,18 @@ private struct ClientRowCard: View {
 struct ClientDetailView: View {
     @Binding var client: Client
     @EnvironmentObject private var jobVM: JobViewModel
+    @EnvironmentObject private var invoiceVM: InvoiceViewModel
     @Environment(\.openURL) private var openURL
 
     @State private var showingEditSheet = false
     @State private var draftClient: Client = .init()
 
     var body: some View {
-        let jobCount = jobVM.jobCount(for: client)
-
         ScrollView {
             VStack(spacing: 16) {
                 ClientEditableCard(
                     client: $client,
-                    jobCount: jobCount,
+                    jobCount: projectCount,
                     isEditing: false,
                     onEdit: openEditSheet,
                     addressAction: openMaps,
@@ -748,7 +755,7 @@ struct ClientDetailView: View {
             NavigationStack {
                 ScrollView {
                     VStack(spacing: 16) {
-                        ClientEditableCard(client: $draftClient, jobCount: jobCount)
+                        ClientEditableCard(client: $draftClient, jobCount: projectCount)
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 24)
@@ -798,6 +805,18 @@ struct ClientDetailView: View {
     private func saveEdits() {
         client = draftClient
         showingEditSheet = false
+    }
+
+    private var assignedJobs: [Job] {
+        jobVM.jobs.filter { $0.clientId == client.id }
+    }
+
+    private var assignedInvoices: [Invoice] {
+        invoiceVM.invoices.filter { $0.clientID == client.id }
+    }
+
+    private var projectCount: Int {
+        assignedJobs.count + assignedInvoices.count
     }
 }
 
