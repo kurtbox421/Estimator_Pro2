@@ -61,14 +61,22 @@ struct InvoicePDFRenderer {
         let format = UIGraphicsPDFRendererFormat()
         let renderer = UIGraphicsPDFRenderer(bounds: pageRect, format: format)
 
+        let companyLogo = CompanyLogoLoader.loadLogo()
+
         let data = renderer.pdfData { context in
             context.beginPage()
 
-            var y: CGFloat = 40
+            let padding: CGFloat = 24
+            let logoRect = drawLogo(companyLogo,
+                                    in: context.cgContext,
+                                    pageRect: pageRect,
+                                    padding: padding)
+
+            var y: CGFloat = padding
 
             func draw(_ text: String,
                       font: UIFont,
-                      x: CGFloat = 40) {
+                      x: CGFloat = padding) {
                 let attributes: [NSAttributedString.Key: Any] = [
                     .font: font,
                     .foregroundColor: UIColor.black
@@ -101,15 +109,15 @@ struct InvoicePDFRenderer {
 
                 let startY = y
 
-                item.description.draw(at: CGPoint(x: 40, y: y), withAttributes: descriptionAttributes)
+                item.description.draw(at: CGPoint(x: padding, y: y), withAttributes: descriptionAttributes)
 
                 var nextY = y + descriptionSize.height + 4
 
                 if let url = item.productURL {
                     let linkString = url.absoluteString
                     let attributed = NSAttributedString(string: linkString, attributes: linkAttributes)
-                    let maxWidth = pageRect.width - 200
-                    let linkRect = CGRect(x: 40, y: nextY, width: maxWidth, height: attributed.size().height)
+                    let maxWidth = pageRect.width - (padding * 2) - 160
+                    let linkRect = CGRect(x: padding, y: nextY, width: maxWidth, height: attributed.size().height)
                     attributed.draw(in: linkRect)
                     nextY += attributed.size().height + 4
                 }
@@ -132,6 +140,10 @@ struct InvoicePDFRenderer {
                 draw("Email: \(company.companyEmail)", font: .systemFont(ofSize: 12))
             }
             y += 10
+
+            if let logoRect {
+                y = max(y, logoRect.maxY + 12)
+            }
 
             // Invoice header
             draw(title.uppercased(), font: .boldSystemFont(ofSize: 26))
@@ -159,8 +171,8 @@ struct InvoicePDFRenderer {
                  x: pageRect.width - 160)
 
             y += 4
-            context.cgContext.move(to: CGPoint(x: 40, y: y))
-            context.cgContext.addLine(to: CGPoint(x: pageRect.width - 40, y: y))
+            context.cgContext.move(to: CGPoint(x: padding, y: y))
+            context.cgContext.addLine(to: CGPoint(x: pageRect.width - padding, y: y))
             context.cgContext.strokePath()
             y += 10
 
@@ -170,8 +182,8 @@ struct InvoicePDFRenderer {
             }
 
             y += 16
-            context.cgContext.move(to: CGPoint(x: 40, y: y))
-            context.cgContext.addLine(to: CGPoint(x: pageRect.width - 40, y: y))
+            context.cgContext.move(to: CGPoint(x: padding, y: y))
+            context.cgContext.addLine(to: CGPoint(x: pageRect.width - padding, y: y))
             context.cgContext.strokePath()
             y += 10
 
@@ -201,4 +213,97 @@ struct InvoicePDFRenderer {
 
         return items
     }
+}
+
+// MARK: - Company logo support
+
+private enum CompanyLogoLoader {
+    private static let logoKey = "brandingLogoData"
+
+    static func loadLogo() -> UIImage? {
+        if let data = UserDefaults.standard.data(forKey: logoKey),
+           let image = UIImage(data: data) {
+            return image
+        }
+
+        if let storedURL = UserDefaults.standard.url(forKey: logoKey),
+           let resolved = resolvePersistentURL(from: storedURL),
+           let data = try? Data(contentsOf: resolved),
+           let image = UIImage(data: data) {
+            return image
+        }
+
+        if let storedPath = UserDefaults.standard.string(forKey: logoKey),
+           let url = URL(string: storedPath),
+           let resolved = resolvePersistentURL(from: url),
+           let data = try? Data(contentsOf: resolved),
+           let image = UIImage(data: data) {
+            return image
+        }
+
+        return nil
+    }
+
+    private static func resolvePersistentURL(from url: URL) -> URL? {
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+
+        if url.path.contains("/tmp/") {
+            let candidates: [URL?] = [
+                FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first,
+                FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ]
+
+            for base in candidates.compactMap({ $0 }) {
+                let candidate = base.appendingPathComponent(url.lastPathComponent)
+                if FileManager.default.fileExists(atPath: candidate.path) {
+                    return candidate
+                }
+            }
+        }
+
+        return url
+    }
+}
+
+// MARK: - Drawing helpers
+
+private func drawLogo(_ logo: UIImage?,
+                     in context: CGContext,
+                     pageRect: CGRect,
+                     padding: CGFloat) -> CGRect? {
+    guard let logo else { return nil }
+
+    let maxSize = CGSize(width: 140, height: 60)
+    let boundingOrigin = CGPoint(
+        x: pageRect.width - padding - maxSize.width,
+        y: padding
+    )
+
+    let logoRect = aspectFitRect(for: logo.size,
+                                 boundingSize: maxSize,
+                                 origin: boundingOrigin)
+
+    context.saveGState()
+    logo.draw(in: logoRect)
+    context.restoreGState()
+
+    return logoRect
+}
+
+private func aspectFitRect(for imageSize: CGSize,
+                           boundingSize: CGSize,
+                           origin: CGPoint) -> CGRect {
+    guard imageSize.width > 0, imageSize.height > 0 else {
+        return CGRect(origin: origin, size: .zero)
+    }
+
+    let widthRatio = boundingSize.width / imageSize.width
+    let heightRatio = boundingSize.height / imageSize.height
+    let scale = min(widthRatio, heightRatio)
+
+    let fittedSize = CGSize(width: imageSize.width * scale,
+                            height: imageSize.height * scale)
+
+    return CGRect(origin: origin,
+                  size: fittedSize)
 }
