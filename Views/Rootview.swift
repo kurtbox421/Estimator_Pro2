@@ -158,7 +158,11 @@ struct RootView: View {
     }
 
     private var segmentedControl: some View {
-        segmentedButtons(isCompact: horizontalSizeClass == .compact)
+        ScrollView(.horizontal, showsIndicators: false) {
+            segmentedButtons(isCompact: horizontalSizeClass == .compact)
+                .fixedSize(horizontal: true, vertical: false)
+                .padding(.horizontal, 2)
+        }
     }
 
     private func segmentedButtons(isCompact: Bool) -> some View {
@@ -220,7 +224,7 @@ struct RootView: View {
             return Text(tab.rawValue)
                 .font(.subheadline.weight(.semibold))
                 .lineLimit(1)
-                .minimumScaleFactor(0.9)
+                .minimumScaleFactor(1)
                 .padding(.vertical, verticalPadding)
                 .padding(.horizontal, horizontalPadding)
                 .background(Capsule().fill(backgroundColor))
