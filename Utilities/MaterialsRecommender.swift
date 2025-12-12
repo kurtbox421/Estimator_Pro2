@@ -85,8 +85,26 @@ struct MaterialRecommendation: Identifiable {
     let unit: String            // "gallon", "sheet", "sq ft", "lf", etc.
     let category: String        // "Paint", "Drywall", "Flooring", "Prep", etc.
     let notes: String?
-    let sourceGroupID: String = ""
-    var estimatedUnitCost: Double? = nil
+    let sourceGroupID: String
+    var estimatedUnitCost: Double?
+
+    init(
+        name: String,
+        quantity: Double,
+        unit: String,
+        category: String,
+        notes: String?,
+        sourceGroupID: String = "",
+        estimatedUnitCost: Double? = nil
+    ) {
+        self.name = name
+        self.quantity = quantity
+        self.unit = unit
+        self.category = category
+        self.notes = notes
+        self.sourceGroupID = sourceGroupID
+        self.estimatedUnitCost = estimatedUnitCost
+    }
 }
 
 private struct ResolvedGeneratorMaterial {
