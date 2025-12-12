@@ -12,6 +12,8 @@ struct InvoiceDetailView: View {
 
     @Binding var invoice: Invoice
     @State private var isPresentingInvoiceEditor = false
+    @State private var isShowingClientPicker = false
+    @State private var clientSearchText = ""
 
     // MARK: - Derived data
 
@@ -34,7 +36,11 @@ struct InvoiceDetailView: View {
                 statusAction: markInvoiceAsSent
             ),
             customer: {
-                EstimateCustomerCard(client: client)
+                EstimateCustomerCard(
+                    client: client,
+                    assignAction: { isShowingClientPicker = true },
+                    changeAction: client != nil ? { isShowingClientPicker = true } : nil
+                )
             },
             quickActions: {
                 EstimateQuickActionsCard(
@@ -112,6 +118,40 @@ struct InvoiceDetailView: View {
         } message: {
             Text(invoiceVM.previewError ?? "Unknown error")
         }
+        .sheet(isPresented: $isShowingClientPicker) {
+            NavigationView {
+                List {
+                    ForEach(filteredClients) { client in
+                        Button {
+                            assignClient(client)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(client.name.isEmpty ? client.company : client.name)
+                                    .font(.headline)
+                                if !client.company.isEmpty, !client.name.isEmpty {
+                                    Text(client.company)
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                                if !client.email.isEmpty {
+                                    Text(client.email)
+                                        .font(.footnote)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                }
+                .searchable(text: $clientSearchText)
+                .navigationTitle("Assign Client")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { isShowingClientPicker = false }
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Actions
@@ -154,6 +194,30 @@ struct InvoiceDetailView: View {
         else { return }
 
         UIApplication.shared.open(url)
+    }
+
+    private func assignClient(_ client: Client) {
+        invoice.clientID = client.id
+        invoice.clientName = resolvedClientName(from: client)
+        invoiceVM.update(invoice)
+        isShowingClientPicker = false
+    }
+
+    private var filteredClients: [Client] {
+        guard clientSearchText.isEmpty == false else { return clientVM.clients }
+
+        let query = clientSearchText.lowercased()
+        return clientVM.clients.filter { client in
+            client.name.lowercased().contains(query)
+                || client.company.lowercased().contains(query)
+                || client.email.lowercased().contains(query)
+        }
+    }
+
+    private func resolvedClientName(from client: Client) -> String {
+        if client.name.isEmpty == false { return client.name }
+        if client.company.isEmpty == false { return client.company }
+        return "Not Assigned"
     }
 }
 
