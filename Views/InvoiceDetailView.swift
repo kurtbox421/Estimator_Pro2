@@ -14,6 +14,9 @@ struct InvoiceDetailView: View {
     @State private var isPresentingInvoiceEditor = false
     @State private var isShowingClientPicker = false
     @State private var clientSearchText = ""
+    @State private var isShowingShareSheet = false
+    @State private var shareItems: [Any] = []
+    @State private var shareError: String?
 
     // MARK: - Derived data
 
@@ -32,6 +35,7 @@ struct InvoiceDetailView: View {
             document: InvoiceDocumentCard(
                 invoice: invoice,
                 previewAction: handlePreviewInvoice,
+                shareAction: shareInvoicePDF,
                 editAction: { isPresentingInvoiceEditor = true },
                 statusAction: markInvoiceAsSent
             ),
@@ -118,6 +122,22 @@ struct InvoiceDetailView: View {
         } message: {
             Text(invoiceVM.previewError ?? "Unknown error")
         }
+        .alert(
+            "Unable to share PDF",
+            isPresented: Binding(
+                get: { shareError != nil },
+                set: { if !$0 { shareError = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {
+                shareError = nil
+            }
+        } message: {
+            Text(shareError ?? "Unknown error")
+        }
+        .sheet(isPresented: $isShowingShareSheet) {
+            ShareSheet(activityItems: shareItems)
+        }
         .sheet(isPresented: $isShowingClientPicker) {
             NavigationView {
                 List {
@@ -165,6 +185,32 @@ struct InvoiceDetailView: View {
 
     private func handlePreviewInvoice() {
         invoiceVM.preview(invoice: invoice, client: client, company: companySettings.settings)
+    }
+
+    private func shareInvoicePDF() {
+        do {
+            let pdfURL = try invoiceVM.generateInvoicePDF(
+                for: invoice,
+                client: client,
+                company: companySettings.settings
+            )
+
+            let shareURL = try PDFTempWriter.makeTempPDF(
+                from: pdfURL,
+                fileName: "Invoice-\(invoice.invoiceNumber)"
+            )
+
+            var items: [Any] = []
+            if let client, !client.email.isEmpty {
+                items.append("Invoice \(invoice.invoiceNumber) attached.")
+            }
+
+            items.append(shareURL)
+            shareItems = items
+            isShowingShareSheet = true
+        } catch {
+            shareError = error.localizedDescription
+        }
     }
 
     private func markInvoiceAsSent() {
@@ -333,6 +379,7 @@ private struct InvoiceSummaryCard: View {
 private struct InvoiceDocumentCard: View {
     let invoice: Invoice
     let previewAction: () -> Void
+    let shareAction: () -> Void
     let editAction: () -> Void
     let statusAction: () -> Void
 
@@ -354,6 +401,11 @@ private struct InvoiceDocumentCard: View {
                 HStack(spacing: 12) {
                     Button(action: previewAction) {
                         Label("Preview Invoice", systemImage: "doc.text.magnifyingglass")
+                    }
+                    .buttonStyle(PrimaryBlueButton())
+
+                    Button(action: shareAction) {
+                        Label("Share / Email PDF", systemImage: "square.and.arrow.up")
                     }
                     .buttonStyle(PrimaryBlueButton())
 
