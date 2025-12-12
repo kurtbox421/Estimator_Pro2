@@ -296,18 +296,13 @@ struct JobDetailView: View {
                 company: companySettings.settings
             )
 
-            let shareURL = try PDFTempWriter.makeTempPDF(
-                from: pdfURL,
+            let pdfData = try Data(contentsOf: pdfURL)
+            let shareURL = try PDFTempWriter.exportShareablePDF(
+                data: pdfData,
                 fileName: "Estimate-\(estimate.name)"
             )
 
-            var items: [Any] = []
-            if let client = client(for: estimate), !client.email.isEmpty {
-                items.append("Estimate \(estimate.name) attached.")
-            }
-
-            items.append(shareURL)
-            shareItems = items
+            shareItems = [shareURL]
             isShowingShareSheet = true
         } catch {
             shareError = error.localizedDescription

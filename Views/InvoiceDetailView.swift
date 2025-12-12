@@ -195,18 +195,13 @@ struct InvoiceDetailView: View {
                 company: companySettings.settings
             )
 
-            let shareURL = try PDFTempWriter.makeTempPDF(
-                from: pdfURL,
+            let pdfData = try Data(contentsOf: pdfURL)
+            let shareURL = try PDFTempWriter.exportShareablePDF(
+                data: pdfData,
                 fileName: "Invoice-\(invoice.invoiceNumber)"
             )
 
-            var items: [Any] = []
-            if let client, !client.email.isEmpty {
-                items.append("Invoice \(invoice.invoiceNumber) attached.")
-            }
-
-            items.append(shareURL)
-            shareItems = items
+            shareItems = [shareURL]
             isShowingShareSheet = true
         } catch {
             shareError = error.localizedDescription

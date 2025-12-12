@@ -3,6 +3,7 @@ import Foundation
 enum PDFTempWriter {
     enum WriterError: Error {
         case missingSource
+        case missingFile(String)
     }
 
     static func makeTempPDF(from url: URL? = nil, data: Data? = nil, fileName: String) throws -> URL {
@@ -33,6 +34,17 @@ enum PDFTempWriter {
         }
 
         throw WriterError.missingSource
+    }
+
+    static func exportShareablePDF(data: Data, fileName: String) throws -> URL {
+        let pdfURL = try makeTempPDF(data: data, fileName: fileName)
+        let fileExists = FileManager.default.fileExists(atPath: pdfURL.path)
+
+        print("Share PDF path: \(pdfURL.path)")
+        print("Share PDF exists: \(fileExists)")
+
+        guard fileExists else { throw WriterError.missingFile(pdfURL.path) }
+        return pdfURL
     }
 
     private static func sanitizedFileName(_ rawName: String) -> String {
