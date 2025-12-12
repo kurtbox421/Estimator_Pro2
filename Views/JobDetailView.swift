@@ -302,8 +302,28 @@ struct JobDetailView: View {
                 fileName: "Estimate-\(estimate.name)"
             )
 
-            shareItems = [shareURL]
-            isShowingShareSheet = true
+            let fileExists = FileManager.default.fileExists(atPath: shareURL.path)
+            #if DEBUG
+            let size = (try? FileManager.default.attributesOfItem(atPath: shareURL.path)[.size] as? NSNumber)?.intValue ?? 0
+            print("[SharePDF] URL: \(shareURL)")
+            print("[SharePDF] fileExists: \(fileExists)")
+            print("[SharePDF] fileSize: \(size)")
+            #endif
+
+            guard fileExists else {
+                shareError = "PDF file missing"
+                return
+            }
+
+            let shareItem = PDFActivityItemSource(
+                url: shareURL,
+                title: "Estimate \(estimate.name)"
+            )
+
+            DispatchQueue.main.async {
+                shareItems = [shareItem]
+                isShowingShareSheet = true
+            }
         } catch {
             shareError = error.localizedDescription
         }
