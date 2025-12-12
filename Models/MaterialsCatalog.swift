@@ -551,7 +551,8 @@ final class MaterialsCatalogStore: ObservableObject {
         customCategoryName: String? = nil,
         productURL: URL? = nil,
         coverageQuantity: Double? = nil,
-        coverageUnit: String? = nil
+        coverageUnit: String? = nil,
+        wasteFactor: Double = 0
     ) -> MaterialItem {
         guard let uid = Auth.auth().currentUser?.uid else {
             print("Attempted to add custom material without authenticated user")
@@ -568,7 +569,7 @@ final class MaterialsCatalogStore: ObservableObject {
                 productURL: productURL,
                 coverageQuantity: coverageQuantity,
                 coverageUnit: coverageUnit,
-                wasteFactor: 0,
+                wasteFactor: wasteFactor,
                 quantityRuleKey: nil,
                 jobType: MaterialItem.defaultJobType(for: category)
             )
@@ -587,7 +588,7 @@ final class MaterialsCatalogStore: ObservableObject {
             productURL: productURL,
             coverageQuantity: coverageQuantity,
             coverageUnit: coverageUnit,
-            wasteFactor: 0,
+            wasteFactor: wasteFactor,
             quantityRuleKey: nil,
             jobType: MaterialItem.defaultJobType(for: category)
         )
@@ -606,7 +607,8 @@ final class MaterialsCatalogStore: ObservableObject {
         customCategoryName: String?? = nil,
         productURL: URL?? = nil,
         coverageQuantity: Double?? = nil,
-        coverageUnit: String?? = nil
+        coverageUnit: String?? = nil,
+        wasteFactor: Double?? = nil
     ) {
         guard let index = customMaterials.firstIndex(where: { $0.id == material.id }) else { return }
 
@@ -631,6 +633,13 @@ final class MaterialsCatalogStore: ObservableObject {
             updatedCoverageUnit = material.coverageUnit
         }
 
+        let updatedWasteFactor: Double
+        if let wasteFactor {
+            updatedWasteFactor = wasteFactor ?? material.wasteFactor
+        } else {
+            updatedWasteFactor = material.wasteFactor
+        }
+
         let updatedCustomCategoryName: String?
         if let customCategoryName {
             updatedCustomCategoryName = customCategoryName?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -653,7 +662,7 @@ final class MaterialsCatalogStore: ObservableObject {
             productURL: updatedProductURL,
             coverageQuantity: updatedCoverageQuantity,
             coverageUnit: updatedCoverageUnit,
-            wasteFactor: material.wasteFactor,
+            wasteFactor: updatedWasteFactor,
             quantityRuleKey: material.quantityRuleKey,
             jobType: category != nil ? MaterialItem.defaultJobType(for: resolvedCategory) : material.jobType
         )

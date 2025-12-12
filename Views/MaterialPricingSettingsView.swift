@@ -10,6 +10,9 @@ struct MaterialPricingSettingsView: View {
     @State private var newCustomPrice: String = ""
     @State private var newCustomCategoryName: String = ""
     @State private var newCustomCategory: MaterialCategory = MaterialCategory.allCases.first(where: { $0 != .custom }) ?? .paint
+    @State private var newCustomCoverageQuantity: String = ""
+    @State private var newCustomCoverageUnit: String = "sqft"
+    @State private var newCustomWastePercent: String = ""
     @State private var showingAddMaterialSheet = false
     @State private var selectedTemplate: MaterialGroupTemplateType?
 
@@ -117,6 +120,21 @@ struct MaterialPricingSettingsView: View {
                         if newCustomCategory == .custom {
                             TextField("Custom category name", text: $newCustomCategoryName)
                         }
+                    }
+
+                    Section("Coverage (optional)") {
+                        TextField("Coverage amount", text: $newCustomCoverageQuantity)
+                            .keyboardType(.decimalPad)
+
+                        Picker("Coverage unit", selection: $newCustomCoverageUnit) {
+                            Text("Sq ft").tag("sqft")
+                            Text("Linear ft").tag("lf")
+                            Text("Each").tag("each")
+                        }
+                        .pickerStyle(.menu)
+
+                        TextField("Waste %", text: $newCustomWastePercent)
+                            .keyboardType(.decimalPad)
                     }
                 }
                 .navigationTitle("New material")
@@ -245,8 +263,10 @@ struct MaterialPricingSettingsView: View {
         let price = parseDouble(newCustomPrice.replacingOccurrences(of: ",", with: "."))
         let trimmedCustomCategoryName = newCustomCategoryName.trimmingCharacters(in: .whitespacesAndNewlines)
         let hasValidCustomCategory = newCustomCategory != .custom || !trimmedCustomCategoryName.isEmpty
+        let coverageQuantity = parseDouble(newCustomCoverageQuantity.replacingOccurrences(of: ",", with: "."))
+        let hasValidCoverage = coverageQuantity == nil || !newCustomCoverageUnit.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 
-        return !trimmedName.isEmpty && !trimmedUnit.isEmpty && price != nil && hasValidCustomCategory
+        return !trimmedName.isEmpty && !trimmedUnit.isEmpty && price != nil && hasValidCustomCategory && hasValidCoverage
     }
 
     private func addCustomMaterial() {
@@ -255,12 +275,18 @@ struct MaterialPricingSettingsView: View {
         let price = debugCheckNaN(parseDouble(newCustomPrice.replacingOccurrences(of: ",", with: ".")) ?? 0, label: "custom material price")
         let trimmedCategoryName = newCustomCategoryName.trimmingCharacters(in: .whitespacesAndNewlines)
         let customCategoryName = newCustomCategory == .custom ? trimmedCategoryName : nil
+        let coverageQuantity = parseDouble(newCustomCoverageQuantity.replacingOccurrences(of: ",", with: "."))
+        let wastePercent = parseDouble(newCustomWastePercent.replacingOccurrences(of: ",", with: ".")) ?? 0
+        let wasteFactor = debugCheckNaN(wastePercent / 100, label: "custom material waste factor")
         let material = materialsStore.addCustomMaterial(
             name: trimmedName,
             unit: trimmedUnit,
             unitCost: price,
             category: newCustomCategory,
-            customCategoryName: customCategoryName
+            customCategoryName: customCategoryName,
+            coverageQuantity: coverageQuantity,
+            coverageUnit: coverageQuantity != nil ? newCustomCoverageUnit : nil,
+            wasteFactor: wasteFactor
         )
         overrideValues[material.id] = price
 
@@ -274,6 +300,9 @@ struct MaterialPricingSettingsView: View {
         newCustomPrice = ""
         newCustomCategoryName = ""
         newCustomCategory = MaterialCategory.allCases.first(where: { $0 != .custom }) ?? .paint
+        newCustomCoverageQuantity = ""
+        newCustomCoverageUnit = "sqft"
+        newCustomWastePercent = ""
     }
 
     private func deleteMaterial(_ material: MaterialItem) {

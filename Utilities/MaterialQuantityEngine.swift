@@ -80,6 +80,19 @@ struct MaterialQuantityEngine {
             return 1
         }
 
+        if let coverageQuantity = material.coverageQuantity,
+           coverageQuantity > 0,
+           let coverageUnit = normalizedUnit(material.coverageUnit),
+           let requirement = coverageRequirement(for: key, context: context, coverageUnit: coverageUnit) {
+
+            let computed = computeQuantity(
+                requirement: requirement,
+                coverageQuantity: coverageQuantity,
+                wasteFactor: material.wasteFactor
+            )
+            return roundedQuantity(computed, unit: material.unit)
+        }
+
         let base = computeBaseQuantity(for: key, context: context)
         // Apply waste factor from material definition
         let withWaste = base * (1.0 + material.wasteFactor)
@@ -244,10 +257,91 @@ struct MaterialQuantityEngine {
         }
     }
 
+    private func coverageRequirement(
+        for key: QuantityRuleKey,
+        context: QuantityContext,
+        coverageUnit: String
+    ) -> Double? {
+        switch coverageUnit {
+        case "sqft":
+            return areaRequirement(for: key, context: context)
+        case "lf":
+            return linearFootRequirement(for: key, context: context)
+        case "each":
+            return eachRequirement(for: key, context: context)
+        default:
+            return nil
+        }
+    }
+
+    private func areaRequirement(for key: QuantityRuleKey, context: QuantityContext) -> Double? {
+        let wallArea = context.wallLengthFt.flatMap { length in
+            context.wallHeightFt.map { $0 * length }
+        }
+
+        switch key {
+        case .flooring10Waste, .rollCoverage100SqFt, .membranePerSqFt, .thinsetPerSqFt, .groutPerSqFt:
+            return context.roomFloorAreaSqFt ?? context.tileAreaSqFt ?? context.deckAreaSqFt ?? wallArea
+        case .sheetArea10Waste, .sheetArea15Waste, .insulationPerSqFt, .fastenersPerSheet:
+            return wallArea
+        case .paintWalls:
+            if let perimeter = context.roomPerimeterFt, let height = context.wallHeightFt {
+                return perimeter * height
+            }
+            return wallArea
+        case .fastenersPerSqFtDeck, .deckBoards16OC:
+            return context.deckAreaSqFt
+        case .adhesiveGeneric:
+            return context.roomFloorAreaSqFt ?? wallArea
+        default:
+            return context.roomFloorAreaSqFt ?? context.tileAreaSqFt ?? context.deckAreaSqFt ?? wallArea
+        }
+    }
+
+    private func linearFootRequirement(for key: QuantityRuleKey, context: QuantityContext) -> Double? {
+        switch key {
+        case .linearFt10Waste, .linearFtExact, .caulkPerLinearFt:
+            return context.roomPerimeterFt ?? context.wallLengthFt
+        case .postsLinear:
+            return context.deckLengthFt
+        default:
+            return context.roomPerimeterFt ?? context.deckLengthFt ?? context.wallLengthFt
+        }
+    }
+
+    private func eachRequirement(for key: QuantityRuleKey, context: QuantityContext) -> Double? {
+        switch key {
+        case .foamPerOpening, .shimsPerOpening:
+            return context.openingCount.map { Double($0) }
+        case .outletsPerBath, .pexPerBath:
+            return context.bathroomCount.map { Double($0) }
+        default:
+            return nil
+        }
+    }
+
     private func applyCoverageConversion(_ quantity: Double, material: MaterialItem) -> Double {
         guard let coverage = material.coverageQuantity,
               coverage > 0 else { return quantity }
 
         return (quantity / coverage).rounded(.up)
+    }
+
+    private func computeQuantity(
+        requirement: Double,
+        coverageQuantity: Double,
+        wasteFactor: Double
+    ) -> Double {
+        let adjustedRequirement = max(0, requirement) * (1 + max(0, wasteFactor))
+        guard adjustedRequirement > 0 else { return 0 }
+        return ceil(adjustedRequirement / coverageQuantity)
+    }
+
+    private func normalizedUnit(_ unit: String?) -> String? {
+        guard let unit else { return nil }
+        return unit
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "_", with: "")
     }
 }
