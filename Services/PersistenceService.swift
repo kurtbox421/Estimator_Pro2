@@ -34,7 +34,19 @@ final class PersistenceService {
             let data = try Data(contentsOf: url)
             return try decoder.decode(type, from: data)
         } catch {
+            #if DEBUG
             print("[PersistenceService] Failed to load \(fileName): \(error)")
+            #endif
+            do {
+                try fileManager.removeItem(at: url)
+                #if DEBUG
+                print("[PersistenceService] Removed corrupted \(fileName)")
+                #endif
+            } catch {
+                #if DEBUG
+                print("[PersistenceService] Failed to remove corrupted \(fileName): \(error)")
+                #endif
+            }
             return nil
         }
     }
@@ -64,7 +76,13 @@ final class PersistenceService {
             UserDefaults.standard.removeObject(forKey: key)
             return decoded
         } catch {
+            #if DEBUG
             print("[PersistenceService] Migration for \(key) failed: \(error)")
+            #endif
+            UserDefaults.standard.removeObject(forKey: key)
+            #if DEBUG
+            print("[PersistenceService] Removed corrupted value for \(key)")
+            #endif
             return nil
         }
     }

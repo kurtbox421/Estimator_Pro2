@@ -28,6 +28,7 @@ final class MaterialIntelligenceStore: ObservableObject {
     private var invoicesListener: ListenerRegistration?
     private var cachedJobs: [Job] = []
     private var cachedInvoices: [Invoice] = []
+    private var invalidJobDocumentIDs: Set<String> = []
     private var coOccurrence: [String: [String: Int]] = [:]
 
     init(database: Firestore = Firestore.firestore()) {
@@ -89,6 +90,7 @@ final class MaterialIntelligenceStore: ObservableObject {
         invoicesListener?.remove()
         materialStats = []
         coOccurrence = [:]
+        invalidJobDocumentIDs = []
 
         guard let uid = user?.uid else { return }
 
@@ -100,10 +102,17 @@ final class MaterialIntelligenceStore: ObservableObject {
                 if let error { print("Failed to fetch jobs: \(error.localizedDescription)"); return }
 
                 let jobs: [Job] = snapshot?.documents.compactMap { document in
+                    if self.invalidJobDocumentIDs.contains(document.documentID) {
+                        return nil
+                    }
+
                     do {
                         return try document.data(as: Job.self)
                     } catch {
+                        #if DEBUG
                         print("Failed to decode job \(document.documentID): \(error.localizedDescription)")
+                        #endif
+                        self.invalidJobDocumentIDs.insert(document.documentID)
                         return nil
                     }
                 } ?? []

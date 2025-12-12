@@ -64,6 +64,7 @@
                 D00200022FFF000200000001 /* MaterialPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00200012FFF000200000001 /* MaterialPreferences.swift */; };
                 D003000A2FFF000300000001 /* NumericHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00300092FFF000300000001 /* NumericHelpers.swift */; };
                 D003000C2FFF000300000001 /* MaterialResolutionHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D003000B2FFF000300000001 /* MaterialResolutionHelper.swift */; };
+                D00A00022FFF100100000001 /* PDFActivityItemSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00A00012FFF100100000001 /* PDFActivityItemSource.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -110,6 +111,7 @@
                 AA09AA09AA09AA09AA09AA08 /* InvoicePDFRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoicePDFRenderer.swift; sourceTree = "<group>"; };
                 AA0AAA0AAA0AAA0AAA0AAA0F /* PDFPreviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFPreviewSheet.swift; sourceTree = "<group>"; };
                 AA0B0B0B0B0B0B0B0B0B0B0A /* EstimateViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EstimateViewModel.swift; sourceTree = "<group>"; };
+                D00A00012FFF100100000001 /* PDFActivityItemSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFActivityItemSource.swift; sourceTree = "<group>"; };
                 D00400012FFF000400000001 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
                 D00400032FFF000400000001 /* PDFTempWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFTempWriter.swift; sourceTree = "<group>"; };
                 B1E7E0102F01000100000001 /* MaterialEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialEditView.swift; sourceTree = "<group>"; };
@@ -220,6 +222,7 @@
                                 3969FD142ECD3F410005C1AE /* AddMaterialView.swift */,
                                 B1E7E0102F01000100000001 /* MaterialEditView.swift */,
                                 3969FD0C2ECD372A0005C1AE /* JobDetailView.swift */,
+                                D00A00012FFF100100000001 /* PDFActivityItemSource.swift */,
                                 D00400012FFF000400000001 /* ShareSheet.swift */,
                         );
                         path = Views;
@@ -368,6 +371,7 @@
                                 AA09AA09AA09AA09AA09AA09 /* InvoicePDFRenderer.swift in Sources */,
                                 AA08AA08AA08AA08AA08AA08 /* InvoicePDFGenerator.swift in Sources */,
                                 AA0AAA0AAA0AAA0AAA0AAA0 /* PDFPreviewSheet.swift in Sources */,
+                                D00A00022FFF100100000001 /* PDFActivityItemSource.swift in Sources */,
                                 D00400042FFF000400000001 /* PDFTempWriter.swift in Sources */,
                                 D00100022FFF000100000001 /* MaterialsCatalog.swift in Sources */,
 				D00200022FFF000200000001 /* MaterialPreferences.swift in Sources */,
