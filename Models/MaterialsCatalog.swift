@@ -112,6 +112,21 @@ struct MaterialGroup: Identifiable, Codable, Hashable {
     var name: String
     var sortOrder: Int
     var templateType: MaterialGroupTemplateType
+
+    static func defaults() -> [MaterialGroup] {
+        MaterialCategory.allCases.enumerated().compactMap { index, category in
+            let name = category.displayName
+            let groupID = MaterialItem.groupID(for: category, customCategoryName: nil)
+            guard let template = MaterialGroupTemplateType(jobTag: MaterialItem.defaultJobType(for: category).jobTag) else { return nil }
+
+            return MaterialGroup(
+                id: groupID,
+                name: name,
+                sortOrder: index,
+                templateType: template
+            )
+        }
+    }
 }
 
 enum MaterialJobTag: String, Codable, CaseIterable, Identifiable {
@@ -136,6 +151,7 @@ struct MaterialItem: Identifiable, Codable, Hashable {
     let name: String
     let category: MaterialCategory
     let customCategoryName: String?
+    let groupID: String
     let unit: String               // "each", "sheet", "sqft", "linear_ft", "bag", etc.
     let defaultUnitCost: Double
     let productURL: URL?
@@ -159,6 +175,7 @@ struct MaterialItem: Identifiable, Codable, Hashable {
         name: String,
         category: MaterialCategory,
         customCategoryName: String?,
+        groupID: String? = nil,
         unit: String,
         defaultUnitCost: Double,
         productURL: URL?,
@@ -174,6 +191,7 @@ struct MaterialItem: Identifiable, Codable, Hashable {
         self.name = name
         self.category = category
         self.customCategoryName = customCategoryName
+        self.groupID = groupID ?? MaterialItem.groupID(for: category, customCategoryName: customCategoryName)
         self.unit = unit
         self.defaultUnitCost = defaultUnitCost
         self.productURL = productURL
@@ -193,6 +211,7 @@ struct MaterialItem: Identifiable, Codable, Hashable {
         name = try container.decode(String.self, forKey: .name)
         category = try container.decode(MaterialCategory.self, forKey: .category)
         customCategoryName = try container.decodeIfPresent(String.self, forKey: .customCategoryName)
+        groupID = try container.decodeIfPresent(String.self, forKey: .groupID) ?? MaterialItem.groupID(for: category, customCategoryName: customCategoryName)
         unit = try container.decode(String.self, forKey: .unit)
         defaultUnitCost = try container.decode(Double.self, forKey: .defaultUnitCost)
         productURL = try container.decodeIfPresent(URL.self, forKey: .productURL)
@@ -210,6 +229,7 @@ struct MaterialItem: Identifiable, Codable, Hashable {
         case name
         case category
         case customCategoryName
+        case groupID
         case unit
         case defaultUnitCost
         case productURL
@@ -229,6 +249,7 @@ struct MaterialItem: Identifiable, Codable, Hashable {
         try container.encode(name, forKey: .name)
         try container.encode(category, forKey: .category)
         try container.encodeIfPresent(customCategoryName, forKey: .customCategoryName)
+        try container.encode(groupID, forKey: .groupID)
         try container.encode(unit, forKey: .unit)
         try container.encode(defaultUnitCost, forKey: .defaultUnitCost)
         try container.encodeIfPresent(productURL, forKey: .productURL)
@@ -264,8 +285,17 @@ struct MaterialItem: Identifiable, Codable, Hashable {
         }
     }
 
-    var groupIdentifier: String {
-        displayCategory.lowercased().replacingOccurrences(of: " ", with: "_")
+    static func groupID(for category: MaterialCategory, customCategoryName: String?) -> String {
+        if category == .custom,
+           let customCategoryName,
+           !customCategoryName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return customCategoryName
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased()
+                .replacingOccurrences(of: " ", with: "_")
+        }
+
+        return category.rawValue
     }
 }
 
@@ -275,6 +305,7 @@ struct MaterialsCatalog: Codable {
 
 final class MaterialsCatalogStore: ObservableObject {
     @Published private(set) var materials: [MaterialItem] = []
+    @Published private(set) var materialGroups: [MaterialGroup] = []
     @Published private(set) var customMaterials: [MaterialItem] = [] {
         didSet { rebuildCatalog() }
     }
@@ -305,19 +336,6 @@ final class MaterialsCatalogStore: ObservableObject {
     private var preferencesListener: ListenerRegistration?
     private var currentUserID: String?
     private var isApplyingRemoteUpdate = false
-
-    var materialGroups: [MaterialGroup] {
-        let grouped = Dictionary(grouping: materials) { $0.displayCategory }
-        return grouped.keys.sorted().enumerated().compactMap { index, key in
-            guard let items = grouped[key] else { return nil }
-            return MaterialGroup(
-                id: key.lowercased().replacingOccurrences(of: " ", with: "_"),
-                name: key,
-                sortOrder: index,
-                templateType: templateType(for: items)
-            )
-        }
-    }
 
     init(database: Firestore = Firestore.firestore()) {
         self.db = database
@@ -363,6 +381,41 @@ final class MaterialsCatalogStore: ObservableObject {
             .filter { !removedMaterialIDs.contains($0.id) }
             .map { applyProductURLOverride(to: $0) }
         materials = filteredBase + filteredCustom
+        rebuildGroups()
+    }
+
+    private func rebuildGroups() {
+        let groupedByID = Dictionary(grouping: materials) { $0.groupID }
+        let defaultGroups = MaterialGroup.defaults()
+        var resolved: [MaterialGroup] = []
+
+        for group in defaultGroups {
+            guard let items = groupedByID[group.id] else { continue }
+            resolved.append(
+                MaterialGroup(
+                    id: group.id,
+                    name: group.name,
+                    sortOrder: group.sortOrder,
+                    templateType: templateType(for: items)
+                )
+            )
+        }
+
+        let defaultIDs = Set(defaultGroups.map { $0.id })
+        let customGroups = groupedByID.filter { !defaultIDs.contains($0.key) }
+        for (index, entry) in customGroups.sorted(by: { $0.key < $1.key }).enumerated() {
+            let items = entry.value
+            resolved.append(
+                MaterialGroup(
+                    id: entry.key,
+                    name: items.first?.displayCategory ?? entry.key,
+                    sortOrder: defaultGroups.count + index,
+                    templateType: templateType(for: items)
+                )
+            )
+        }
+
+        materialGroups = resolved.sorted { $0.sortOrder < $1.sortOrder }
     }
 
     private func templateType(for items: [MaterialItem]) -> MaterialGroupTemplateType {
@@ -383,7 +436,12 @@ final class MaterialsCatalogStore: ObservableObject {
     }
 
     func materials(in group: MaterialGroup) -> [MaterialItem] {
-        materials.filter { $0.displayCategory == group.name }
+        items(inGroupID: group.id)
+    }
+
+    func items(inGroupID groupID: String) -> [MaterialItem] {
+        materials
+            .filter { $0.groupID == groupID }
             .sorted { $0.name < $1.name }
     }
 
@@ -504,6 +562,7 @@ final class MaterialsCatalogStore: ObservableObject {
                 name: name,
                 category: category,
                 customCategoryName: customCategoryName,
+                groupID: MaterialItem.groupID(for: category, customCategoryName: customCategoryName),
                 unit: unit,
                 defaultUnitCost: unitCost,
                 productURL: productURL,
@@ -522,6 +581,7 @@ final class MaterialsCatalogStore: ObservableObject {
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
             category: category,
             customCategoryName: customCategoryName?.trimmingCharacters(in: .whitespacesAndNewlines),
+            groupID: MaterialItem.groupID(for: category, customCategoryName: customCategoryName),
             unit: unit.trimmingCharacters(in: .whitespacesAndNewlines),
             defaultUnitCost: unitCost,
             productURL: productURL,
@@ -579,6 +639,7 @@ final class MaterialsCatalogStore: ObservableObject {
         }
 
         let resolvedCategory = category ?? material.category
+        let resolvedGroupID = MaterialItem.groupID(for: resolvedCategory, customCategoryName: updatedCustomCategoryName)
         let updated = MaterialItem(
             id: material.id,
             ownerID: material.ownerID,
@@ -586,6 +647,7 @@ final class MaterialsCatalogStore: ObservableObject {
             name: name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? material.name,
             category: resolvedCategory,
             customCategoryName: updatedCustomCategoryName,
+            groupID: resolvedGroupID,
             unit: unit?.trimmingCharacters(in: .whitespacesAndNewlines) ?? material.unit,
             defaultUnitCost: defaultUnitCost ?? material.defaultUnitCost,
             productURL: updatedProductURL,
@@ -723,6 +785,7 @@ final class MaterialsCatalogStore: ObservableObject {
             name: material.name,
             category: material.category,
             customCategoryName: material.customCategoryName,
+            groupID: material.groupID,
             unit: material.unit,
             defaultUnitCost: material.defaultUnitCost,
             productURL: override ?? material.productURL,

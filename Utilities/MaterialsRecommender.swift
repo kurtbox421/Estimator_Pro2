@@ -85,6 +85,7 @@ struct MaterialRecommendation: Identifiable {
     let unit: String            // "gallon", "sheet", "sq ft", "lf", etc.
     let category: String        // "Paint", "Drywall", "Flooring", "Prep", etc.
     let notes: String?
+    let sourceGroupID: String = ""
     var estimatedUnitCost: Double? = nil
 }
 
@@ -108,19 +109,14 @@ struct MaterialsRecommender {
     let catalog: MaterialsCatalogStore
     private let quantityEngine = MaterialQuantityEngine()
 
-    func recommendMaterials(for context: JobContext) -> [MaterialRecommendation] {
-        let taggedMaterials = catalog.materials(
-            for: context.jobType,
-            in: allowedCategories(for: context.jobType)
-        )
+    func recommendMaterials(for group: MaterialGroup, context: JobContext) -> [MaterialRecommendation] {
+        let pricingItems = catalog.items(inGroupID: group.id)
 
-        if taggedMaterials.isEmpty {
-            return []
-        }
+        guard !pricingItems.isEmpty else { return [] }
 
         let quantityContext = quantityContext(from: context)
 
-        return taggedMaterials.compactMap { material in
+        return pricingItems.compactMap { material in
             let quantity = quantityEngine.quantity(for: material, context: quantityContext)
             guard quantity > 0 else { return nil }
 
@@ -130,82 +126,13 @@ struct MaterialsRecommender {
                 unit: material.unit,
                 category: material.displayCategory,
                 notes: coverageNote(for: material),
+                sourceGroupID: material.groupID,
                 estimatedUnitCost: catalog.price(for: material)
             )
         }
     }
 
     // MARK: - Helpers
-
-    private func allowedCategories(for jobType: MaterialJobType) -> [MaterialCategory] {
-        switch jobType {
-        case .interiorWallBuild:
-            return [
-                .lumberFraming,
-                .sheetgoods,
-                .drywallBacker,
-                .insulation,
-                .hardwareFasteners,
-                .hardwareConnectors,
-                .trimFinish,
-                .electrical,
-                .sealants
-            ]
-        case .lvpFlooring:
-            return [
-                .flooring,
-                .trimFinish,
-                .sealants,
-                .hardwareFasteners
-            ]
-        case .paintRoom:
-            return [
-                .paint,
-                .sealants,
-                .trimFinish
-            ]
-        case .basicBathroomRemodel:
-            return [
-                .tile,
-                .tileMaterials,
-                .flooring,
-                .sealants,
-                .plumbing,
-                .electrical,
-                .paint,
-                .trimFinish
-            ]
-        case .exteriorPaint:
-            return [
-                .paint,
-                .sealants,
-                .hardwareFasteners
-            ]
-        case .tileBacksplash:
-            return [
-                .tile,
-                .tileMaterials,
-                .sealants,
-                .trimFinish
-            ]
-        case .deckBuild:
-            return [
-                .exteriorDecking,
-                .exteriorStructural,
-                .hardwareFasteners,
-                .hardwareConnectors,
-                .exteriorFlashing,
-                .concreteMasonry
-            ]
-        case .roofShingleReplacement:
-            return [
-                .exteriorFlashing,
-                .hardwareFasteners,
-                .exteriorStructural,
-                .sheetgoods
-            ]
-        }
-    }
 
     private func quantityContext(from ctx: JobContext) -> QuantityContext {
         let length = ctx.lengthFeet ?? 0
