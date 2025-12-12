@@ -421,18 +421,17 @@ final class MaterialsCatalogStore: ObservableObject {
     private func templateType(for items: [MaterialItem]) -> MaterialGroupTemplateType {
         let tags = items.map { $0.jobType.jobTag }
 
-        let tagCounts: [String: Int] = tags.reduce(into: [:]) { counts, tag in
+        let tagCounts: [MaterialJobTag: Int] = tags.reduce(into: [:]) { counts, tag in
             counts[tag, default: 0] += 1
         }
 
-        let mostCommon = tagCounts.max(by: { lhs, rhs in lhs.value < rhs.value })?.key
-
-        if let mostCommon,
+        if let mostCommon = tagCounts.max(by: { lhs, rhs in lhs.value < rhs.value })?.key,
            let template = MaterialGroupTemplateType(jobTag: mostCommon) {
             return template
         }
 
-        if let firstTag = tags.first, let template = MaterialGroupTemplateType(jobTag: firstTag) {
+        if let firstTag = tags.first,
+           let template = MaterialGroupTemplateType(jobTag: firstTag) {
             return template
         }
 
