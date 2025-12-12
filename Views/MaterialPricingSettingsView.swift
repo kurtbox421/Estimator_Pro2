@@ -18,63 +18,78 @@ struct MaterialPricingSettingsView: View {
     @State private var editTarget: MaterialItem?
     @State private var deleteTarget: MaterialItem?
     @State private var isShowingDeleteConfirm = false
-    @State private var selectedTemplate: MaterialGroupTemplateType?
 
-    private var groupedMaterials: [(category: String, items: [MaterialItem])] {
-        filteredGroups.map { group in
-            (group.name, materialsStore.materials(in: group))
-        }
-    }
-
-    private var availableTemplates: [MaterialGroupTemplateType] {
-        Array(Set(materialsStore.materialGroups.map { $0.templateType }))
-            .sorted { $0.displayName < $1.displayName }
-    }
-
-    private var filteredGroups: [MaterialGroup] {
-        let groups = materialsStore.materialGroups.sorted { $0.sortOrder < $1.sortOrder }
-        guard let selectedTemplate else { return groups }
-        return groups.filter { $0.templateType == selectedTemplate }
+    private var groupedMaterials: [(group: MaterialGroup, items: [MaterialItem])] {
+        materialsStore.materialGroups
+            .sorted { $0.sortOrder < $1.sortOrder }
+            .map { group in
+                (group, materialsStore.materials(in: group))
+            }
     }
 
     var body: some View {
-        List {
-            if !availableTemplates.isEmpty {
-                Section("Job type") {
-                    Picker("Job type", selection: $selectedTemplate) {
-                        ForEach(availableTemplates) { template in
-                            Text(template.displayName).tag(Optional.some(template))
+        ScrollViewReader { proxy in
+            VStack(spacing: 0) {
+                if !groupedMaterials.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Jump to section")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal)
+
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(groupedMaterials, id: \.group.id) { section in
+                                    Button {
+                                        withAnimation {
+                                            proxy.scrollTo(section.group.id, anchor: .top)
+                                        }
+                                    } label: {
+                                        Text(section.group.name)
+                                            .font(.footnote)
+                                            .padding(.vertical, 8)
+                                            .padding(.horizontal, 12)
+                                            .background(Color(.systemGray5))
+                                            .foregroundColor(.primary)
+                                            .clipShape(Capsule())
+                                    }
+                                }
+                            }
+                            .padding(.horizontal)
                         }
+                        .padding(.vertical, 8)
                     }
-                    .pickerStyle(.menu)
                 }
-            }
 
-            Section {
-                Text("Customize the unit prices used when materials are generated from the templates above. Your overrides will be saved and applied every time the generator is used.")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-                    .listRowBackground(Color.clear)
-            }
+                List {
+                    Section {
+                        Text("Customize the unit prices used when materials are generated from the templates above. Your overrides will be saved and applied every time the generator is used.")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                            .listRowBackground(Color.clear)
+                    }
 
-            ForEach(groupedMaterials, id: \.category) { group in
-                Section(group.category) {
-                    ForEach(group.items, id: \.id) { material in
-                        MaterialPricingRow(
-                            material: material,
-                            price: priceBinding(for: material),
-                            productURL: productURLBinding(for: material),
-                            resetOverride: {
-                                materialsStore.resetOverride(for: material.id)
-                                overrideValues[material.id] = material.defaultUnitCost
-                            },
-                            onEdit: { startEditing(material) },
-                            onDelete: {
-                                deleteTarget = material
-                                isShowingDeleteConfirm = true
-                            },
-                            store: materialsStore
-                        )
+                    ForEach(groupedMaterials, id: \.group.id) { group in
+                        Section(group.group.name) {
+                            ForEach(group.items, id: \.id) { material in
+                                MaterialPricingRow(
+                                    material: material,
+                                    price: priceBinding(for: material),
+                                    productURL: productURLBinding(for: material),
+                                    resetOverride: {
+                                        materialsStore.resetOverride(for: material.id)
+                                        overrideValues[material.id] = material.defaultUnitCost
+                                    },
+                                    onEdit: { startEditing(material) },
+                                    onDelete: {
+                                        deleteTarget = material
+                                        isShowingDeleteConfirm = true
+                                    },
+                                    store: materialsStore
+                                )
+                            }
+                        }
+                        .id(group.group.id)
                     }
                 }
             }
@@ -93,9 +108,6 @@ struct MaterialPricingSettingsView: View {
         .onAppear {
             syncOverrides()
             syncProductURLTexts()
-            if selectedTemplate == nil {
-                selectedTemplate = availableTemplates.first
-            }
         }
         .onChange(of: newCustomCategory, initial: false) { _, newValue in
             if newValue != .custom {
@@ -105,9 +117,6 @@ struct MaterialPricingSettingsView: View {
         .onChange(of: materialsStore.materials, initial: false) { _, _ in
             syncOverrides()
             syncProductURLTexts()
-            if let selectedTemplate, !availableTemplates.contains(selectedTemplate) {
-                self.selectedTemplate = availableTemplates.first
-            }
         }
         .sheet(isPresented: $showingMaterialSheet) {
             NavigationStack {
