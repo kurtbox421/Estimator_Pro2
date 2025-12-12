@@ -329,16 +329,6 @@ private struct InvoiceSummaryCard: View {
                             .foregroundColor(.white.opacity(0.85))
 
                         HStack(spacing: 8) {
-                            Label("Invoice", systemImage: "doc.text")
-                                .font(.caption.weight(.semibold))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(
-                                    Capsule()
-                                        .fill(Color.white.opacity(0.16))
-                                )
-                                .foregroundColor(.white)
-
                             Text(invoice.status.displayName)
                                 .font(.caption.weight(.semibold))
                                 .padding(.horizontal, 10)
