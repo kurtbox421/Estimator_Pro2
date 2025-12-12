@@ -10,10 +10,14 @@ struct MaterialPricingSettingsView: View {
     @State private var newCustomPrice: String = ""
     @State private var newCustomCategoryName: String = ""
     @State private var newCustomCategory: MaterialCategory = MaterialCategory.allCases.first(where: { $0 != .custom }) ?? .paint
+    @State private var newCustomProductURL: String = ""
     @State private var newCustomCoverageQuantity: String = ""
     @State private var newCustomCoverageUnit: String = "sqft"
     @State private var newCustomWastePercent: String = ""
-    @State private var showingAddMaterialSheet = false
+    @State private var showingMaterialSheet = false
+    @State private var editTarget: MaterialItem?
+    @State private var deleteTarget: MaterialItem?
+    @State private var isShowingDeleteConfirm = false
     @State private var selectedTemplate: MaterialGroupTemplateType?
 
     private var groupedMaterials: [(category: String, items: [MaterialItem])] {
@@ -64,7 +68,11 @@ struct MaterialPricingSettingsView: View {
                                 materialsStore.resetOverride(for: material.id)
                                 overrideValues[material.id] = material.defaultUnitCost
                             },
-                            deleteAction: { deleteMaterial(material) },
+                            onEdit: { startEditing(material) },
+                            onDelete: {
+                                deleteTarget = material
+                                isShowingDeleteConfirm = true
+                            },
                             store: materialsStore
                         )
                     }
@@ -75,7 +83,7 @@ struct MaterialPricingSettingsView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
-                    showingAddMaterialSheet = true
+                    startAddingMaterial()
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -101,14 +109,19 @@ struct MaterialPricingSettingsView: View {
                 self.selectedTemplate = availableTemplates.first
             }
         }
-        .sheet(isPresented: $showingAddMaterialSheet) {
+        .sheet(isPresented: $showingMaterialSheet) {
             NavigationStack {
                 Form {
-                    Section("Add generator material") {
+                    Section(editTarget == nil ? "Add generator material" : "Edit generator material") {
                         TextField("Name", text: $newCustomName)
                         TextField("Unit (each, tube, sq ft)", text: $newCustomUnit)
                         TextField("Unit cost", text: $newCustomPrice)
                             .keyboardType(.decimalPad)
+
+                        TextField("Product URL (optional)", text: $newCustomProductURL)
+                            .keyboardType(.URL)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
 
                         Picker("Category", selection: $newCustomCategory) {
                             ForEach(MaterialCategory.allCases) { category in
@@ -137,22 +150,39 @@ struct MaterialPricingSettingsView: View {
                             .keyboardType(.decimalPad)
                     }
                 }
-                .navigationTitle("New material")
+                .navigationTitle(editTarget == nil ? "New material" : "Edit material")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Cancel") {
                             resetNewCustomMaterialForm()
-                            showingAddMaterialSheet = false
+                            editTarget = nil
+                            showingMaterialSheet = false
                         }
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Add") {
-                            addCustomMaterial()
-                            showingAddMaterialSheet = false
+                        Button(editTarget == nil ? "Add" : "Save") {
+                            if let editTarget {
+                                updateMaterial(editTarget)
+                            } else {
+                                addCustomMaterial()
+                            }
+                            editTarget = nil
+                            showingMaterialSheet = false
                         }
                         .disabled(!canAddCustomMaterial)
                     }
                 }
+            }
+        }
+        .alert("Delete material?", isPresented: $isShowingDeleteConfirm, presenting: deleteTarget) { _ in
+            Button("Delete", role: .destructive) {
+                if let deleteTarget {
+                    deleteMaterial(deleteTarget)
+                }
+                self.deleteTarget = nil
+            }
+            Button("Cancel", role: .cancel) {
+                deleteTarget = nil
             }
         }
     }
@@ -266,7 +296,10 @@ struct MaterialPricingSettingsView: View {
         let coverageQuantity = parseDouble(newCustomCoverageQuantity.replacingOccurrences(of: ",", with: "."))
         let hasValidCoverage = coverageQuantity == nil || !newCustomCoverageUnit.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 
-        return !trimmedName.isEmpty && !trimmedUnit.isEmpty && price != nil && hasValidCustomCategory && hasValidCoverage
+        let trimmedProductURL = newCustomProductURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        let isValidURL = trimmedProductURL.isEmpty || URL(string: trimmedProductURL)?.scheme != nil
+
+        return !trimmedName.isEmpty && !trimmedUnit.isEmpty && price != nil && hasValidCustomCategory && hasValidCoverage && isValidURL
     }
 
     private func addCustomMaterial() {
@@ -275,6 +308,8 @@ struct MaterialPricingSettingsView: View {
         let price = debugCheckNaN(parseDouble(newCustomPrice.replacingOccurrences(of: ",", with: ".")) ?? 0, label: "custom material price")
         let trimmedCategoryName = newCustomCategoryName.trimmingCharacters(in: .whitespacesAndNewlines)
         let customCategoryName = newCustomCategory == .custom ? trimmedCategoryName : nil
+        let trimmedProductURL = newCustomProductURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        let productURL = URL(string: trimmedProductURL)
         let coverageQuantity = parseDouble(newCustomCoverageQuantity.replacingOccurrences(of: ",", with: "."))
         let wastePercent = parseDouble(newCustomWastePercent.replacingOccurrences(of: ",", with: ".")) ?? 0
         let wasteFactor = debugCheckNaN(wastePercent / 100, label: "custom material waste factor")
@@ -284,6 +319,7 @@ struct MaterialPricingSettingsView: View {
             unitCost: price,
             category: newCustomCategory,
             customCategoryName: customCategoryName,
+            productURL: productURL,
             coverageQuantity: coverageQuantity,
             coverageUnit: coverageQuantity != nil ? newCustomCoverageUnit : nil,
             wasteFactor: wasteFactor
@@ -300,15 +336,75 @@ struct MaterialPricingSettingsView: View {
         newCustomPrice = ""
         newCustomCategoryName = ""
         newCustomCategory = MaterialCategory.allCases.first(where: { $0 != .custom }) ?? .paint
+        newCustomProductURL = ""
         newCustomCoverageQuantity = ""
         newCustomCoverageUnit = "sqft"
         newCustomWastePercent = ""
+    }
+
+    private func startAddingMaterial() {
+        resetNewCustomMaterialForm()
+        editTarget = nil
+        showingMaterialSheet = true
+    }
+
+    private func startEditing(_ material: MaterialItem) {
+        editTarget = material
+        newCustomName = material.name
+        newCustomUnit = material.unit
+        newCustomPrice = formattedNumber(material.defaultUnitCost)
+        newCustomCategory = material.category
+        newCustomCategoryName = material.customCategoryName ?? ""
+        newCustomProductURL = material.productURL?.absoluteString ?? ""
+        newCustomCoverageQuantity = formattedNumber(material.coverageQuantity)
+        newCustomCoverageUnit = material.coverageUnit ?? "sqft"
+        newCustomWastePercent = formattedNumber(material.wasteFactor * 100)
+        showingMaterialSheet = true
     }
 
     private func deleteMaterial(_ material: MaterialItem) {
         materialsStore.deleteMaterial(material)
         overrideValues.removeValue(forKey: material.id)
         syncOverrides()
+    }
+
+    private func updateMaterial(_ material: MaterialItem) {
+        let trimmedName = newCustomName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedUnit = newCustomUnit.trimmingCharacters(in: .whitespacesAndNewlines)
+        let price = debugCheckNaN(parseDouble(newCustomPrice.replacingOccurrences(of: ",", with: ".")) ?? material.defaultUnitCost, label: "custom material price")
+        let trimmedCategoryName = newCustomCategoryName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let customCategoryName = newCustomCategory == .custom ? trimmedCategoryName : nil
+        let trimmedProductURL = newCustomProductURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        let productURL = trimmedProductURL.isEmpty ? nil : URL(string: trimmedProductURL)
+        let coverageQuantity = parseDouble(newCustomCoverageQuantity.replacingOccurrences(of: ",", with: "."))
+        let wastePercent = parseDouble(newCustomWastePercent.replacingOccurrences(of: ",", with: ".")) ?? 0
+        let wasteFactor = debugCheckNaN(wastePercent / 100, label: "custom material waste factor")
+
+        materialsStore.updateCustomMaterial(
+            material,
+            name: trimmedName,
+            unit: trimmedUnit,
+            defaultUnitCost: price,
+            category: newCustomCategory,
+            customCategoryName: customCategoryName,
+            productURL: productURL,
+            coverageQuantity: coverageQuantity,
+            coverageUnit: coverageQuantity != nil ? newCustomCoverageUnit : nil,
+            wasteFactor: wasteFactor
+        )
+
+        overrideValues[material.id] = price
+        syncOverrides()
+        syncProductURLTexts()
+    }
+
+    private func formattedNumber(_ value: Double?) -> String {
+        guard let value else { return "" }
+        let formatter = NumberFormatter()
+        formatter.maximumFractionDigits = 4
+        formatter.minimumFractionDigits = 0
+        formatter.minimumIntegerDigits = 1
+        return formatter.string(from: NSNumber(value: value)) ?? ""
     }
 }
 
@@ -317,7 +413,8 @@ private struct MaterialPricingRow: View {
     let price: Binding<Double>
     let productURL: Binding<String>
     let resetOverride: () -> Void
-    let deleteAction: () -> Void
+    let onEdit: () -> Void
+    let onDelete: () -> Void
     let store: MaterialsCatalogStore
 
     var body: some View {
@@ -327,8 +424,12 @@ private struct MaterialPricingRow: View {
             overrideButton
         }
         .padding(.vertical, 6)
-        .swipeActions {
-            Button(role: .destructive, action: deleteAction) {
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(action: onEdit) {
+                Label("Edit", systemImage: "pencil")
+            }
+
+            Button(role: .destructive, action: onDelete) {
                 Label("Delete", systemImage: "trash")
             }
         }
