@@ -9,7 +9,7 @@ import SwiftUI
 import UIKit
 import FirebaseAuth
 
-struct EstimateDetailView: View {
+struct JobDetailView: View {
     @EnvironmentObject private var vm: JobViewModel
     @EnvironmentObject private var invoiceVM: InvoiceViewModel
     @EnvironmentObject private var estimateVM: EstimateViewModel

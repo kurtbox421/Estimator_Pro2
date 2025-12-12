@@ -361,7 +361,7 @@ struct EstimatesTabView: View {
             ForEach($vm.jobs) { $job in
                 NavigationLink {
                     // pass a binding to this job
-                    EstimateDetailView(estimate: $job)
+                    JobDetailView(estimate: $job)
                 } label: {
                     EstimateJobCard(job: $job.wrappedValue)
                 }
@@ -863,21 +863,23 @@ struct ClientDetailView: View {
                 } else {
                     VStack(spacing: 0) {
                         ForEach(clientJobs) { job in
-                            NavigationLink {
-                                JobDetailView(job: job)
-                            } label: {
-                                ProjectRow(
-                                    title: job.name,
-                                    subtitle: job.category,
-                                    amount: job.total,
-                                    date: job.dateCreated,
-                                    badge: "Estimate"
-                                )
-                            }
-                            .buttonStyle(.plain)
+                            if let jobBinding = binding(forJob: job.id) {
+                                NavigationLink {
+                                    JobDetailView(estimate: jobBinding)
+                                } label: {
+                                    ProjectRow(
+                                        title: job.name,
+                                        subtitle: job.category,
+                                        amount: job.total,
+                                        date: job.dateCreated,
+                                        badge: "Estimate"
+                                    )
+                                }
+                                .buttonStyle(.plain)
 
-                            if !(job.id == clientJobs.last?.id && clientInvoices.isEmpty) {
-                                Divider().overlay(Color.white.opacity(0.12))
+                                if !(job.id == clientJobs.last?.id && clientInvoices.isEmpty) {
+                                    Divider().overlay(Color.white.opacity(0.12))
+                                }
                             }
                         }
 
@@ -910,6 +912,11 @@ struct ClientDetailView: View {
     private func binding(forInvoice id: UUID) -> Binding<Invoice>? {
         guard let index = invoiceVM.invoices.firstIndex(where: { $0.id == id }) else { return nil }
         return $invoiceVM.invoices[index]
+    }
+
+    private func binding(forJob id: UUID) -> Binding<Job>? {
+        guard let index = jobVM.jobs.firstIndex(where: { $0.id == id }) else { return nil }
+        return $jobVM.jobs[index]
     }
 }
 
