@@ -7,6 +7,7 @@
 
 import Foundation
 import FirebaseAuth
+import FirebaseFirestore
 
 private enum JobStorage {
     static let userDefaultsKey = "EstimatorPro_Jobs"
@@ -21,9 +22,11 @@ class JobViewModel: ObservableObject {
     }
     
     private let persistence: PersistenceService
-    
-    init(persistence: PersistenceService = .shared) {
+    private let db: Firestore
+
+    init(persistence: PersistenceService = .shared, database: Firestore = Firestore.firestore()) {
         self.persistence = persistence
+        self.db = database
         loadJobs()
     }
     
@@ -48,13 +51,30 @@ class JobViewModel: ObservableObject {
     func delete(at offsets: IndexSet) {
         jobs.remove(atOffsets: offsets)
     }
-    
+
     func delete(_ job: Job) {
         if let index = jobs.firstIndex(where: { $0.id == job.id }) {
             jobs.remove(at: index)
         }
     }
-    
+
+    func assignClient(jobID: Job.ID, to clientID: Client.ID) {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+
+        guard let jobIndex = jobs.firstIndex(where: { $0.id == jobID }) else { return }
+
+        var updatedJob = jobs[jobIndex]
+        updatedJob.clientId = clientID
+        jobs[jobIndex] = updatedJob
+        sortJobs()
+
+        db.collection("users")
+            .document(uid)
+            .collection("jobs")
+            .document(jobID.uuidString)
+            .setData(["clientId": clientID.uuidString], merge: true)
+    }
+
     func update(_ job: Job, replacingMaterialAt index: Int, with material: Material) {
         guard let jobIndex = jobs.firstIndex(where: { $0.id == job.id }),
               jobs[jobIndex].materials.indices.contains(index) else { return }

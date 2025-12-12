@@ -20,6 +20,8 @@ struct EstimateDetailView: View {
     @State private var createdInvoice: Invoice?
     @State private var showingInvoiceEditor = false
     @State private var showingMaterialManager = false
+    @State private var isShowingClientPicker = false
+    @State private var clientSearchText = ""
 
     // Labor editor state
     @State private var showingLaborEditor = false
@@ -40,7 +42,13 @@ struct EstimateDetailView: View {
                 editAction: editEstimate,
                 convertAction: convertToInvoice
             ),
-            customer: { EstimateCustomerCard(client: client(for: estimate)) },
+            customer: {
+                EstimateCustomerCard(
+                    client: client(for: estimate),
+                    assignAction: { isShowingClientPicker = true },
+                    changeAction: client(for: estimate) != nil ? { isShowingClientPicker = true } : nil
+                )
+            },
             quickActions: {
                 EstimateQuickActionsCard(
                     client: client(for: estimate),
@@ -121,6 +129,40 @@ struct EstimateDetailView: View {
                 invoiceVM: invoiceVM
             )
         }
+        .sheet(isPresented: $isShowingClientPicker) {
+            NavigationView {
+                List {
+                    ForEach(filteredClients) { client in
+                        Button {
+                            assignClient(client)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(client.name.isEmpty ? client.company : client.name)
+                                    .font(.headline)
+                                if !client.company.isEmpty, !client.name.isEmpty {
+                                    Text(client.company)
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                                if !client.email.isEmpty {
+                                    Text(client.email)
+                                        .font(.footnote)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                }
+                .searchable(text: $clientSearchText)
+                .navigationTitle("Assign Client")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") { isShowingClientPicker = false }
+                    }
+                }
+            }
+        }
         .sheet(isPresented: previewSheetBinding) {
             if let url = estimateVM.previewURL {
                 PDFPreviewSheet(url: url)
@@ -162,6 +204,17 @@ struct EstimateDetailView: View {
         return clientVM.clients.first(where: { $0.id == clientId })
     }
 
+    private var filteredClients: [Client] {
+        guard clientSearchText.isEmpty == false else { return clientVM.clients }
+
+        return clientVM.clients.filter { client in
+            let query = clientSearchText.lowercased()
+            return client.name.lowercased().contains(query)
+                || client.company.lowercased().contains(query)
+                || client.email.lowercased().contains(query)
+        }
+    }
+
     private func showLaborEditor() {
         laborHoursText = String(format: "%.2f", estimate.laborHours)
         laborRateText = String(format: "%.2f", estimate.laborRate)
@@ -199,6 +252,12 @@ struct EstimateDetailView: View {
 
         vm.update(estimate)
         showingLaborEditor = false
+    }
+
+    private func assignClient(_ client: Client) {
+        estimate.clientId = client.id
+        vm.assignClient(jobID: estimate.id, to: client.id)
+        isShowingClientPicker = false
     }
 
     private func previewEstimate() {
@@ -522,6 +581,8 @@ private struct EstimateDocumentCard: View {
 
 struct EstimateCustomerCard: View {
     let client: Client?
+    let assignAction: () -> Void
+    let changeAction: (() -> Void)?
 
     var body: some View {
         RoundedCard {
@@ -542,21 +603,47 @@ struct EstimateCustomerCard: View {
                     Spacer()
 
                     VStack(alignment: .trailing, spacing: 10) {
-                        Text(clientDisplayName)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.white)
-                        Text(client?.name ?? "—")
-                            .font(.subheadline)
-                            .foregroundColor(.white)
-                        Text(client?.address ?? "—")
-                            .font(.subheadline)
-                            .foregroundColor(.white)
-                        Text(client?.phone ?? "—")
-                            .font(.subheadline)
-                            .foregroundColor(.white)
-                        Text(client?.email ?? "—")
-                            .font(.subheadline)
-                            .foregroundColor(.white)
+                        if let client {
+                            VStack(alignment: .trailing, spacing: 6) {
+                                Text(clientDisplayName)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(.white)
+                                Text(client.name)
+                                    .font(.subheadline)
+                                    .foregroundColor(.white)
+                                Text(client.address.isEmpty ? "—" : client.address)
+                                    .font(.subheadline)
+                                    .foregroundColor(.white)
+                                Text(client.phone.isEmpty ? "—" : client.phone)
+                                    .font(.subheadline)
+                                    .foregroundColor(.white)
+                                Text(client.email.isEmpty ? "—" : client.email)
+                                    .font(.subheadline)
+                                    .foregroundColor(.white)
+                            }
+
+                            if let changeAction {
+                                Button(action: changeAction) {
+                                    Text("Change")
+                                        .font(.caption.weight(.semibold))
+                                        .padding(.vertical, 6)
+                                        .padding(.horizontal, 12)
+                                        .background(Color.white.opacity(0.16))
+                                        .clipShape(Capsule())
+                                        .foregroundColor(.white)
+                                }
+                            }
+                        } else {
+                            Button(action: assignAction) {
+                                Text("Assign Client")
+                                    .font(.subheadline.weight(.semibold))
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 12)
+                                    .background(Color.white.opacity(0.16))
+                                    .clipShape(Capsule())
+                                    .foregroundColor(.white)
+                            }
+                        }
                     }
                 }
             }
