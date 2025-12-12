@@ -22,6 +22,9 @@ struct JobDetailView: View {
     @State private var showingMaterialManager = false
     @State private var isShowingClientPicker = false
     @State private var clientSearchText = ""
+    @State private var isShowingShareSheet = false
+    @State private var shareItems: [Any] = []
+    @State private var shareError: String?
 
     // Labor editor state
     @State private var showingLaborEditor = false
@@ -39,6 +42,7 @@ struct JobDetailView: View {
             document: EstimateDocumentCard(
                 estimate: estimate,
                 previewAction: previewEstimate,
+                shareAction: shareEstimatePDF,
                 editAction: editEstimate,
                 convertAction: convertToInvoice
             ),
@@ -177,6 +181,22 @@ struct JobDetailView: View {
         } message: {
             Text(estimateVM.previewError ?? "Unknown error")
         }
+        .alert(
+            "Unable to share PDF",
+            isPresented: Binding(
+                get: { shareError != nil },
+                set: { if !$0 { shareError = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {
+                shareError = nil
+            }
+        } message: {
+            Text(shareError ?? "Unknown error")
+        }
+        .sheet(isPresented: $isShowingShareSheet) {
+            ShareSheet(activityItems: shareItems)
+        }
     }
 
     private var previewSheetBinding: Binding<Bool> {
@@ -266,6 +286,32 @@ struct JobDetailView: View {
             client: client(for: estimate),
             company: companySettings.settings
         )
+    }
+
+    private func shareEstimatePDF() {
+        do {
+            let pdfURL = try estimateVM.generatePDF(
+                for: estimate,
+                client: client(for: estimate),
+                company: companySettings.settings
+            )
+
+            let shareURL = try PDFTempWriter.makeTempPDF(
+                from: pdfURL,
+                fileName: "Estimate-\(estimate.name)"
+            )
+
+            var items: [Any] = []
+            if let client = client(for: estimate), !client.email.isEmpty {
+                items.append("Estimate \(estimate.name) attached.")
+            }
+
+            items.append(shareURL)
+            shareItems = items
+            isShowingShareSheet = true
+        } catch {
+            shareError = error.localizedDescription
+        }
     }
 
     private func editEstimate() {
@@ -538,6 +584,7 @@ private struct EstimateSummaryCard: View {
 private struct EstimateDocumentCard: View {
     let estimate: Job?
     let previewAction: () -> Void
+    let shareAction: () -> Void
     let editAction: () -> Void
     let convertAction: () -> Void
 
@@ -559,6 +606,12 @@ private struct EstimateDocumentCard: View {
                 HStack(spacing: 12) {
                     Button(action: previewAction) {
                         Label("Preview Estimate", systemImage: "doc.text.magnifyingglass")
+                    }
+                    .buttonStyle(PrimaryBlueButton())
+                    .disabled(estimate == nil)
+
+                    Button(action: shareAction) {
+                        Label("Share / Email PDF", systemImage: "square.and.arrow.up")
                     }
                     .buttonStyle(PrimaryBlueButton())
                     .disabled(estimate == nil)
