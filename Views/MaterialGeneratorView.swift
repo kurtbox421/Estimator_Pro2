@@ -178,8 +178,8 @@ struct MaterialGeneratorView: View {
                 selectedGroupID = orderedGroups.first?.id
             }
         }
-        .onChange(of: lengthText) { _, _ in regenerateAfterDimensionChange() }
-        .onChange(of: secondaryText) { _, _ in regenerateAfterDimensionChange() }
+        .onChange(of: lengthText) { _ in regenerateAfterDimensionChange() }
+        .onChange(of: secondaryText) { _ in regenerateAfterDimensionChange() }
     }
 
     private var smartSuggestionsSection: some View {
