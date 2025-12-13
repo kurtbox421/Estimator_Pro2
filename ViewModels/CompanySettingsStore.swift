@@ -60,6 +60,10 @@ final class CompanySettingsStore: ObservableObject {
     private var currentLogoPath: String?
     private var isApplyingRemoteUpdate = false
 
+    private func logoStoragePath(for uid: String) -> String {
+        "users/\(uid)/branding/logo.png"
+    }
+
     init(
         persistence: PersistenceService = .shared,
         database: Firestore = Firestore.firestore(),
@@ -177,7 +181,7 @@ final class CompanySettingsStore: ObservableObject {
         defer { isUploadingLogo = false }
 
         do {
-            let path = "users/\(uid)/branding/logo_\(Int(Date().timeIntervalSince1970)).png"
+            let path = logoStoragePath(for: uid)
             let ref = storage.reference(withPath: path)
             let metadata = StorageMetadata()
             metadata.contentType = "image/png"
