@@ -53,9 +53,22 @@ class JobViewModel: ObservableObject {
     }
 
     func delete(_ job: Job) {
-        if let index = jobs.firstIndex(where: { $0.id == job.id }) {
-            jobs.remove(at: index)
-        }
+        delete(jobID: job.id)
+    }
+
+    func delete(jobID: Job.ID) {
+        let countBeforeDelete = jobs.count
+
+        #if DEBUG
+        print("[JobViewModel] delete(jobID:) before: \(countBeforeDelete) items")
+        #endif
+
+        jobs.removeAll { $0.id == jobID }
+
+        #if DEBUG
+        let countAfterDelete = jobs.count
+        print("[JobViewModel] delete(jobID:) after: \(countAfterDelete) items")
+        #endif
     }
 
     func assignClient(jobID: Job.ID, to clientID: Client.ID) {
