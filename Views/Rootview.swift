@@ -385,12 +385,11 @@ struct EstimatesTabView: View {
     var body: some View {
         List {
             // iterate jobs with index + value
-            ForEach($vm.jobs) { $job in
+            ForEach(vm.jobs) { job in
                 NavigationLink {
-                    // pass a binding to this job
-                    JobDetailView(estimate: $job)
+                    JobDetailView(estimateID: job.id)
                 } label: {
-                    EstimateJobCard(job: $job.wrappedValue)
+                    EstimateJobCard(job: job)
                 }
                 .listRowInsets(rowInsets)
                 .listRowSeparator(.hidden)
@@ -398,7 +397,7 @@ struct EstimatesTabView: View {
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     Button(role: .destructive) {
                         withAnimation {
-                            vm.delete($job.wrappedValue)
+                            vm.delete(jobID: job.id)
                         }
                     } label: {
                         Label("Delete", systemImage: "trash")
@@ -890,23 +889,21 @@ struct ClientDetailView: View {
                 } else {
                     VStack(spacing: 0) {
                         ForEach(clientJobs) { job in
-                            if let jobBinding = binding(forJob: job.id) {
-                                NavigationLink {
-                                    JobDetailView(estimate: jobBinding)
-                                } label: {
-                                    ProjectRow(
-                                        title: job.name,
-                                        subtitle: job.category,
-                                        amount: job.total,
-                                        date: job.dateCreated,
-                                        badge: "Estimate"
-                                    )
-                                }
-                                .buttonStyle(.plain)
+                            NavigationLink {
+                                JobDetailView(estimateID: job.id)
+                            } label: {
+                                ProjectRow(
+                                    title: job.name,
+                                    subtitle: job.category,
+                                    amount: job.total,
+                                    date: job.dateCreated,
+                                    badge: "Estimate"
+                                )
+                            }
+                            .buttonStyle(.plain)
 
-                                if !(job.id == clientJobs.last?.id && clientInvoices.isEmpty) {
-                                    Divider().overlay(Color.white.opacity(0.12))
-                                }
+                            if !(job.id == clientJobs.last?.id && clientInvoices.isEmpty) {
+                                Divider().overlay(Color.white.opacity(0.12))
                             }
                         }
 
@@ -937,13 +934,12 @@ struct ClientDetailView: View {
     }
 
     private func binding(forInvoice id: UUID) -> Binding<Invoice>? {
-        guard let index = invoiceVM.invoices.firstIndex(where: { $0.id == id }) else { return nil }
-        return $invoiceVM.invoices[index]
-    }
+        guard let invoice = invoiceVM.invoices.first(where: { $0.id == id }) else { return nil }
 
-    private func binding(forJob id: UUID) -> Binding<Job>? {
-        guard let index = jobVM.jobs.firstIndex(where: { $0.id == id }) else { return nil }
-        return $jobVM.jobs[index]
+        return Binding(
+            get: { invoiceVM.invoices.first(where: { $0.id == id }) ?? invoice },
+            set: { invoiceVM.update($0) }
+        )
     }
 }
 

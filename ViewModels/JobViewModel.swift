@@ -152,6 +152,10 @@ class JobViewModel: ObservableObject {
     func jobs(for client: Client) -> [Job] {
         jobs.filter { $0.clientId == client.id }
     }
+
+    func job(for id: Job.ID) -> Job? {
+        jobs.first(where: { $0.id == id })
+    }
     
     func jobCount(for client: Client) -> Int {
         jobs(for: client).count

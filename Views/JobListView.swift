@@ -34,7 +34,7 @@ struct JobListView: View {
                     // Card-style list
                     List {
                         ForEach(vm.jobs) { job in
-                            NavigationLink(destination: JobDetailView(estimate: binding(for: job))) {
+                            NavigationLink(destination: JobDetailView(estimateID: job.id)) {
                                 JobRowView(job: job)
                             }
                             .listRowBackground(Color.clear)
@@ -66,14 +66,6 @@ struct JobListView: View {
                 }
             }
         }
-    }
-
-    private func binding(for job: Job) -> Binding<Job> {
-        guard let index = vm.jobs.firstIndex(where: { $0.id == job.id }) else {
-            return .constant(job)
-        }
-
-        return $vm.jobs[index]
     }
 }
 
