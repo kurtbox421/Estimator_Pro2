@@ -30,120 +30,11 @@ struct InvoiceDetailView: View {
 
     var body: some View {
         JobDocumentLayout(
-            summary: VStack(spacing: 12) {
-                InvoiceSummaryCard(invoice: invoice, client: client)
-            },
-            document: InvoiceDocumentCard(
-                invoice: invoice,
-                previewAction: handlePreviewInvoice,
-                shareAction: shareInvoicePDF,
-                editAction: { isPresentingInvoiceEditor = true },
-                statusAction: markInvoiceAsSent
-            ),
-            customer: {
-                EstimateCustomerCard(
-                    client: client,
-                    assignAction: { isShowingClientPicker = true },
-                    changeAction: client != nil ? { isShowingClientPicker = true } : nil
-                )
-            },
-            quickActions: {
-                EstimateQuickActionsCard(
-                    client: client,
-                    callAction: callClient,
-                    textAction: textClient,
-                    followUpAction: followUpClient
-                )
-            },
-            materials: {
-                VStack(spacing: 16) {
-                    RoundedCard {
-                        VStack(alignment: .leading, spacing: 16) {
-                            HStack(alignment: .center) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Labor")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundColor(.white.opacity(0.7))
-
-                                    Text("\(invoice.laborLines.count) items")
-                                        .font(.caption2)
-                                        .foregroundColor(.white.opacity(0.6))
-                                }
-
-                                Spacer()
-
-                                Button(action: addLaborLine) {
-                                    Label("Add Labor Line", systemImage: "plus")
-                                        .font(.caption.weight(.semibold))
-                                        .padding(.vertical, 6)
-                                        .padding(.horizontal, 10)
-                                        .background(Color.white.opacity(0.16))
-                                        .clipShape(Capsule())
-                                        .foregroundColor(.white)
-                                }
-                            }
-
-                            if invoice.laborLines.isEmpty {
-                                Text("No labor added yet.")
-                                    .font(.subheadline)
-                                    .foregroundColor(.white.opacity(0.7))
-                            } else {
-                                ForEach($invoice.laborLines) { $labor in
-                                    InvoiceLaborRow(
-                                        laborLine: $labor,
-                                        isLast: labor.id == invoice.laborLines.last?.id,
-                                        deleteAction: { deleteLaborLine(labor) }
-                                    )
-                                }
-                            }
-
-                            Divider().overlay(Color.white.opacity(0.15))
-
-                            HStack {
-                                Text("Labor Subtotal")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundColor(.white.opacity(0.8))
-                                Spacer()
-                                Text(invoice.laborSubtotal, format: .currency(code: "USD"))
-                                    .font(.headline.weight(.semibold))
-                                    .foregroundColor(.white)
-                            }
-                        }
-                    }
-
-                    RoundedCard {
-                        VStack(alignment: .leading, spacing: 16) {
-                            HStack(alignment: .center) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Materials")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundColor(.white.opacity(0.7))
-
-                                    Text("\(invoice.materials.count) items")
-                                        .font(.caption2)
-                                        .foregroundColor(.white.opacity(0.6))
-                                }
-
-                                Spacer()
-                            }
-
-                            if invoice.materials.isEmpty {
-                                Text("No materials added yet.")
-                                    .font(.subheadline)
-                                    .foregroundColor(.white.opacity(0.7))
-                            } else {
-                                ForEach($invoice.materials) { $material in
-                                    InvoiceMaterialRow(
-                                        material: $material,
-                                        isLast: material.id == invoice.materials.last?.id,
-                                        deleteAction: { deleteMaterial(material) }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            summary: summarySection,
+            document: documentSection,
+            customer: customerSection,
+            quickActions: quickActionsSection,
+            materials: materialsSection
         )
         .navigationTitle("Invoice")
         .navigationBarTitleDisplayMode(.inline)
@@ -234,7 +125,52 @@ struct InvoiceDetailView: View {
         }
     }
 
-    // MARK: - Actions
+    private var summarySection: some View {
+        VStack(spacing: 12) {
+            InvoiceSummaryCard(invoice: invoice, client: client)
+        }
+    }
+
+    private var documentSection: some View {
+        InvoiceDocumentCard(
+            invoice: invoice,
+            previewAction: handlePreviewInvoice,
+            shareAction: shareInvoicePDF,
+            editAction: { isPresentingInvoiceEditor = true },
+            statusAction: markInvoiceAsSent
+        )
+    }
+
+    private var customerSection: some View {
+        EstimateCustomerCard(
+            client: client,
+            assignAction: { isShowingClientPicker = true },
+            changeAction: client != nil ? { isShowingClientPicker = true } : nil
+        )
+    }
+
+    private var quickActionsSection: some View {
+        EstimateQuickActionsCard(
+            client: client,
+            callAction: callClient,
+            textAction: textClient,
+            followUpAction: followUpClient
+        )
+    }
+
+    private var materialsSection: some View {
+        InvoiceMaterialsSectionView(
+            invoice: $invoice,
+            addLaborLine: addLaborLine,
+            deleteLaborLine: deleteLaborLine,
+            deleteMaterial: deleteMaterial,
+            addMaterialFromCatalog: addMaterialFromCatalog,
+            addMaterialSuggestions: addMaterialSuggestions,
+            addMaterial: addMaterial
+        )
+    }
+
+// MARK: - Actions
 
     private func deleteMaterial(_ material: Material) {
         if let index = invoice.materials.firstIndex(where: { $0.id == material.id }) {
@@ -539,6 +475,138 @@ private struct InvoiceDocumentCard: View {
                             )
                         }
                         .buttonStyle(PrimaryBlueButton())
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+private struct InvoiceMaterialsSectionView: View {
+    @Binding var invoice: Invoice
+    let addLaborLine: () -> Void
+    let deleteLaborLine: (LaborLine) -> Void
+    let deleteMaterial: (Material) -> Void
+    let addMaterialFromCatalog: () -> Void
+    let addMaterialSuggestions: () -> Void
+    let addMaterial: () -> Void
+
+    var body: some View {
+        VStack(spacing: 16) {
+            RoundedCard {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(alignment: .center) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Labor")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.white.opacity(0.7))
+
+                            Text("\(invoice.laborLines.count) items")
+                                .font(.caption2)
+                                .foregroundColor(.white.opacity(0.6))
+                        }
+
+                        Spacer()
+
+                        Button(action: addLaborLine) {
+                            Label("Add Labor Line", systemImage: "plus")
+                                .font(.caption.weight(.semibold))
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 10)
+                                .background(Color.white.opacity(0.16))
+                                .clipShape(Capsule())
+                                .foregroundColor(.white)
+                        }
+                    }
+
+                    if invoice.laborLines.isEmpty {
+                        Text("No labor added yet.")
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.7))
+                    } else {
+                        ForEach($invoice.laborLines) { $labor in
+                            InvoiceLaborRow(
+                                laborLine: $labor,
+                                isLast: labor.id == invoice.laborLines.last?.id,
+                                deleteAction: { deleteLaborLine(labor) }
+                            )
+                        }
+                    }
+
+                    Divider().overlay(Color.white.opacity(0.15))
+
+                    HStack {
+                        Text("Labor Subtotal")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.white.opacity(0.8))
+                        Spacer()
+                        Text(invoice.laborSubtotal, format: .currency(code: "USD"))
+                            .font(.headline.weight(.semibold))
+                            .foregroundColor(.white)
+                    }
+                }
+            }
+
+            RoundedCard {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(alignment: .center) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Materials")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.white.opacity(0.7))
+
+                            Text("\(invoice.materials.count) items")
+                                .font(.caption2)
+                                .foregroundColor(.white.opacity(0.6))
+                        }
+
+                        Spacer()
+
+                        Menu {
+                            Button("Add from Catalog", action: addMaterialFromCatalog)
+                            Button("Generate Suggestions", action: addMaterialSuggestions)
+                            Button("Create Custom Material", action: addMaterial)
+                        } label: {
+                            Label("Add Material", systemImage: "plus")
+                                .font(.caption.weight(.semibold))
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 10)
+                                .background(Color.white.opacity(0.16))
+                                .clipShape(Capsule())
+                                .foregroundColor(.white)
+                        }
+                    }
+
+                    if invoice.materials.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("No materials added yet.")
+                                .font(.subheadline)
+                                .foregroundColor(.white.opacity(0.7))
+                            Text("Add materials from your catalog, generate suggestions, or create custom entries.")
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.6))
+                        }
+                    } else {
+                        ForEach($invoice.materials) { $material in
+                            InvoiceMaterialRow(
+                                material: $material,
+                                isLast: material.id == invoice.materials.last?.id,
+                                deleteAction: { deleteMaterial(material) }
+                            )
+                        }
+                    }
+
+                    Divider().overlay(Color.white.opacity(0.15))
+
+                    HStack {
+                        Text("Materials Subtotal")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.white.opacity(0.8))
+                        Spacer()
+                        Text(invoice.materialSubtotal, format: .currency(code: "USD"))
+                            .font(.headline.weight(.semibold))
+                            .foregroundColor(.white)
                     }
                 }
             }
