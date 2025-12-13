@@ -1,5 +1,6 @@
 import UIKit
 import PDFKit
+import FirebaseAuth
 
 struct InvoicePDFRenderer {
     private struct InvoiceLineItem {
@@ -293,23 +294,30 @@ struct InvoicePDFRenderer {
 
 // MARK: - Company logo support
 
-private enum CompanyLogoLoader {
-    private static let logoKey = "brandingLogoData"
+enum CompanyLogoLoader {
+    private static func logoKey(for uid: String) -> String { "brandingLogoData_\(uid)" }
 
     static func loadLogo() -> UIImage? {
-        if let data = UserDefaults.standard.data(forKey: logoKey),
+        guard let uid = Auth.auth().currentUser?.uid else { return nil }
+        return loadLogo(for: uid)
+    }
+
+    static func loadLogo(for uid: String) -> UIImage? {
+        let key = logoKey(for: uid)
+
+        if let data = UserDefaults.standard.data(forKey: key),
            let image = UIImage(data: data) {
             return image
         }
 
-        if let storedURL = UserDefaults.standard.url(forKey: logoKey),
+        if let storedURL = UserDefaults.standard.url(forKey: key),
            let resolved = resolvePersistentURL(from: storedURL),
            let data = try? Data(contentsOf: resolved),
            let image = UIImage(data: data) {
             return image
         }
 
-        if let storedPath = UserDefaults.standard.string(forKey: logoKey),
+        if let storedPath = UserDefaults.standard.string(forKey: key),
            let url = URL(string: storedPath),
            let resolved = resolvePersistentURL(from: url),
            let data = try? Data(contentsOf: resolved),
@@ -318,6 +326,16 @@ private enum CompanyLogoLoader {
         }
 
         return nil
+    }
+
+    static func cacheLogoData(_ data: Data, for uid: String) {
+        let key = logoKey(for: uid)
+        UserDefaults.standard.set(data, forKey: key)
+    }
+
+    static func clearCache(for uid: String) {
+        let key = logoKey(for: uid)
+        UserDefaults.standard.removeObject(forKey: key)
     }
 
     private static func resolvePersistentURL(from url: URL) -> URL? {

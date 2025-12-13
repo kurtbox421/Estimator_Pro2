@@ -2,7 +2,9 @@ import Combine
 import FirebaseAuth
 import FirebaseFirestore
 import FirebaseFirestoreSwift
+import FirebaseStorage
 import Foundation
+import UIKit
 
 private enum CompanyStorage {
     static func fileName(for uid: String) -> String { "companySettings_\(uid).json" }
@@ -14,6 +16,7 @@ struct CompanySettings: Codable {
     var companyAddress: String
     var companyPhone: String
     var companyEmail: String
+    var logoPath: String?
 
     private enum CodingKeys: String, CodingKey {
         case ownerID
@@ -21,9 +24,10 @@ struct CompanySettings: Codable {
         case companyAddress
         case companyPhone
         case companyEmail
+        case logoPath
     }
 
-    static let empty = CompanySettings(ownerID: nil, companyName: "", companyAddress: "", companyPhone: "", companyEmail: "")
+    static let empty = CompanySettings(ownerID: nil, companyName: "", companyAddress: "", companyPhone: "", companyEmail: "", logoPath: nil)
 }
 
 final class CompanySettingsStore: ObservableObject {
@@ -31,6 +35,8 @@ final class CompanySettingsStore: ObservableObject {
     @Published var companyAddress: String = ""
     @Published var companyPhone: String = ""
     @Published var companyEmail: String = ""
+    @Published var logoImage: UIImage?
+    @Published private(set) var isUploadingLogo = false
 
     var settings: CompanySettings {
         CompanySettings(
@@ -38,26 +44,31 @@ final class CompanySettingsStore: ObservableObject {
             companyName: companyName,
             companyAddress: companyAddress,
             companyPhone: companyPhone,
-            companyEmail: companyEmail
+            companyEmail: companyEmail,
+            logoPath: currentLogoPath
         )
     }
 
     private let persistence: PersistenceService
     private let db: Firestore
+    private let storage: Storage
     private let auth: Auth
     private var cancellables: Set<AnyCancellable> = []
     private var listener: ListenerRegistration?
     private var authHandle: AuthStateDidChangeListenerHandle?
     private var currentUserID: String?
+    private var currentLogoPath: String?
     private var isApplyingRemoteUpdate = false
 
     init(
         persistence: PersistenceService = .shared,
         database: Firestore = Firestore.firestore(),
+        storage: Storage = Storage.storage(),
         auth: Auth = Auth.auth()
     ) {
         self.persistence = persistence
         self.db = database
+        self.storage = storage
         self.auth = auth
 
         configureAuthListener()
@@ -80,7 +91,8 @@ final class CompanySettingsStore: ObservableObject {
                     companyName: name,
                     companyAddress: address,
                     companyPhone: phone,
-                    companyEmail: email
+                    companyEmail: email,
+                    logoPath: self.currentLogoPath
                 )
 
                 self.persistence.save(settings, to: CompanyStorage.fileName(for: uid))
@@ -105,11 +117,14 @@ final class CompanySettingsStore: ObservableObject {
     private func attachListener(for user: User?) {
         listener?.remove()
         currentUserID = user?.uid
+        currentLogoPath = nil
+        logoImage = nil
         apply(settings: .empty)
 
         guard let uid = user?.uid else { return }
 
         loadLocalSettings(for: uid)
+        loadCachedLogo(for: uid)
 
         listener = companyDocument(for: uid)
             .addSnapshotListener { [weak self] snapshot, error in
@@ -137,6 +152,11 @@ final class CompanySettingsStore: ObservableObject {
         companyAddress = settings.companyAddress
         companyPhone = settings.companyPhone
         companyEmail = settings.companyEmail
+        currentLogoPath = settings.logoPath
+
+        if let uid = currentUserID, let logoPath = settings.logoPath {
+            fetchLogoIfNeeded(from: logoPath, for: uid)
+        }
         isApplyingRemoteUpdate = false
     }
 
@@ -145,5 +165,64 @@ final class CompanySettingsStore: ObservableObject {
             .document(uid)
             .collection("company")
             .document("settings")
+    }
+
+    // MARK: - Branding & Logo
+
+    @MainActor
+    func uploadLogo(data: Data) async {
+        guard let uid = currentUserID else { return }
+
+        isUploadingLogo = true
+        defer { isUploadingLogo = false }
+
+        do {
+            let path = "users/\(uid)/branding/logo_\(Int(Date().timeIntervalSince1970)).png"
+            let ref = storage.reference(withPath: path)
+            let metadata = StorageMetadata()
+            metadata.contentType = "image/png"
+
+            _ = try await ref.putDataAsync(data, metadata: metadata)
+
+            logoImage = UIImage(data: data)
+            CompanyLogoLoader.cacheLogoData(data, for: uid)
+            currentLogoPath = path
+
+            var updatedSettings = settings
+            updatedSettings.logoPath = path
+            do {
+                try companyDocument(for: uid).setData(from: updatedSettings, merge: true)
+            } catch {
+                print("Failed to save logo path: \(error.localizedDescription)")
+            }
+        } catch {
+            print("Failed to upload logo: \(error.localizedDescription)")
+        }
+    }
+
+    private func fetchLogoIfNeeded(from path: String, for uid: String) {
+        guard path != currentLogoPath || logoImage == nil else { return }
+        if let cached = CompanyLogoLoader.loadLogo(for: uid) {
+            logoImage = cached
+            return
+        }
+
+        let ref = storage.reference(withPath: path)
+        ref.getData(maxSize: 5 * 1024 * 1024) { [weak self] data, error in
+            guard let self else { return }
+            if let error { print("Failed to download logo: \(error.localizedDescription)"); return }
+            guard let data, let image = UIImage(data: data) else { return }
+
+            DispatchQueue.main.async {
+                self.logoImage = image
+                CompanyLogoLoader.cacheLogoData(data, for: uid)
+            }
+        }
+    }
+
+    private func loadCachedLogo(for uid: String) {
+        if let cached = CompanyLogoLoader.loadLogo(for: uid) {
+            logoImage = cached
+        }
     }
 }
