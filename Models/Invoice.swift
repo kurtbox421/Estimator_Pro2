@@ -118,4 +118,19 @@ struct Invoice: Identifiable, Codable {
         self.dueDate = try container.decodeIfPresent(Date.self, forKey: .dueDate)
         self.ownerID = try container.decodeIfPresent(String.self, forKey: .ownerID) ?? ""
     }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        try container.encode(id, forKey: .id)
+        try container.encode(invoiceNumber, forKey: .invoiceNumber)
+        try container.encode(title, forKey: .title)
+        try container.encodeIfPresent(clientID, forKey: .clientID)
+        try container.encode(clientName, forKey: .clientName)
+        try container.encode(materials, forKey: .materials)
+        try container.encode(laborLines, forKey: .laborLines)
+        try container.encode(status, forKey: .status)
+        try container.encodeIfPresent(dueDate, forKey: .dueDate)
+        try container.encode(ownerID, forKey: .ownerID)
+    }
 }
