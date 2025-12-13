@@ -34,7 +34,7 @@ struct JobListView: View {
                     // Card-style list
                     List {
                         ForEach(vm.jobs) { job in
-                            NavigationLink(destination: JobDetailView(job: job)) {
+                            NavigationLink(destination: JobDetailView(estimateID: job.id)) {
                                 JobRowView(job: job)
                             }
                             .listRowBackground(Color.clear)

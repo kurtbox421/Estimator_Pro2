@@ -18,7 +18,8 @@ struct JobDetailView: View {
     @EnvironmentObject private var emailTemplateSettings: EmailTemplateSettingsStore
     @Environment(\.dismiss) private var dismiss
 
-    @Binding var estimate: Job
+    let estimateID: Job.ID
+    @State private var draftEstimate: Job?
     @State private var createdInvoice: Invoice?
     @State private var estimateIDPendingDeletion: Job.ID?
     @State private var showingInvoiceEditor = false
@@ -28,40 +29,54 @@ struct JobDetailView: View {
     @State private var isShowingShareSheet = false
     @State private var shareItems: [Any] = []
     @State private var shareError: String?
+    @State private var isConverting = false
 
     // Material editor state
     @State private var showingMaterialEditor = false
 
     var body: some View {
-        jobLayout
-            .navigationTitle("Estimate")
-            .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $showingInvoiceEditor, onDismiss: finalizeConversionIfNeeded) { invoiceEditor }
-            .sheet(isPresented: $showingMaterialManager) { materialManagerSheet }
-            .sheet(isPresented: $showingMaterialEditor) { materialEditorSheet }
-            .sheet(isPresented: $isShowingClientPicker) { clientPickerSheet }
-            .sheet(isPresented: previewSheetBinding) { previewSheet }
-            .alert("Unable to generate PDF", isPresented: previewErrorBinding) {
-                previewErrorActions
-            } message: {
-                previewErrorMessage
+        Group {
+            if let estimateBinding = draftEstimateBinding {
+                jobLayout(estimate: estimateBinding)
+                    .onChange(of: estimateBinding.wrappedValue.laborLines) { _, _ in
+                        guard !isConverting, let estimate = draftEstimate else { return }
+                        vm.update(estimate)
+                    }
+            } else {
+                missingEstimateView
             }
-            .alert("Unable to share PDF", isPresented: shareErrorBinding) {
-                shareErrorActions
-            } message: {
-                shareErrorMessage
-            }
-            .sheet(isPresented: $isShowingShareSheet) { ShareSheet(activityItems: shareItems) }
-            .onChange(of: estimate.laborLines) { _, _ in vm.update(estimate) }
+        }
+        .navigationTitle("Estimate")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showingInvoiceEditor, onDismiss: finalizeConversionIfNeeded) { invoiceEditor }
+        .sheet(isPresented: $showingMaterialManager) { materialManagerSheet }
+        .sheet(isPresented: $showingMaterialEditor) { materialEditorSheet }
+        .sheet(isPresented: $isShowingClientPicker) { clientPickerSheet }
+        .sheet(isPresented: previewSheetBinding) { previewSheet }
+        .alert("Unable to generate PDF", isPresented: previewErrorBinding) {
+            previewErrorActions
+        } message: {
+            previewErrorMessage
+        }
+        .alert("Unable to share PDF", isPresented: shareErrorBinding) {
+            shareErrorActions
+        } message: {
+            shareErrorMessage
+        }
+        .sheet(isPresented: $isShowingShareSheet) { ShareSheet(activityItems: shareItems) }
+        .onAppear(perform: loadEstimate)
+        .onReceive(vm.$jobs) { _ in syncEstimateFromStore() }
     }
 
-    private var jobLayout: some View {
+    private func jobLayout(estimate: Binding<Job>) -> some View {
+        let estimateValue = estimate.wrappedValue
+
         JobDocumentLayout(
-            summary: summarySection,
-            document: documentSection,
-            customer: { customerSection },
-            quickActions: { quickActionsSection },
-            materials: { materialsSection }
+            summary: { summarySection(for: estimateValue) },
+            document: { documentSection(for: estimateValue) },
+            customer: { customerSection(for: estimateValue) },
+            quickActions: { quickActionsSection(for: estimateValue) },
+            materials: { materialsSection(for: estimate) }
         )
     }
 
@@ -76,20 +91,26 @@ struct JobDetailView: View {
         }
     }
 
+    @ViewBuilder
     private var materialManagerSheet: some View {
-        MaterialManagerSheet(
-            job: $estimate,
-            jobVM: vm,
-            invoiceVM: invoiceVM
-        )
+        if let estimateBinding = draftEstimateBinding {
+            MaterialManagerSheet(
+                job: estimateBinding,
+                jobVM: vm,
+                invoiceVM: invoiceVM
+            )
+        }
     }
 
+    @ViewBuilder
     private var materialEditorSheet: some View {
-        AddMaterialView(
-            mode: .add(job: estimate),
-            jobVM: vm,
-            invoiceVM: invoiceVM
-        )
+        if let estimate = draftEstimate {
+            AddMaterialView(
+                mode: .add(job: estimate),
+                jobVM: vm,
+                invoiceVM: invoiceVM
+            )
+        }
     }
 
     @ViewBuilder
@@ -134,17 +155,21 @@ struct JobDetailView: View {
     }
 
     private var currentClient: Client? {
-        client(for: estimate)
+        if let estimate = draftEstimate {
+            client(for: estimate)
+        } else {
+            nil
+        }
     }
 
     @ViewBuilder
-    private var summarySection: some View {
+    private func summarySection(for estimate: Job) -> some View {
         VStack(spacing: 12) {
             EstimateSummaryCard(job: estimate, editLaborAction: addLaborLine)
         }
     }
 
-    private var documentSection: some View {
+    private func documentSection(for estimate: Job) -> some View {
         EstimateDocumentCard(
             estimate: estimate,
             previewAction: previewEstimate,
@@ -154,7 +179,7 @@ struct JobDetailView: View {
         )
     }
 
-    private var customerSection: some View {
+    private func customerSection(for estimate: Job) -> some View {
         EstimateCustomerCard(
             client: currentClient,
             assignAction: { isShowingClientPicker = true },
@@ -162,7 +187,7 @@ struct JobDetailView: View {
         )
     }
 
-    private var quickActionsSection: some View {
+    private func quickActionsSection(for estimate: Job) -> some View {
         EstimateQuickActionsCard(
             client: currentClient,
             callAction: callClient,
@@ -172,7 +197,9 @@ struct JobDetailView: View {
     }
 
     @ViewBuilder
-    private var materialsSection: some View {
+    private func materialsSection(for estimate: Binding<Job>) -> some View {
+        let estimateValue = estimate.wrappedValue
+
         VStack(spacing: 16) {
             RoundedCard {
                 VStack(alignment: .leading, spacing: 16) {
@@ -200,15 +227,15 @@ struct JobDetailView: View {
                         }
                     }
 
-                    if estimate.laborLines.isEmpty {
+                    if estimateValue.laborLines.isEmpty {
                         Text("No labor added yet.")
                             .font(.subheadline)
                             .foregroundColor(.white.opacity(0.7))
                     } else {
-                        ForEach($estimate.laborLines) { $labor in
+                        ForEach(estimate.laborLines) { $labor in
                             EditableLaborRow(
                                 laborLine: $labor,
-                                isLast: labor.id == estimate.laborLines.last?.id,
+                                isLast: labor.id == estimateValue.laborLines.last?.id,
                                 deleteAction: { deleteLaborLine(labor) }
                             )
                         }
@@ -221,7 +248,7 @@ struct JobDetailView: View {
                             .font(.subheadline.weight(.semibold))
                             .foregroundColor(.white.opacity(0.8))
                         Spacer()
-                        Text(estimate.laborSubtotal, format: .currency(code: "USD"))
+                        Text(estimateValue.laborSubtotal, format: .currency(code: "USD"))
                             .font(.headline.weight(.semibold))
                             .foregroundColor(.white)
                     }
@@ -236,7 +263,7 @@ struct JobDetailView: View {
                                 .font(.caption.weight(.semibold))
                                 .foregroundColor(.white.opacity(0.7))
 
-                            Text("\(estimate.materials.count) items")
+                            Text("\(estimateValue.materials.count) items")
                                 .font(.caption2)
                                 .foregroundColor(.white.opacity(0.6))
                         }
@@ -254,15 +281,15 @@ struct JobDetailView: View {
                         }
                     }
 
-                    if estimate.materials.isEmpty {
+                    if estimateValue.materials.isEmpty {
                         Text("No materials added yet.")
                             .font(.subheadline)
                             .foregroundColor(.white.opacity(0.7))
                     } else {
-                        ForEach($estimate.materials) { $material in
+                        ForEach(estimate.materials) { $material in
                             EditableMaterialRow(
                                 material: $material,
-                                showDivider: material.id != estimate.materials.last?.id,
+                                showDivider: material.id != estimateValue.materials.last?.id,
                                 deleteAction: { deleteMaterial(material) }
                             )
                         }
@@ -295,6 +322,53 @@ struct JobDetailView: View {
             get: { shareError != nil },
             set: { if !$0 { shareError = nil } }
         )
+    }
+
+    private func loadEstimate() {
+        draftEstimate = vm.job(for: estimateID)
+    }
+
+    private func syncEstimateFromStore() {
+        guard let storedEstimate = vm.job(for: estimateID) else {
+            if !isConverting {
+                dismiss()
+            }
+            draftEstimate = nil
+            return
+        }
+
+        draftEstimate = storedEstimate
+    }
+
+    private var draftEstimateBinding: Binding<Job>? {
+        guard let estimate = draftEstimate else { return nil }
+
+        return Binding(
+            get: { draftEstimate ?? estimate },
+            set: { newValue in
+                draftEstimate = newValue
+                vm.update(newValue)
+            }
+        )
+    }
+
+    @ViewBuilder
+    private var missingEstimateView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.largeTitle)
+                .foregroundColor(.yellow)
+            Text("This estimate is no longer available.")
+                .font(.headline)
+                .multilineTextAlignment(.center)
+                .foregroundColor(.white)
+            Button("Close") {
+                dismiss()
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
     }
 
     // MARK: - Helpers
@@ -348,31 +422,46 @@ struct JobDetailView: View {
     }
 
     private func addLaborLine() {
+        guard var estimate = draftEstimate else { return }
         estimate.laborLines.append(LaborLine(id: UUID(), title: "Labor", hours: 0, rate: 0))
+        draftEstimate = estimate
         vm.update(estimate)
     }
 
     private func deleteMaterial(_ material: Material) {
-        if let index = estimate.materials.firstIndex(where: { $0.id == material.id }) {
+        guard var estimate = draftEstimate else { return }
+
+        if let index = estimate.materials.firstIndex(where: { $0.id == material.id }),
+           estimate.materials.indices.contains(index) {
             estimate.materials.remove(at: index)
+            draftEstimate = estimate
             vm.update(estimate)
         }
     }
 
     private func deleteLaborLine(_ labor: LaborLine) {
-        if let index = estimate.laborLines.firstIndex(where: { $0.id == labor.id }) {
+        guard var estimate = draftEstimate else { return }
+
+        if let index = estimate.laborLines.firstIndex(where: { $0.id == labor.id }),
+           estimate.laborLines.indices.contains(index) {
             estimate.laborLines.remove(at: index)
+            draftEstimate = estimate
             vm.update(estimate)
         }
     }
 
     private func assignClient(_ client: Client) {
+        guard var estimate = draftEstimate else { return }
+
         estimate.clientId = client.id
+        draftEstimate = estimate
         vm.assignClient(jobID: estimate.id, to: client.id)
         isShowingClientPicker = false
     }
 
     private func previewEstimate() {
+        guard let estimate = draftEstimate else { return }
+
         estimateVM.preview(
             estimate: estimate,
             client: client(for: estimate),
@@ -381,6 +470,8 @@ struct JobDetailView: View {
     }
 
     private func shareEstimatePDF() {
+        guard let estimate = draftEstimate else { return }
+
         do {
             let pdfURL = try estimateVM.generatePDF(
                 for: estimate,
@@ -426,6 +517,8 @@ struct JobDetailView: View {
     }
 
     private func convertToInvoice() {
+        guard let estimate = draftEstimate else { return }
+
         let estimateID = estimate.id
 
         let jobsCount = vm.jobs.count
@@ -435,7 +528,7 @@ struct JobDetailView: View {
         print("[ConvertToInvoice] jobs count: \(jobsCount), invoices count: \(invoiceCount), target estimate id: \(estimateID)")
         #endif
 
-        guard let estimateToConvert = vm.jobs.first(where: { $0.id == estimateID }) else {
+        guard let estimateToConvert = vm.job(for: estimateID) else {
             #if DEBUG
             assertionFailure("[ConvertToInvoice] Missing estimate with id \(estimateID). jobs count when converting: \(jobsCount)")
             #endif
@@ -461,6 +554,7 @@ struct JobDetailView: View {
         createdInvoice = invoice
         showingInvoiceEditor = true
         estimateIDPendingDeletion = estimateID
+        isConverting = true
     }
 
     private func finalizeConversionIfNeeded() {
@@ -469,13 +563,17 @@ struct JobDetailView: View {
         self.estimateIDPendingDeletion = nil
 
         dismiss()
+
         vm.delete(jobID: estimateIDPendingDeletion)
+        draftEstimate = nil
+        isConverting = false
     }
 
     // MARK: - Quick Actions
 
     private func callClient() {
         guard
+            let estimate = draftEstimate,
             let phone = client(for: estimate)?.phone,
             !phone.isEmpty
         else { return }
@@ -489,6 +587,7 @@ struct JobDetailView: View {
 
     private func textClient() {
         guard
+            let estimate = draftEstimate,
             let phone = client(for: estimate)?.phone,
             !phone.isEmpty
         else { return }
@@ -501,6 +600,7 @@ struct JobDetailView: View {
 
     private func followUpClient() {
         guard
+            let estimate = draftEstimate,
             let email = client(for: estimate)?.email,
             !email.isEmpty,
             let url = URL(string: "mailto:\(email)")
