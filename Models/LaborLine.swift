@@ -1,6 +1,6 @@
 import Foundation
 
-struct LaborLine: Identifiable, Codable {
+struct LaborLine: Identifiable, Codable, Equatable {
     var id: UUID
     var title: String
     var hours: Double
