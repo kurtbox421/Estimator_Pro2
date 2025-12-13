@@ -24,12 +24,15 @@ struct Invoice: Identifiable, Codable {
     var clientID: UUID?
     var clientName: String
     var materials: [Material]
+    var laborLines: [LaborLine]
     var status: InvoiceStatus
     var dueDate: Date?
 
     var amount: Double {
-        materials.reduce(into: 0) { $0 += $1.total }
+        materials.reduce(into: 0) { $0 += $1.total } + laborSubtotal
     }
+
+    var laborSubtotal: Double { laborLines.reduce(0) { $0 + $1.total } }
 
     // MARK: - Designated init
 
@@ -41,6 +44,7 @@ struct Invoice: Identifiable, Codable {
         clientID: UUID? = nil,
         clientName: String,
         materials: [Material] = [],
+        laborLines: [LaborLine] = [],
         status: InvoiceStatus,
         dueDate: Date? = nil
     ) {
@@ -51,6 +55,7 @@ struct Invoice: Identifiable, Codable {
         self.clientID = clientID
         self.clientName = clientName
         self.materials = materials
+        self.laborLines = laborLines
         self.status = status
         self.dueDate = dueDate
     }
@@ -64,6 +69,7 @@ struct Invoice: Identifiable, Codable {
             clientID: job.clientId,
             clientName: clientName,
             materials: job.materials,
+            laborLines: job.laborLines,
             status: .draft
         )
     }
@@ -77,9 +83,13 @@ struct Invoice: Identifiable, Codable {
         case clientID
         case clientName
         case materials
+        case laborLines
         case status
         case dueDate
         case ownerID
+        // Legacy
+        case laborHours
+        case laborRate
     }
 
     init(from decoder: Decoder) throws {
@@ -95,6 +105,15 @@ struct Invoice: Identifiable, Codable {
         self.clientID = try container.decodeIfPresent(UUID.self, forKey: .clientID)
         self.clientName = try container.decode(String.self, forKey: .clientName)
         self.materials = try container.decodeIfPresent([Material].self, forKey: .materials) ?? []
+        if let decodedLaborLines = try container.decodeIfPresent([LaborLine].self, forKey: .laborLines) {
+            self.laborLines = decodedLaborLines
+        } else if let hours = try container.decodeIfPresent(Double.self, forKey: .laborHours),
+                  let rate = try container.decodeIfPresent(Double.self, forKey: .laborRate),
+                  hours > 0 || rate > 0 {
+            self.laborLines = [LaborLine(id: UUID(), title: "Labor", hours: hours, rate: rate)]
+        } else {
+            self.laborLines = []
+        }
         self.status = try container.decode(InvoiceStatus.self, forKey: .status)
         self.dueDate = try container.decodeIfPresent(Date.self, forKey: .dueDate)
         self.ownerID = try container.decodeIfPresent(String.self, forKey: .ownerID) ?? ""

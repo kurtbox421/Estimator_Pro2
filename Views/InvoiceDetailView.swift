@@ -56,33 +56,89 @@ struct InvoiceDetailView: View {
                 )
             },
             materials: {
-                RoundedCard {
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack(alignment: .center) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Materials")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundColor(.white.opacity(0.7))
+                VStack(spacing: 16) {
+                    RoundedCard {
+                        VStack(alignment: .leading, spacing: 16) {
+                            HStack(alignment: .center) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Labor")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundColor(.white.opacity(0.7))
 
-                                Text("\(invoice.materials.count) items")
-                                    .font(.caption2)
-                                    .foregroundColor(.white.opacity(0.6))
+                                    Text("\(invoice.laborLines.count) items")
+                                        .font(.caption2)
+                                        .foregroundColor(.white.opacity(0.6))
+                                }
+
+                                Spacer()
+
+                                Button(action: addLaborLine) {
+                                    Label("Add Labor Line", systemImage: "plus")
+                                        .font(.caption.weight(.semibold))
+                                        .padding(.vertical, 6)
+                                        .padding(.horizontal, 10)
+                                        .background(Color.white.opacity(0.16))
+                                        .clipShape(Capsule())
+                                        .foregroundColor(.white)
+                                }
                             }
 
-                            Spacer()
-                        }
+                            if invoice.laborLines.isEmpty {
+                                Text("No labor added yet.")
+                                    .font(.subheadline)
+                                    .foregroundColor(.white.opacity(0.7))
+                            } else {
+                                ForEach($invoice.laborLines) { $labor in
+                                    InvoiceLaborRow(
+                                        laborLine: $labor,
+                                        isLast: labor.id == invoice.laborLines.last?.id,
+                                        deleteAction: { deleteLaborLine(labor) }
+                                    )
+                                }
+                            }
 
-                        if invoice.materials.isEmpty {
-                            Text("No materials added yet.")
-                                .font(.subheadline)
-                                .foregroundColor(.white.opacity(0.7))
-                        } else {
-                            ForEach($invoice.materials) { $material in
-                                InvoiceMaterialRow(
-                                    material: $material,
-                                    isLast: material.id == invoice.materials.last?.id,
-                                    deleteAction: { deleteMaterial(material) }
-                                )
+                            Divider().overlay(Color.white.opacity(0.15))
+
+                            HStack {
+                                Text("Labor Subtotal")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(.white.opacity(0.8))
+                                Spacer()
+                                Text(invoice.laborSubtotal, format: .currency(code: "USD"))
+                                    .font(.headline.weight(.semibold))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                    }
+
+                    RoundedCard {
+                        VStack(alignment: .leading, spacing: 16) {
+                            HStack(alignment: .center) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Materials")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundColor(.white.opacity(0.7))
+
+                                    Text("\(invoice.materials.count) items")
+                                        .font(.caption2)
+                                        .foregroundColor(.white.opacity(0.6))
+                                }
+
+                                Spacer()
+                            }
+
+                            if invoice.materials.isEmpty {
+                                Text("No materials added yet.")
+                                    .font(.subheadline)
+                                    .foregroundColor(.white.opacity(0.7))
+                            } else {
+                                ForEach($invoice.materials) { $material in
+                                    InvoiceMaterialRow(
+                                        material: $material,
+                                        isLast: material.id == invoice.materials.last?.id,
+                                        deleteAction: { deleteMaterial(material) }
+                                    )
+                                }
                             }
                         }
                     }
@@ -173,6 +229,9 @@ struct InvoiceDetailView: View {
                 }
             }
         }
+        .onChange(of: invoice.laborLines) { _ in
+            invoiceVM.update(invoice)
+        }
     }
 
     // MARK: - Actions
@@ -182,6 +241,18 @@ struct InvoiceDetailView: View {
             invoice.materials.remove(at: index)
             invoiceVM.update(invoice)
         }
+    }
+
+    private func deleteLaborLine(_ labor: LaborLine) {
+        if let index = invoice.laborLines.firstIndex(where: { $0.id == labor.id }) {
+            invoice.laborLines.remove(at: index)
+            invoiceVM.update(invoice)
+        }
+    }
+
+    private func addLaborLine() {
+        invoice.laborLines.append(LaborLine(id: UUID(), title: "Labor", hours: 1, rate: 0))
+        invoiceVM.update(invoice)
     }
 
     private func handlePreviewInvoice() {
@@ -471,6 +542,55 @@ private struct InvoiceDocumentCard: View {
                     }
                 }
             }
+        }
+    }
+}
+
+private struct InvoiceLaborRow: View {
+    @Binding var laborLine: LaborLine
+    let isLast: Bool
+    let deleteAction: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 4) {
+                    TextField("Title", text: $laborLine.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.white)
+
+                    Text("\(laborLine.hours, format: .number.precision(.fractionLength(2))) × \(laborLine.rate, format: .currency(code: "USD"))")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.7))
+
+                    HStack {
+                        TextField("Hours", value: $laborLine.hours, format: .number)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.roundedBorder)
+                        TextField("Rate", value: $laborLine.rate, format: .number)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.roundedBorder)
+                    }
+                }
+
+                Spacer()
+
+                Text(laborLine.total, format: .currency(code: "USD"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
+            }
+        }
+        .padding(.vertical, 6)
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) {
+                deleteAction()
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+
+        if !isLast {
+            Divider().overlay(Color.white.opacity(0.15))
         }
     }
 }

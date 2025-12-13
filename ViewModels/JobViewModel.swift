@@ -125,8 +125,7 @@ class JobViewModel: ObservableObject {
         var job = Job(
             name: displayName,
             category: displayName,
-            laborHours: 0,
-            laborRate: 0,
+            laborLines: [],
             materials: materials,
             clientId: nil
         )

@@ -27,18 +27,13 @@ struct JobDetailView: View {
     @State private var shareItems: [Any] = []
     @State private var shareError: String?
 
-    // Labor editor state
-    @State private var showingLaborEditor = false
-    @State private var laborHoursText = ""
-    @State private var laborRateText = ""
-
     // Material editor state
     @State private var showingMaterialEditor = false
 
     var body: some View {
         JobDocumentLayout(
             summary: VStack(spacing: 12) {
-                EstimateSummaryCard(job: estimate, editLaborAction: showLaborEditor)
+                EstimateSummaryCard(job: estimate, editLaborAction: addLaborLine)
             },
             document: EstimateDocumentCard(
                 estimate: estimate,
@@ -63,43 +58,99 @@ struct JobDetailView: View {
                 )
             },
             materials: {
-                RoundedCard {
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack(alignment: .center) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Materials")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundColor(.white.opacity(0.7))
+                VStack(spacing: 16) {
+                    RoundedCard {
+                        VStack(alignment: .leading, spacing: 16) {
+                            HStack(alignment: .center) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Labor")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundColor(.white.opacity(0.7))
 
-                                Text("\(estimate.materials.count) items")
-                                    .font(.caption2)
-                                    .foregroundColor(.white.opacity(0.6))
+                                    Text("\(estimate.laborLines.count) items")
+                                        .font(.caption2)
+                                        .foregroundColor(.white.opacity(0.6))
+                                }
+
+                                Spacer()
+
+                                Button(action: addLaborLine) {
+                                    Label("Add Labor Line", systemImage: "plus")
+                                        .font(.caption.weight(.semibold))
+                                        .padding(.vertical, 6)
+                                        .padding(.horizontal, 10)
+                                        .background(Color.white.opacity(0.16))
+                                        .clipShape(Capsule())
+                                        .foregroundColor(.white)
+                                }
                             }
 
-                            Spacer()
+                            if estimate.laborLines.isEmpty {
+                                Text("No labor added yet.")
+                                    .font(.subheadline)
+                                    .foregroundColor(.white.opacity(0.7))
+                            } else {
+                                ForEach($estimate.laborLines) { $labor in
+                                    EditableLaborRow(
+                                        laborLine: $labor,
+                                        isLast: labor.id == estimate.laborLines.last?.id,
+                                        deleteAction: { deleteLaborLine(labor) }
+                                    )
+                                }
+                            }
 
-                            Button(action: addMaterial) {
-                                Label("Add Material", systemImage: "plus")
-                                    .font(.caption.weight(.semibold))
-                                    .padding(.vertical, 6)
-                                    .padding(.horizontal, 10)
-                                    .background(Color.white.opacity(0.16))
-                                    .clipShape(Capsule())
+                            Divider().overlay(Color.white.opacity(0.15))
+
+                            HStack {
+                                Text("Labor Subtotal")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(.white.opacity(0.8))
+                                Spacer()
+                                Text(estimate.laborSubtotal, format: .currency(code: "USD"))
+                                    .font(.headline.weight(.semibold))
                                     .foregroundColor(.white)
                             }
                         }
+                    }
 
-                        if estimate.materials.isEmpty {
-                            Text("No materials added yet.")
-                                .font(.subheadline)
-                                .foregroundColor(.white.opacity(0.7))
-                        } else {
-                            ForEach($estimate.materials) { $material in
-                                EditableMaterialRow(
-                                    material: $material,
-                                    showDivider: material.id != estimate.materials.last?.id,
-                                    deleteAction: { deleteMaterial(material) }
-                                )
+                    RoundedCard {
+                        VStack(alignment: .leading, spacing: 16) {
+                            HStack(alignment: .center) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Materials")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundColor(.white.opacity(0.7))
+
+                                    Text("\(estimate.materials.count) items")
+                                        .font(.caption2)
+                                        .foregroundColor(.white.opacity(0.6))
+                                }
+
+                                Spacer()
+
+                                Button(action: addMaterial) {
+                                    Label("Add Material", systemImage: "plus")
+                                        .font(.caption.weight(.semibold))
+                                        .padding(.vertical, 6)
+                                        .padding(.horizontal, 10)
+                                        .background(Color.white.opacity(0.16))
+                                        .clipShape(Capsule())
+                                        .foregroundColor(.white)
+                                }
+                            }
+
+                            if estimate.materials.isEmpty {
+                                Text("No materials added yet.")
+                                    .font(.subheadline)
+                                    .foregroundColor(.white.opacity(0.7))
+                            } else {
+                                ForEach($estimate.materials) { $material in
+                                    EditableMaterialRow(
+                                        material: $material,
+                                        showDivider: material.id != estimate.materials.last?.id,
+                                        deleteAction: { deleteMaterial(material) }
+                                    )
+                                }
                             }
                         }
                     }
@@ -123,9 +174,6 @@ struct JobDetailView: View {
                 jobVM: vm,
                 invoiceVM: invoiceVM
             )
-        }
-        .sheet(isPresented: $showingLaborEditor) {
-            laborEditorSheet
         }
         .sheet(isPresented: $showingMaterialEditor) {
             AddMaterialView(
@@ -198,6 +246,9 @@ struct JobDetailView: View {
         .sheet(isPresented: $isShowingShareSheet) {
             ShareSheet(activityItems: shareItems)
         }
+        .onChange(of: estimate.laborLines) { _ in
+            vm.update(estimate)
+        }
     }
 
     private var previewSheetBinding: Binding<Bool> {
@@ -236,16 +287,15 @@ struct JobDetailView: View {
         }
     }
 
-    private func showLaborEditor() {
-        laborHoursText = String(format: "%.2f", estimate.laborHours)
-        laborRateText = String(format: "%.2f", estimate.laborRate)
-        showingLaborEditor = true
-    }
-
-    // MARK: - Materials editing
+    // MARK: - Materials & labor editing
 
     private func addMaterial() {
         showingMaterialEditor = true
+    }
+
+    private func addLaborLine() {
+        estimate.laborLines.append(LaborLine(id: UUID(), title: "Labor", hours: 1, rate: 0))
+        vm.update(estimate)
     }
 
     private func deleteMaterial(_ material: Material) {
@@ -255,24 +305,11 @@ struct JobDetailView: View {
         }
     }
 
-    private func saveLabor() {
-        let hoursString = laborHoursText.replacingOccurrences(of: ",", with: ".")
-        let rateString = laborRateText.replacingOccurrences(of: ",", with: ".")
-
-        guard let hoursValue = parseDouble(hoursString),
-              let rateValue = parseDouble(rateString) else {
-            showingLaborEditor = false
-            return
+    private func deleteLaborLine(_ labor: LaborLine) {
+        if let index = estimate.laborLines.firstIndex(where: { $0.id == labor.id }) {
+            estimate.laborLines.remove(at: index)
+            vm.update(estimate)
         }
-
-        let hours = debugCheckNaN(hoursValue, label: "labor hours")
-        let rate = debugCheckNaN(rateValue, label: "labor rate")
-
-        estimate.laborHours = hours
-        estimate.laborRate = rate
-
-        vm.update(estimate)
-        showingLaborEditor = false
     }
 
     private func assignClient(_ client: Client) {
@@ -337,22 +374,6 @@ struct JobDetailView: View {
     private func convertToInvoice() {
         let clientName = clientVM.clients.first(where: { $0.id == estimate.clientId })?.name ?? "Unassigned"
 
-        // Start with the existing materials from the estimate
-        var invoiceMaterials = estimate.materials
-
-        // If there is labor, add it as a separate line item
-        if estimate.laborHours > 0 && estimate.laborRate > 0 {
-            let laborMaterial = Material(
-                id: UUID(),
-                ownerID: Auth.auth().currentUser?.uid ?? "",
-                name: "Labor",
-                quantity: estimate.laborHours,
-                unitCost: estimate.laborRate
-                // add any extra Material fields you have (notes/url/etc) with sensible defaults
-            )
-            invoiceMaterials.append(laborMaterial)
-        }
-
         let invoice = Invoice(
             id: UUID(),
             ownerID: Auth.auth().currentUser?.uid ?? "",
@@ -360,7 +381,8 @@ struct JobDetailView: View {
             title: estimate.name,
             clientID: estimate.clientId,
             clientName: clientName,
-            materials: invoiceMaterials,
+            materials: estimate.materials,
+            laborLines: estimate.laborLines,
             status: .draft,
             dueDate: nil
         )
@@ -421,38 +443,53 @@ struct JobDetailView: View {
         return normalized
     }
 
-    // MARK: - Labor editor sheet
+}
 
-    private var laborEditorSheet: some View {
-        NavigationView {
-            Form {
-                Section(header: Text("Labor details")) {
-                    TextField("Hours", text: $laborHoursText)
-                        .keyboardType(.decimalPad)
-                    TextField("Rate per hour", text: $laborRateText)
-                        .keyboardType(.decimalPad)
-                    if let hours = parseDouble(laborHoursText.replacingOccurrences(of: ",", with: ".")),
-                       let rate = parseDouble(laborRateText.replacingOccurrences(of: ",", with: ".")) {
-                        let cost = debugCheckNaN(hours * rate, label: "labor cost preview")
-                        Text("Labor cost: \(cost.formatted(.currency(code: "USD")))")
-                            .foregroundColor(.secondary)
+private struct EditableLaborRow: View {
+    @Binding var laborLine: LaborLine
+    let isLast: Bool
+    let deleteAction: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 4) {
+                    TextField("Title", text: $laborLine.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.white)
+
+                    Text("\(laborLine.hours, format: .number.precision(.fractionLength(2))) × \(laborLine.rate, format: .currency(code: "USD"))")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.7))
+
+                    HStack {
+                        TextField("Hours", value: $laborLine.hours, format: .number)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.roundedBorder)
+                        TextField("Rate", value: $laborLine.rate, format: .number)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.roundedBorder)
                     }
                 }
+
+                Spacer()
+
+                Text(laborLine.total, format: .currency(code: "USD"))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.white)
             }
-            .navigationTitle("Edit labor")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        showingLaborEditor = false
-                    }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        saveLabor()
-                    }
-                }
+        }
+        .padding(.vertical, 6)
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) {
+                deleteAction()
+            } label: {
+                Label("Delete", systemImage: "trash")
             }
+        }
+
+        if !isLast {
+            Divider().overlay(Color.white.opacity(0.15))
         }
     }
 }
@@ -547,7 +584,7 @@ private struct EstimateSummaryCard: View {
 
                         HStack(spacing: 8) {
                             Button(action: editLaborAction) {
-                                Label("Edit Labor", systemImage: "wrench.and.screwdriver")
+                                Label("Add Labor Line", systemImage: "wrench.and.screwdriver")
                                     .font(.caption.weight(.semibold))
                             }
                             .padding(.horizontal, 10)

@@ -50,7 +50,7 @@ struct JobDetailView: View {
                                 Text("Labor")
                                     .font(.caption)
                                     .foregroundColor(.white.opacity(0.7))
-                                Text("$\(job.laborCost, specifier: "%.2f")")
+                                Text("$\(job.laborSubtotal, specifier: "%.2f")")
                                     .font(.headline)
                                     .foregroundColor(.white)
                             }
