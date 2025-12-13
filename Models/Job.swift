@@ -74,5 +74,17 @@ struct Job: Identifiable, Codable {
             laborLines = decodedLaborLines
         }
     }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(ownerID, forKey: .ownerID)
+        try container.encode(name, forKey: .name)
+        try container.encode(category, forKey: .category)
+        try container.encode(laborLines, forKey: .laborLines)
+        try container.encode(materials, forKey: .materials)
+        try container.encode(dateCreated, forKey: .dateCreated)
+        try container.encodeIfPresent(clientId, forKey: .clientId)
+    }
 }
 

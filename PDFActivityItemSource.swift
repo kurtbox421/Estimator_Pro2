@@ -17,7 +17,7 @@ final class PDFActivityItemSource: NSObject, UIActivityItemSource {
     func activityViewController(
         _ activityViewController: UIActivityViewController,
         itemForActivityType activityType: UIActivity.ActivityType?
-    ) -> Any {
+    ) -> Any? {
         url
     }
 
