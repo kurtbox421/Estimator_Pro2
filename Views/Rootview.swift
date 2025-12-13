@@ -1290,9 +1290,10 @@ struct CompanyDetailsView: View {
 // MARK: - Branding & logo
 
 struct BrandingLogoView: View {
-    @AppStorage("brandingLogoData") private var brandingLogoData: Data = Data()
+    @EnvironmentObject private var companySettings: CompanySettingsStore
     @State private var selectedItem: PhotosPickerItem?
     @State private var logoImage: UIImage?
+    @State private var uploadError: String?
 
     var body: some View {
         ScrollView {
@@ -1318,8 +1319,9 @@ struct BrandingLogoView: View {
                 .onChange(of: selectedItem) { _, newItem in
                     Task {
                         guard let data = try? await newItem?.loadTransferable(type: Data.self) else { return }
-                        brandingLogoData = data
-                        logoImage = UIImage(data: data)
+                        await companySettings.uploadLogo(data: data)
+                        logoImage = companySettings.logoImage
+                        uploadError = companySettings.logoImage == nil ? "Couldn’t save logo. Try again." : nil
                     }
                 }
 
@@ -1328,12 +1330,21 @@ struct BrandingLogoView: View {
                     .foregroundColor(.white.opacity(0.85))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
+
+                if let uploadError {
+                    Text(uploadError)
+                        .font(.footnote)
+                        .foregroundColor(.red.opacity(0.9))
+                }
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 32)
         }
         .navigationTitle("Branding & logo")
         .onAppear(perform: loadStoredLogo)
+        .onReceive(companySettings.$logoImage) { newLogo in
+            logoImage = newLogo
+        }
     }
 
     @ViewBuilder
@@ -1367,8 +1378,7 @@ struct BrandingLogoView: View {
     }
 
     private func loadStoredLogo() {
-        guard !brandingLogoData.isEmpty else { return }
-        logoImage = UIImage(data: brandingLogoData)
+        logoImage = companySettings.logoImage
     }
 }
 
