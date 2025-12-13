@@ -4,6 +4,7 @@ import UIKit
 struct InvoiceDetailView: View {
     // MARK: - Environment
 
+    @EnvironmentObject var jobVM: JobViewModel
     @EnvironmentObject var clientVM: ClientViewModel
     @EnvironmentObject var invoiceVM: InvoiceViewModel
     @EnvironmentObject var companySettings: CompanySettingsStore
@@ -18,6 +19,8 @@ struct InvoiceDetailView: View {
     @State private var isShowingShareSheet = false
     @State private var shareItems: [Any] = []
     @State private var shareError: String?
+    @State private var materialEditorMode: AddMaterialView.Mode?
+    @State private var isShowingMaterialGenerator = false
 
     // MARK: - Derived data
 
@@ -46,6 +49,12 @@ struct InvoiceDetailView: View {
             }
             .sheet(isPresented: $isShowingShareSheet) { ShareSheet(activityItems: shareItems) }
             .sheet(isPresented: $isShowingClientPicker) { clientPickerSheet }
+            .sheet(item: $materialEditorMode) { mode in
+                AddMaterialView(mode: mode, jobVM: jobVM, invoiceVM: invoiceVM)
+            }
+            .sheet(isPresented: $isShowingMaterialGenerator) {
+                MaterialGeneratorView()
+            }
             .onChange(of: invoice.laborLines) { _ in invoiceVM.update(invoice) }
     }
 
@@ -53,9 +62,9 @@ struct InvoiceDetailView: View {
         JobDocumentLayout(
             summary: summarySection,
             document: documentSection,
-            customer: customerSection,
-            quickActions: quickActionsSection,
-            materials: materialsSection
+            customer: { customerSection },
+            quickActions: { quickActionsSection },
+            materials: { materialsSection }
         )
     }
 
@@ -219,6 +228,18 @@ struct InvoiceDetailView: View {
     private func addLaborLine() {
         invoice.laborLines.append(LaborLine(id: UUID(), title: "Labor", hours: 1, rate: 0))
         invoiceVM.update(invoice)
+    }
+
+    private func addMaterialFromCatalog() {
+        materialEditorMode = .addToInvoice(invoice: invoice)
+    }
+
+    private func addMaterialSuggestions() {
+        isShowingMaterialGenerator = true
+    }
+
+    private func addMaterial() {
+        materialEditorMode = .addToInvoice(invoice: invoice)
     }
 
     private func handlePreviewInvoice() {
