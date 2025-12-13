@@ -50,7 +50,7 @@ struct JobDetailView: View {
                 shareErrorMessage
             }
             .sheet(isPresented: $isShowingShareSheet) { ShareSheet(activityItems: shareItems) }
-            .onChange(of: estimate.laborLines) { _ in vm.update(estimate) }
+            .onChange(of: estimate.laborLines) { _, _ in vm.update(estimate) }
     }
 
     private var jobLayout: some View {

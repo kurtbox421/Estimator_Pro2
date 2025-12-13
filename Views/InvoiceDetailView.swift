@@ -55,7 +55,7 @@ struct InvoiceDetailView: View {
             .sheet(isPresented: $isShowingMaterialGenerator) {
                 MaterialGeneratorView()
             }
-            .onChange(of: invoice.laborLines) { _ in invoiceVM.update(invoice) }
+            .onChange(of: invoice.laborLines) { _, _ in invoiceVM.update(invoice) }
     }
 
     private var invoiceLayout: some View {
