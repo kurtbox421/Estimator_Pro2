@@ -3,10 +3,15 @@ import PDFKit
 
 struct InvoicePDFPreviewView: View {
     let url: URL
+    @EnvironmentObject private var onboarding: OnboardingProgressStore
 
     var body: some View {
         PDFKitView(url: url)
             .ignoresSafeArea()
+            .onAppear {
+                onboarding.hasPreviewedPDF = true
+                onboarding.evaluateCompletion()
+            }
     }
 }
 
