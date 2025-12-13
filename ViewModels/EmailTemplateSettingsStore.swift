@@ -1,8 +1,9 @@
-import Foundation
 import Combine
+import FirebaseAuth
+import Foundation
 
 private enum EmailTemplateStorage {
-    static let fileName = "emailTemplateSettings.json"
+    static func fileName(for uid: String) -> String { "emailTemplateSettings_\(uid).json" }
 }
 
 struct EmailTemplateSettings: Codable {
@@ -63,36 +64,71 @@ final class EmailTemplateSettingsStore: ObservableObject {
     @Published var defaultEmailMessage: String
 
     private let persistence: PersistenceService
+    private let auth: Auth
     private var cancellables: Set<AnyCancellable> = []
+    private var authHandle: AuthStateDidChangeListenerHandle?
+    private var currentUserID: String?
+    private var isApplyingRemoteUpdate = false
 
-    init(persistence: PersistenceService = .shared) {
+    init(persistence: PersistenceService = .shared, auth: Auth = Auth.auth()) {
         self.persistence = persistence
+        self.auth = auth
+        self.defaultEmailMessage = EmailTemplateSettings.standard.defaultEmailMessage
 
-        if let stored: EmailTemplateSettings = persistence.load(EmailTemplateSettings.self, from: EmailTemplateStorage.fileName) {
-            defaultEmailMessage = stored.defaultEmailMessage
-        } else {
-            defaultEmailMessage = EmailTemplateSettings.standard.defaultEmailMessage
-        }
-
+        configureAuthListener()
         bindPersistence()
+    }
+
+    deinit {
+        if let authHandle { auth.removeStateDidChangeListener(authHandle) }
     }
 
     func resetToDefaults() {
         apply(settings: .standard)
-        persistence.save(EmailTemplateSettings.standard, to: EmailTemplateStorage.fileName)
+        persistCurrentSettings()
+    }
+
+    private func configureAuthListener() {
+        authHandle = auth.addStateDidChangeListener { [weak self] _, user in
+            self?.loadSettings(for: user)
+        }
+
+        loadSettings(for: auth.currentUser)
     }
 
     private func bindPersistence() {
         $defaultEmailMessage
             .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
-            .sink { [weak self] message in
-                let settings = EmailTemplateSettings(defaultEmailMessage: message)
-                self?.persistence.save(settings, to: EmailTemplateStorage.fileName)
+            .sink { [weak self] _ in
+                self?.persistCurrentSettings()
             }
             .store(in: &cancellables)
     }
 
+    private func loadSettings(for user: User?) {
+        currentUserID = user?.uid
+        apply(settings: .standard)
+
+        guard let uid = user?.uid else { return }
+
+        if let stored: EmailTemplateSettings = persistence.load(
+            EmailTemplateSettings.self,
+            from: EmailTemplateStorage.fileName(for: uid)
+        ) {
+            apply(settings: stored)
+        }
+    }
+
+    private func persistCurrentSettings() {
+        guard let uid = currentUserID, !isApplyingRemoteUpdate else { return }
+
+        let settings = EmailTemplateSettings(defaultEmailMessage: defaultEmailMessage)
+        persistence.save(settings, to: EmailTemplateStorage.fileName(for: uid))
+    }
+
     private func apply(settings: EmailTemplateSettings) {
+        isApplyingRemoteUpdate = true
         defaultEmailMessage = settings.defaultEmailMessage
+        isApplyingRemoteUpdate = false
     }
 }
