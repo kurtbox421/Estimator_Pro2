@@ -16,9 +16,11 @@ struct JobDetailView: View {
     @EnvironmentObject private var clientVM: ClientViewModel
     @EnvironmentObject private var companySettings: CompanySettingsStore
     @EnvironmentObject private var emailTemplateSettings: EmailTemplateSettingsStore
+    @Environment(\.dismiss) private var dismiss
 
     @Binding var estimate: Job
     @State private var createdInvoice: Invoice?
+    @State private var estimateIDPendingDeletion: Job.ID?
     @State private var showingInvoiceEditor = false
     @State private var showingMaterialManager = false
     @State private var isShowingClientPicker = false
@@ -34,7 +36,7 @@ struct JobDetailView: View {
         jobLayout
             .navigationTitle("Estimate")
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $showingInvoiceEditor) { invoiceEditor }
+            .sheet(isPresented: $showingInvoiceEditor, onDismiss: finalizeConversionIfNeeded) { invoiceEditor }
             .sheet(isPresented: $showingMaterialManager) { materialManagerSheet }
             .sheet(isPresented: $showingMaterialEditor) { materialEditorSheet }
             .sheet(isPresented: $isShowingClientPicker) { clientPickerSheet }
@@ -424,25 +426,50 @@ struct JobDetailView: View {
     }
 
     private func convertToInvoice() {
-        let clientName = clientVM.clients.first(where: { $0.id == estimate.clientId })?.name ?? "Unassigned"
+        let estimateID = estimate.id
+
+        let jobsCount = vm.jobs.count
+        let invoiceCount = invoiceVM.invoices.count
+
+        #if DEBUG
+        print("[ConvertToInvoice] jobs count: \(jobsCount), invoices count: \(invoiceCount), target estimate id: \(estimateID)")
+        #endif
+
+        guard let estimateToConvert = vm.jobs.first(where: { $0.id == estimateID }) else {
+            #if DEBUG
+            assertionFailure("[ConvertToInvoice] Missing estimate with id \(estimateID). jobs count when converting: \(jobsCount)")
+            #endif
+            return
+        }
+
+        let clientName = clientVM.clients.first(where: { $0.id == estimateToConvert.clientId })?.name ?? "Unassigned"
 
         let invoice = Invoice(
             id: UUID(),
             ownerID: Auth.auth().currentUser?.uid ?? "",
             invoiceNumber: InvoiceNumberManager.shared.generateInvoiceNumber(),
-            title: estimate.name,
-            clientID: estimate.clientId,
+            title: estimateToConvert.name,
+            clientID: estimateToConvert.clientId,
             clientName: clientName,
-            materials: estimate.materials,
-            laborLines: estimate.laborLines,
+            materials: estimateToConvert.materials,
+            laborLines: estimateToConvert.laborLines,
             status: .draft,
             dueDate: nil
         )
 
         invoiceVM.add(invoice)
-        vm.delete(estimate)
         createdInvoice = invoice
         showingInvoiceEditor = true
+        estimateIDPendingDeletion = estimateID
+    }
+
+    private func finalizeConversionIfNeeded() {
+        guard let estimateIDPendingDeletion else { return }
+
+        self.estimateIDPendingDeletion = nil
+
+        dismiss()
+        vm.delete(jobID: estimateIDPendingDeletion)
     }
 
     // MARK: - Quick Actions
