@@ -32,6 +32,7 @@ struct Invoice: Identifiable, Codable {
         materials.reduce(into: 0) { $0 += $1.total } + laborSubtotal
     }
 
+    var materialSubtotal: Double { materials.reduce(0) { $0 + $1.total } }
     var laborSubtotal: Double { laborLines.reduce(0) { $0 + $1.total } }
 
     // MARK: - Designated init
