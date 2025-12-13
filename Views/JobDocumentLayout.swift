@@ -1,24 +1,24 @@
 import SwiftUI
 
-struct JobDocumentLayout<Summary: View, Document: View, Customer: View, QuickActions: View, Materials: View>: View {
+struct JobDocumentLayout<Summary: View, Document: View>: View {
     let summary: Summary
     let document: Document
-    let customer: () -> Customer
-    let quickActions: () -> QuickActions
-    let materials: () -> Materials
+    let customer: AnyView
+    let quickActions: AnyView
+    let materials: AnyView
 
     init(
         summary: Summary,
         document: Document,
-        customer: @escaping () -> Customer,
-        quickActions: @escaping () -> QuickActions,
-        materials: @escaping () -> Materials
+        @ViewBuilder customer: () -> some View,
+        @ViewBuilder quickActions: () -> some View,
+        @ViewBuilder materials: () -> some View
     ) {
         self.summary = summary
         self.document = document
-        self.customer = customer
-        self.quickActions = quickActions
-        self.materials = materials
+        self.customer = AnyView(customer())
+        self.quickActions = AnyView(quickActions())
+        self.materials = AnyView(materials())
     }
 
     var body: some View {
@@ -26,9 +26,9 @@ struct JobDocumentLayout<Summary: View, Document: View, Customer: View, QuickAct
             VStack(spacing: 24) {
                 summary
                 document
-                customer()
-                quickActions()
-                materials()
+                customer
+                quickActions
+                materials
             }
             .padding(.horizontal, 24)
             .padding(.top, 24)
