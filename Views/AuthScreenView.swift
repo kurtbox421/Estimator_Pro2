@@ -7,6 +7,7 @@ struct AuthScreenView: View {
     }
 
     @EnvironmentObject private var session: SessionViewModel
+    @EnvironmentObject private var onboarding: OnboardingProgressStore
 
     @State private var mode: Mode = .signIn
     @State private var name = ""
@@ -168,7 +169,12 @@ struct AuthScreenView: View {
 
     private func signUp() {
         isBusy = true
-        AuthManager.shared.signUp(email: email, password: password, displayName: name) { result in
+        AuthManager.shared.signUp(
+            email: email,
+            password: password,
+            displayName: name,
+            onboarding: onboarding
+        ) { result in
             DispatchQueue.main.async {
                 isBusy = false
                 switch result {
@@ -254,4 +260,5 @@ extension View {
 #Preview {
     AuthScreenView()
         .environmentObject(SessionViewModel())
+        .environmentObject(OnboardingProgressStore())
 }
