@@ -704,9 +704,18 @@ private struct InvoiceLaborRow: View {
 
                 Spacer()
 
-                Text(laborLine.total, format: .currency(code: "USD"))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.white)
+                HStack(spacing: 8) {
+                    Text(laborLine.total, format: .currency(code: "USD"))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.white)
+
+                    Button(action: deleteAction) {
+                        Image(systemName: "trash")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Delete labor line")
+                }
             }
         }
         .padding(.vertical, 6)
