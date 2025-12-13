@@ -2,7 +2,6 @@ import SwiftUI
 
 struct SignUpView: View {
     @EnvironmentObject private var session: SessionViewModel
-    @EnvironmentObject private var onboarding: OnboardingProgressStore
 
     @State private var name = ""
     @State private var email = ""
@@ -43,8 +42,7 @@ struct SignUpView: View {
                 AuthManager.shared.signUp(
                     email: email,
                     password: password,
-                    displayName: name,
-                    onboarding: onboarding
+                    displayName: name
                 ) { result in
                     DispatchQueue.main.async {
                         switch result {
