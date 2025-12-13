@@ -138,11 +138,23 @@ struct AddEditJobView: View {
                     ForEach($laborLines) { $labor in
                         VStack(alignment: .leading, spacing: 8) {
                             TextField("Title", text: $labor.title)
+                                .textFieldStyle(.plain)
+                                .padding(.vertical, 10)
+                                .padding(.horizontal, 12)
+                                .background(Color.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             HStack {
                                 TextField("Hours", value: $labor.hours, format: .number)
                                     .keyboardType(.decimalPad)
+                                    .textFieldStyle(.plain)
+                                    .padding(.vertical, 10)
+                                    .padding(.horizontal, 12)
+                                    .background(Color.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                                 TextField("Rate", value: $labor.rate, format: .number)
                                     .keyboardType(.decimalPad)
+                                    .textFieldStyle(.plain)
+                                    .padding(.vertical, 10)
+                                    .padding(.horizontal, 12)
+                                    .background(Color.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                             }
                             HStack {
                                 Spacer()

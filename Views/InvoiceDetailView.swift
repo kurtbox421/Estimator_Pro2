@@ -677,6 +677,10 @@ private struct InvoiceLaborRow: View {
                     TextField("Title", text: $laborLine.title)
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(.white)
+                        .textFieldStyle(.plain)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 12)
+                        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                     Text("\(laborLine.hours, format: .number.precision(.fractionLength(2))) × \(laborLine.rate, format: .currency(code: "USD"))")
                         .font(.caption)
@@ -685,10 +689,16 @@ private struct InvoiceLaborRow: View {
                     HStack {
                         TextField("Hours", value: $laborLine.hours, format: .number)
                             .keyboardType(.decimalPad)
-                            .textFieldStyle(.roundedBorder)
+                            .textFieldStyle(.plain)
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 12)
+                            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                         TextField("Rate", value: $laborLine.rate, format: .number)
                             .keyboardType(.decimalPad)
-                            .textFieldStyle(.roundedBorder)
+                            .textFieldStyle(.plain)
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 12)
+                            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
                 }
 
