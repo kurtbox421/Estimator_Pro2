@@ -173,7 +173,7 @@ struct AddEditJobView: View {
                     }
 
                     Button {
-                        laborLines.append(LaborLine(id: UUID(), title: "Labor", hours: 1, rate: 0))
+                        laborLines.append(LaborLine(id: UUID(), title: "Labor", hours: 0, rate: 0))
                     } label: {
                         Label("Add Labor Line", systemImage: "plus")
                     }
