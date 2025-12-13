@@ -72,8 +72,8 @@ struct JobDetailView: View {
         let estimateValue = estimate.wrappedValue
 
         JobDocumentLayout(
-            summary: { summarySection(for: estimateValue) },
-            document: { documentSection(for: estimateValue) },
+            summary: summarySection(for: estimateValue),
+            document: documentSection(for: estimateValue),
             customer: { customerSection(for: estimateValue) },
             quickActions: { quickActionsSection(for: estimateValue) },
             materials: { materialsSection(for: estimate) }
@@ -1099,8 +1099,7 @@ struct MaterialManagerSheet: View {
                         .foregroundColor(.secondary)
                 } else {
                     Section(header: Text("Materials")) {
-                        ForEach(job.materials.indices, id: \.self) { index in
-                            let material = job.materials[index]
+                        ForEach(Array(job.materials.enumerated()), id: \.element.id) { index, material in
 
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(material.name)
@@ -1156,6 +1155,7 @@ struct MaterialManagerSheet: View {
     }
 
     private func deleteMaterial(at index: Int) {
+        // Consider enabling an Exception Breakpoint in Xcode to surface any unexpected indexing issues during debugging.
         guard job.materials.indices.contains(index) else { return }
         job.materials.remove(at: index)
         jobVM.update(job)
@@ -1201,8 +1201,7 @@ struct MaterialsSection: View {
                 } else {
                     let lastIndex = materials.indices.last
 
-                    ForEach(materials.indices, id: \.self) { index in
-                        let material = materials[index]
+                    ForEach(Array(materials.enumerated()), id: \.element.id) { index, material in
 
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
