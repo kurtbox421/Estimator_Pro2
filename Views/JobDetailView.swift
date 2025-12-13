@@ -346,7 +346,7 @@ struct JobDetailView: View {
     }
 
     private func addLaborLine() {
-        estimate.laborLines.append(LaborLine(id: UUID(), title: "Labor", hours: 1, rate: 0))
+        estimate.laborLines.append(LaborLine(id: UUID(), title: "Labor", hours: 0, rate: 0))
         vm.update(estimate)
     }
 
@@ -514,7 +514,7 @@ private struct EditableLaborRow: View {
                         .padding(.horizontal, 12)
                         .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                    Text("\(laborLine.hours, format: .number.precision(.fractionLength(2))) × \(laborLine.rate, format: .currency(code: "USD"))")
+                    Text(laborLine.hoursRateSummary)
                         .font(.caption)
                         .foregroundColor(.white.opacity(0.7))
 
