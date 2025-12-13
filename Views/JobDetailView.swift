@@ -31,6 +31,29 @@ struct JobDetailView: View {
     @State private var showingMaterialEditor = false
 
     var body: some View {
+        jobLayout
+            .navigationTitle("Estimate")
+            .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showingInvoiceEditor) { invoiceEditor }
+            .sheet(isPresented: $showingMaterialManager) { materialManagerSheet }
+            .sheet(isPresented: $showingMaterialEditor) { materialEditorSheet }
+            .sheet(isPresented: $isShowingClientPicker) { clientPickerSheet }
+            .sheet(isPresented: previewSheetBinding) { previewSheet }
+            .alert("Unable to generate PDF", isPresented: previewErrorBinding) {
+                previewErrorActions
+            } message: {
+                previewErrorMessage
+            }
+            .alert("Unable to share PDF", isPresented: shareErrorBinding) {
+                shareErrorActions
+            } message: {
+                shareErrorMessage
+            }
+            .sheet(isPresented: $isShowingShareSheet) { ShareSheet(activityItems: shareItems) }
+            .onChange(of: estimate.laborLines) { _ in vm.update(estimate) }
+    }
+
+    private var jobLayout: some View {
         JobDocumentLayout(
             summary: summarySection,
             document: documentSection,
@@ -38,98 +61,74 @@ struct JobDetailView: View {
             quickActions: { quickActionsSection },
             materials: { materialsSection }
         )
-        .navigationTitle("Estimate")
-        .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showingInvoiceEditor) {
-            if let createdInvoice {
-                NavigationView {
-                    AddEditInvoiceView(mode: .edit(createdInvoice))
-                        .environmentObject(invoiceVM)
-                        .environmentObject(clientVM)
-                }
-            }
-        }
-        .sheet(isPresented: $showingMaterialManager) {
-            MaterialManagerSheet(
-                job: $estimate,
-                jobVM: vm,
-                invoiceVM: invoiceVM
-            )
-        }
-        .sheet(isPresented: $showingMaterialEditor) {
-            AddMaterialView(
-                mode: .add(job: estimate),
-                jobVM: vm,
-                invoiceVM: invoiceVM
-            )
-        }
-        .sheet(isPresented: $isShowingClientPicker) {
+    }
+
+    @ViewBuilder
+    private var invoiceEditor: some View {
+        if let createdInvoice {
             NavigationView {
-                List {
-                    ForEach(filteredClients) { client in
-                        Button {
-                            assignClient(client)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(client.name.isEmpty ? client.company : client.name)
-                                    .font(.headline)
-                                if !client.company.isEmpty, !client.name.isEmpty {
-                                    Text(client.company)
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                }
-                                if !client.email.isEmpty {
-                                    Text(client.email)
-                                        .font(.footnote)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        }
+                AddEditInvoiceView(mode: .edit(createdInvoice))
+                    .environmentObject(invoiceVM)
+                    .environmentObject(clientVM)
+            }
+        }
+    }
+
+    private var materialManagerSheet: some View {
+        MaterialManagerSheet(
+            job: $estimate,
+            jobVM: vm,
+            invoiceVM: invoiceVM
+        )
+    }
+
+    private var materialEditorSheet: some View {
+        AddMaterialView(
+            mode: .add(job: estimate),
+            jobVM: vm,
+            invoiceVM: invoiceVM
+        )
+    }
+
+    @ViewBuilder
+    private var clientPickerSheet: some View {
+        NavigationView {
+            List {
+                ForEach(filteredClients) { client in
+                    Button { assignClient(client) } label: {
+                        clientRow(for: client)
                     }
                 }
-                .searchable(text: $clientSearchText)
-                .navigationTitle("Assign Client")
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { isShowingClientPicker = false }
-                    }
-                }
             }
+            .searchable(text: $clientSearchText)
+            .navigationTitle("Assign Client")
+            .toolbar { clientPickerToolbar }
         }
-        .sheet(isPresented: previewSheetBinding) {
-            if let url = estimateVM.previewURL {
-                PDFPreviewSheet(url: url)
-            } else {
-                Text("No PDF available.")
-            }
+    }
+
+    @ViewBuilder
+    private var previewSheet: some View {
+        if let url = estimateVM.previewURL {
+            PDFPreviewSheet(url: url)
+        } else {
+            Text("No PDF available.")
         }
-        .alert("Unable to generate PDF", isPresented: previewErrorBinding) {
-            Button("OK", role: .cancel) {
-                estimateVM.previewError = nil
-            }
-        } message: {
-            Text(estimateVM.previewError ?? "Unknown error")
-        }
-        .alert(
-            "Unable to share PDF",
-            isPresented: Binding(
-                get: { shareError != nil },
-                set: { if !$0 { shareError = nil } }
-            )
-        ) {
-            Button("OK", role: .cancel) {
-                shareError = nil
-            }
-        } message: {
-            Text(shareError ?? "Unknown error")
-        }
-        .sheet(isPresented: $isShowingShareSheet) {
-            ShareSheet(activityItems: shareItems)
-        }
-        .onChange(of: estimate.laborLines) { _ in
-            vm.update(estimate)
-        }
+    }
+
+    private var previewErrorActions: some View {
+        Button("OK", role: .cancel) { estimateVM.previewError = nil }
+    }
+
+    private var previewErrorMessage: some View {
+        Text(estimateVM.previewError ?? "Unknown error")
+    }
+
+    private var shareErrorActions: some View {
+        Button("OK", role: .cancel) { shareError = nil }
+    }
+
+    private var shareErrorMessage: some View {
+        Text(shareError ?? "Unknown error")
     }
 
     private var currentClient: Client? {
@@ -289,7 +288,40 @@ struct JobDetailView: View {
         )
     }
 
+    private var shareErrorBinding: Binding<Bool> {
+        Binding(
+            get: { shareError != nil },
+            set: { if !$0 { shareError = nil } }
+        )
+    }
+
     // MARK: - Helpers
+
+    @ViewBuilder
+    private func clientRow(for client: Client) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(client.name.isEmpty ? client.company : client.name)
+                .font(.headline)
+            if !client.company.isEmpty, !client.name.isEmpty {
+                Text(client.company)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            if !client.email.isEmpty {
+                Text(client.email)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ToolbarContentBuilder
+    private var clientPickerToolbar: some ToolbarContent {
+        ToolbarItem(placement: .cancellationAction) {
+            Button("Cancel") { isShowingClientPicker = false }
+        }
+    }
 
     private func client(for job: Job) -> Client? {
         guard let clientId = job.clientId else { return nil }

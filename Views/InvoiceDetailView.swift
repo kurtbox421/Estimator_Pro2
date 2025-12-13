@@ -29,6 +29,27 @@ struct InvoiceDetailView: View {
     // MARK: - Body
 
     var body: some View {
+        invoiceLayout
+            .navigationTitle("Invoice")
+            .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $isPresentingInvoiceEditor) { invoiceEditorSheet }
+            .sheet(isPresented: previewBinding) { previewSheet }
+            .alert("Unable to generate PDF", isPresented: previewErrorBinding) {
+                previewErrorActions
+            } message: {
+                previewErrorMessage
+            }
+            .alert("Unable to share PDF", isPresented: shareErrorBinding) {
+                shareErrorActions
+            } message: {
+                shareErrorMessage
+            }
+            .sheet(isPresented: $isShowingShareSheet) { ShareSheet(activityItems: shareItems) }
+            .sheet(isPresented: $isShowingClientPicker) { clientPickerSheet }
+            .onChange(of: invoice.laborLines) { _ in invoiceVM.update(invoice) }
+    }
+
+    private var invoiceLayout: some View {
         JobDocumentLayout(
             summary: summarySection,
             document: documentSection,
@@ -36,93 +57,55 @@ struct InvoiceDetailView: View {
             quickActions: quickActionsSection,
             materials: materialsSection
         )
-        .navigationTitle("Invoice")
-        .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $isPresentingInvoiceEditor) {
-            NavigationView {
-                AddEditInvoiceView(mode: .edit(invoice))
-                    .environmentObject(invoiceVM)
-                    .environmentObject(clientVM)
-            }
+    }
+
+    private var invoiceEditorSheet: some View {
+        NavigationView {
+            AddEditInvoiceView(mode: .edit(invoice))
+                .environmentObject(invoiceVM)
+                .environmentObject(clientVM)
         }
-        .sheet(
-            isPresented: Binding(
-                get: { invoiceVM.isShowingPreview },
-                set: { invoiceVM.isShowingPreview = $0 }
-            )
-        ) {
-            if let url = invoiceVM.previewURL {
-                PDFPreviewSheet(url: url)
-            } else {
-                Text("No PDF available.")
-            }
+    }
+
+    @ViewBuilder
+    private var previewSheet: some View {
+        if let url = invoiceVM.previewURL {
+            PDFPreviewSheet(url: url)
+        } else {
+            Text("No PDF available.")
         }
-        .alert(
-            "Unable to generate PDF",
-            isPresented: Binding(
-                get: { invoiceVM.previewError != nil },
-                set: { if !$0 { invoiceVM.previewError = nil } }
-            )
-        ) {
-            Button("OK", role: .cancel) {
-                invoiceVM.previewError = nil
-            }
-        } message: {
-            Text(invoiceVM.previewError ?? "Unknown error")
-        }
-        .alert(
-            "Unable to share PDF",
-            isPresented: Binding(
-                get: { shareError != nil },
-                set: { if !$0 { shareError = nil } }
-            )
-        ) {
-            Button("OK", role: .cancel) {
-                shareError = nil
-            }
-        } message: {
-            Text(shareError ?? "Unknown error")
-        }
-        .sheet(isPresented: $isShowingShareSheet) {
-            ShareSheet(activityItems: shareItems)
-        }
-        .sheet(isPresented: $isShowingClientPicker) {
-            NavigationView {
-                List {
-                    ForEach(filteredClients) { client in
-                        Button {
-                            assignClient(client)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(client.name.isEmpty ? client.company : client.name)
-                                    .font(.headline)
-                                if !client.company.isEmpty, !client.name.isEmpty {
-                                    Text(client.company)
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                }
-                                if !client.email.isEmpty {
-                                    Text(client.email)
-                                        .font(.footnote)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }
-                }
-                .searchable(text: $clientSearchText)
-                .navigationTitle("Assign Client")
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { isShowingClientPicker = false }
+    }
+
+    @ViewBuilder
+    private var clientPickerSheet: some View {
+        NavigationView {
+            List {
+                ForEach(filteredClients) { client in
+                    Button { assignClient(client) } label: {
+                        clientRow(for: client)
                     }
                 }
             }
+            .searchable(text: $clientSearchText)
+            .navigationTitle("Assign Client")
+            .toolbar { clientPickerToolbar }
         }
-        .onChange(of: invoice.laborLines) { _ in
-            invoiceVM.update(invoice)
-        }
+    }
+
+    private var previewErrorActions: some View {
+        Button("OK", role: .cancel) { invoiceVM.previewError = nil }
+    }
+
+    private var previewErrorMessage: some View {
+        Text(invoiceVM.previewError ?? "Unknown error")
+    }
+
+    private var shareErrorActions: some View {
+        Button("OK", role: .cancel) { shareError = nil }
+    }
+
+    private var shareErrorMessage: some View {
+        Text(shareError ?? "Unknown error")
     }
 
     private var summarySection: some View {
@@ -168,6 +151,53 @@ struct InvoiceDetailView: View {
             addMaterialSuggestions: addMaterialSuggestions,
             addMaterial: addMaterial
         )
+    }
+
+    private var previewBinding: Binding<Bool> {
+        Binding(
+            get: { invoiceVM.isShowingPreview },
+            set: { invoiceVM.isShowingPreview = $0 }
+        )
+    }
+
+    private var previewErrorBinding: Binding<Bool> {
+        Binding(
+            get: { invoiceVM.previewError != nil },
+            set: { if !$0 { invoiceVM.previewError = nil } }
+        )
+    }
+
+    private var shareErrorBinding: Binding<Bool> {
+        Binding(
+            get: { shareError != nil },
+            set: { if !$0 { shareError = nil } }
+        )
+    }
+
+    @ViewBuilder
+    private func clientRow(for client: Client) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(client.name.isEmpty ? client.company : client.name)
+                .font(.headline)
+            if !client.company.isEmpty, !client.name.isEmpty {
+                Text(client.company)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            if !client.email.isEmpty {
+                Text(client.email)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ToolbarContentBuilder
+    private var clientPickerToolbar: some ToolbarContent {
+        ToolbarItem(placement: .cancellationAction) {
+            Button("Cancel") { isShowingClientPicker = false }
+        }
     }
 
 // MARK: - Actions
