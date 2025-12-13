@@ -34,7 +34,7 @@ struct SignUpView: View {
                     .multilineTextAlignment(.center)
             }
 
-            Button("Create account") {
+            Button(action: {
                 guard password == confirmPassword else {
                     errorMessage = "Passwords do not match."
                     return
@@ -59,6 +59,8 @@ struct SignUpView: View {
                         }
                     }
                 }
+            }) {
+                Text("Create account")
             }
             .buttonStyle(.borderedProminent)
             .disabled(name.isEmpty || email.isEmpty || password.isEmpty)
