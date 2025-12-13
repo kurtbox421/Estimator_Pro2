@@ -6,6 +6,8 @@ struct InvoicePDFRenderer {
         let description: String
         let amount: Double
         let productURL: URL?
+        let detail: String?
+        let isSubtotal: Bool
     }
 
     static func generateInvoicePDF(for job: Job,
@@ -30,9 +32,7 @@ struct InvoicePDFRenderer {
                                    client: Client? = nil,
                                    company: CompanySettings) throws -> URL {
         let invoiceNumber = invoice.invoiceNumber
-        let lineItems = invoice.materials.map { material in
-            InvoiceLineItem(description: material.name, amount: material.total, productURL: material.productURL)
-        }
+        let lineItems = buildLineItems(for: invoice)
 
         return try renderPDF(
             title: "Invoice",
@@ -88,13 +88,18 @@ struct InvoicePDFRenderer {
 
             func drawLineItem(_ item: InvoiceLineItem) {
                 let descriptionAttributes: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.systemFont(ofSize: 13),
+                    .font: item.isSubtotal ? UIFont.boldSystemFont(ofSize: 13) : UIFont.systemFont(ofSize: 13),
                     .foregroundColor: UIColor.black
                 ]
 
                 let amountAttributes: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.systemFont(ofSize: 13),
+                    .font: item.isSubtotal ? UIFont.boldSystemFont(ofSize: 13) : UIFont.systemFont(ofSize: 13),
                     .foregroundColor: UIColor.black
+                ]
+
+                let detailAttributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 11),
+                    .foregroundColor: UIColor.darkGray
                 ]
 
                 let linkAttributes: [NSAttributedString.Key: Any] = [
@@ -112,6 +117,14 @@ struct InvoicePDFRenderer {
                 item.description.draw(at: CGPoint(x: padding, y: y), withAttributes: descriptionAttributes)
 
                 var nextY = y + descriptionSize.height + 4
+
+                if let detail = item.detail {
+                    let attributedDetail = NSAttributedString(string: detail, attributes: detailAttributes)
+                    let maxWidth = pageRect.width - (padding * 2) - 160
+                    let detailRect = CGRect(x: padding, y: nextY, width: maxWidth, height: attributedDetail.size().height)
+                    attributedDetail.draw(in: detailRect)
+                    nextY += attributedDetail.size().height + 4
+                }
 
                 if let url = item.productURL {
                     let linkString = url.absoluteString
@@ -201,14 +214,77 @@ struct InvoicePDFRenderer {
 
     private static func buildLineItems(for job: Job) -> [InvoiceLineItem] {
         var items = job.materials.map { material in
-            InvoiceLineItem(description: material.name, amount: material.total, productURL: material.productURL)
+            InvoiceLineItem(
+                description: material.name,
+                amount: material.total,
+                productURL: material.productURL,
+                detail: nil,
+                isSubtotal: false
+            )
         }
 
-        if job.laborHours > 0 && job.laborRate > 0 {
-            let laborTotal = job.laborHours * job.laborRate
-            items.append(InvoiceLineItem(description: "Labor",
-                                         amount: laborTotal,
-                                         productURL: nil))
+        if !job.laborLines.isEmpty {
+            for labor in job.laborLines {
+                let detail = String(format: "%.2f hrs × $%.2f", labor.hours, labor.rate)
+                items.append(
+                    InvoiceLineItem(
+                        description: labor.title,
+                        amount: labor.total,
+                        productURL: nil,
+                        detail: detail,
+                        isSubtotal: false
+                    )
+                )
+            }
+
+            items.append(
+                InvoiceLineItem(
+                    description: "Labor Subtotal",
+                    amount: job.laborSubtotal,
+                    productURL: nil,
+                    detail: nil,
+                    isSubtotal: true
+                )
+            )
+        }
+
+        return items
+    }
+
+    private static func buildLineItems(for invoice: Invoice) -> [InvoiceLineItem] {
+        var items = invoice.materials.map { material in
+            InvoiceLineItem(
+                description: material.name,
+                amount: material.total,
+                productURL: material.productURL,
+                detail: nil,
+                isSubtotal: false
+            )
+        }
+
+        if !invoice.laborLines.isEmpty {
+            for labor in invoice.laborLines {
+                let detail = String(format: "%.2f hrs × $%.2f", labor.hours, labor.rate)
+                items.append(
+                    InvoiceLineItem(
+                        description: labor.title,
+                        amount: labor.total,
+                        productURL: nil,
+                        detail: detail,
+                        isSubtotal: false
+                    )
+                )
+            }
+
+            items.append(
+                InvoiceLineItem(
+                    description: "Labor Subtotal",
+                    amount: invoice.laborSubtotal,
+                    productURL: nil,
+                    detail: nil,
+                    isSubtotal: true
+                )
+            )
         }
 
         return items

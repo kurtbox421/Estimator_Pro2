@@ -20,6 +20,7 @@ struct AddEditInvoiceView: View {
     @State private var includeDueDate: Bool
     @State private var dueDate: Date
     @State private var materials: [Material]
+    @State private var laborLines: [LaborLine]
 
     @State private var isPresentingMaterialSheet = false
     @State private var editingMaterialIndex: Int?
@@ -41,6 +42,7 @@ struct AddEditInvoiceView: View {
             _includeDueDate = State(initialValue: false)
             _dueDate = State(initialValue: Date())
             _materials = State(initialValue: [])
+            _laborLines = State(initialValue: [])
         case .edit(let invoice):
             _title = State(initialValue: invoice.title)
             _selectedClientId = State(initialValue: invoice.clientID)
@@ -49,6 +51,7 @@ struct AddEditInvoiceView: View {
             _includeDueDate = State(initialValue: invoice.dueDate != nil)
             _dueDate = State(initialValue: invoice.dueDate ?? Date())
             _materials = State(initialValue: invoice.materials)
+            _laborLines = State(initialValue: invoice.laborLines)
         }
     }
 
@@ -151,6 +154,54 @@ struct AddEditInvoiceView: View {
                     }
                 }
 
+                Section(header: Text("Labor")) {
+                    if laborLines.isEmpty {
+                        Text("No labor lines added yet.")
+                            .foregroundColor(.secondary)
+                    }
+
+                    ForEach($laborLines) { $labor in
+                        VStack(alignment: .leading, spacing: 8) {
+                            TextField("Title", text: $labor.title)
+                            HStack {
+                                TextField("Hours", value: $labor.hours, format: .number)
+                                    .keyboardType(.decimalPad)
+                                TextField("Rate", value: $labor.rate, format: .number)
+                                    .keyboardType(.decimalPad)
+                            }
+                            HStack {
+                                Spacer()
+                                Text(labor.total, format: .currency(code: "USD"))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                laborLines.removeAll { $0.id == labor.id }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
+
+                    Button {
+                        laborLines.append(LaborLine(id: UUID(), title: "Labor", hours: 1, rate: 0))
+                    } label: {
+                        Label("Add Labor Line", systemImage: "plus")
+                    }
+
+                    if !laborLines.isEmpty {
+                        HStack {
+                            Text("Labor Subtotal")
+                            Spacer()
+                            let subtotal = laborLines.reduce(0) { $0 + $1.total }
+                            Text(subtotal, format: .currency(code: "USD"))
+                                .font(.headline)
+                        }
+                    }
+                }
+
                 Section {
                     Button {
                         save()
@@ -242,6 +293,15 @@ struct AddEditInvoiceView: View {
         guard !trimmedTitle.isEmpty, !trimmedClient.isEmpty else { return }
 
         let dueDateValue = includeDueDate ? dueDate : nil
+        let normalizedLaborLines = laborLines.map { line -> LaborLine in
+            let trimmedTitle = line.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            return LaborLine(
+                id: line.id,
+                title: trimmedTitle.isEmpty ? "Labor" : trimmedTitle,
+                hours: debugCheckNaN(line.hours, label: "invoice labor hours"),
+                rate: debugCheckNaN(line.rate, label: "invoice labor rate")
+            )
+        }
 
         switch mode {
         case .add:
@@ -252,6 +312,7 @@ struct AddEditInvoiceView: View {
                 clientID: selectedClientId,
                 clientName: trimmedClient,
                 materials: materials,
+                laborLines: normalizedLaborLines,
                 status: status,
                 dueDate: dueDateValue
             )
@@ -264,6 +325,7 @@ struct AddEditInvoiceView: View {
             updated.clientID = selectedClientId
             updated.clientName = trimmedClient
             updated.materials = materials
+            updated.laborLines = normalizedLaborLines
             updated.status = status
             updated.dueDate = dueDateValue
             invoiceVM.update(updated)

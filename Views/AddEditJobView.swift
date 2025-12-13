@@ -28,8 +28,7 @@ struct AddEditJobView: View {
 
     @State private var name: String
     @State private var category: String
-    @State private var labourHours: String
-    @State private var laborRate: String
+    @State private var laborLines: [LaborLine]
     @State private var selectedClientId: UUID?
     @State private var isPresentingNewClientSheet = false
     @State private var clientSelection: ClientSelection
@@ -54,8 +53,7 @@ struct AddEditJobView: View {
         case .add:
             _name = State(initialValue: "")
             _category = State(initialValue: "")
-            _labourHours = State(initialValue: "")
-            _laborRate = State(initialValue: "")
+            _laborLines = State(initialValue: [])
             _selectedClientId = State(initialValue: nil)
             _materialDrafts = State(initialValue: [MaterialDraft()])
             let initialSelection: ClientSelection = .unassigned
@@ -64,8 +62,7 @@ struct AddEditJobView: View {
         case .edit(let job):
             _name = State(initialValue: job.name)
             _category = State(initialValue: job.category)
-            _labourHours = State(initialValue: String(job.laborHours))
-            _laborRate = State(initialValue: String(job.laborRate))
+            _laborLines = State(initialValue: job.laborLines)
             _selectedClientId = State(initialValue: job.clientId)
             _materialDrafts = State(initialValue: job.materials.map { material in
                 MaterialDraft(
@@ -133,10 +130,51 @@ struct AddEditJobView: View {
                 }
 
                 Section(header: Text("Labor (optional)")) {
-                    TextField("Hours", text: $labourHours)
-                        .keyboardType(.decimalPad)
-                    TextField("Rate", text: $laborRate)
-                        .keyboardType(.decimalPad)
+                    if laborLines.isEmpty {
+                        Text("No labor lines added yet.")
+                            .foregroundColor(.secondary)
+                    }
+
+                    ForEach($laborLines) { $labor in
+                        VStack(alignment: .leading, spacing: 8) {
+                            TextField("Title", text: $labor.title)
+                            HStack {
+                                TextField("Hours", value: $labor.hours, format: .number)
+                                    .keyboardType(.decimalPad)
+                                TextField("Rate", value: $labor.rate, format: .number)
+                                    .keyboardType(.decimalPad)
+                            }
+                            HStack {
+                                Spacer()
+                                Text(labor.total, format: .currency(code: "USD"))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                laborLines.removeAll { $0.id == labor.id }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    }
+
+                    Button {
+                        laborLines.append(LaborLine(id: UUID(), title: "Labor", hours: 1, rate: 0))
+                    } label: {
+                        Label("Add Labor Line", systemImage: "plus")
+                    }
+
+                    if !laborLines.isEmpty {
+                        HStack {
+                            Text("Labor Subtotal")
+                            Spacer()
+                            let subtotal = laborLines.reduce(0) { $0 + $1.total }
+                            Text(subtotal, format: .currency(code: "USD"))
+                                .font(.headline)
+                        }
+                    }
                 }
 
                 Section(header: Text("Materials")) {
@@ -228,12 +266,6 @@ struct AddEditJobView: View {
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
         if trimmedName.isEmpty { return false }
 
-        let hoursTrimmed = labourHours.trimmingCharacters(in: .whitespaces)
-        let rateTrimmed  = laborRate.trimmingCharacters(in: .whitespaces)
-
-        if !hoursTrimmed.isEmpty && parseDouble(hoursTrimmed) == nil { return false }
-        if !rateTrimmed.isEmpty && parseDouble(rateTrimmed) == nil { return false }
-
         return materialDrafts.allSatisfy { isValidProductURL($0.productURL) }
     }
 
@@ -278,9 +310,15 @@ struct AddEditJobView: View {
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
         guard !trimmedName.isEmpty else { return }
 
-        // Empty fields default to 0
-        let h = debugCheckNaN(parseDouble(labourHours.trimmingCharacters(in: .whitespaces)) ?? 0, label: "job labor hours")
-        let r = debugCheckNaN(parseDouble(laborRate.trimmingCharacters(in: .whitespaces)) ?? 0, label: "job labor rate")
+        let normalizedLaborLines = laborLines.map { line -> LaborLine in
+            let trimmedTitle = line.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            return LaborLine(
+                id: line.id,
+                title: trimmedTitle.isEmpty ? "Labor" : trimmedTitle,
+                hours: debugCheckNaN(line.hours, label: "job labor hours"),
+                rate: debugCheckNaN(line.rate, label: "job labor rate")
+            )
+        }
 
         let trimmedCategory = category.trimmingCharacters(in: .whitespaces)
         let materials = materialsFromDrafts()
@@ -290,8 +328,7 @@ struct AddEditJobView: View {
             let job = Job(
                 name: trimmedName,
                 category: trimmedCategory,
-                laborHours: h,
-                laborRate: r,
+                laborLines: normalizedLaborLines,
                 materials: materials,
                 clientId: selectedClientId
             )
@@ -301,8 +338,7 @@ struct AddEditJobView: View {
             var updated = existing
             updated.name = trimmedName
             updated.category = trimmedCategory
-            updated.laborHours = h
-            updated.laborRate = r
+            updated.laborLines = normalizedLaborLines
             updated.clientId = selectedClientId
             updated.materials = materials
             vm.update(updated)

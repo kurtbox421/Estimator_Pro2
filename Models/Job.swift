@@ -12,23 +12,21 @@ struct Job: Identifiable, Codable {
     var ownerID: String
     var name: String
     var category: String
-    var laborHours: Double
-    var laborRate: Double
+    var laborLines: [LaborLine]
     var materials: [Material]
     var dateCreated: Date
     var clientId: UUID?
 
-    var laborCost: Double { laborHours * laborRate }
+    var laborSubtotal: Double { laborLines.reduce(0) { $0 + $1.total } }
     var materialCost: Double { materials.map { $0.cost }.reduce(0, +) }
-    var total: Double { laborCost + materialCost }
+    var total: Double { laborSubtotal + materialCost }
 
     init(
         id: UUID = UUID(),
         ownerID: String = "",
         name: String,
         category: String,
-        laborHours: Double,
-        laborRate: Double,
+        laborLines: [LaborLine] = [],
         materials: [Material] = [],
         clientId: UUID? = nil
     ) {
@@ -36,8 +34,7 @@ struct Job: Identifiable, Codable {
         self.ownerID = ownerID
         self.name = name
         self.category = category
-        self.laborHours = laborHours
-        self.laborRate = laborRate
+        self.laborLines = laborLines
         self.materials = materials
         self.dateCreated = Date()
         self.clientId = clientId
@@ -48,11 +45,13 @@ struct Job: Identifiable, Codable {
         case ownerID
         case name
         case category
-        case laborHours
-        case laborRate
+        case laborLines
         case materials
         case dateCreated
         case clientId
+        // Legacy
+        case laborHours
+        case laborRate
     }
 
     init(from decoder: Decoder) throws {
@@ -61,11 +60,19 @@ struct Job: Identifiable, Codable {
         ownerID = try container.decodeIfPresent(String.self, forKey: .ownerID) ?? ""
         name = try container.decode(String.self, forKey: .name)
         category = try container.decode(String.self, forKey: .category)
-        laborHours = try container.decode(Double.self, forKey: .laborHours)
-        laborRate = try container.decode(Double.self, forKey: .laborRate)
+        let decodedLaborLines = try container.decodeIfPresent([LaborLine].self, forKey: .laborLines) ?? []
         materials = try container.decodeIfPresent([Material].self, forKey: .materials) ?? []
         dateCreated = try container.decodeIfPresent(Date.self, forKey: .dateCreated) ?? Date()
         clientId = try container.decodeIfPresent(UUID.self, forKey: .clientId)
+
+        if decodedLaborLines.isEmpty,
+           let hours = try container.decodeIfPresent(Double.self, forKey: .laborHours),
+           let rate = try container.decodeIfPresent(Double.self, forKey: .laborRate),
+           hours > 0 || rate > 0 {
+            laborLines = [LaborLine(id: UUID(), title: "Labor", hours: hours, rate: rate)]
+        } else {
+            laborLines = decodedLaborLines
+        }
     }
 }
 
