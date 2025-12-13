@@ -10,24 +10,33 @@ import FirebaseAuth
 import FirebaseFirestore
 
 private enum JobStorage {
-    static let userDefaultsKey = "EstimatorPro_Jobs"
-    static let fileName = "jobs.json"
+    static func fileName(for uid: String) -> String { "jobs_\(uid).json" }
 }
 
 class JobViewModel: ObservableObject {
     @Published var jobs: [Job] = [] {
-        didSet {
-            saveJobs()
-        }
+        didSet { saveJobs() }
     }
-    
+
     private let persistence: PersistenceService
     private let db: Firestore
+    private let auth: Auth
+    private var authHandle: AuthStateDidChangeListenerHandle?
+    private var currentUserID: String?
 
-    init(persistence: PersistenceService = .shared, database: Firestore = Firestore.firestore()) {
+    init(
+        persistence: PersistenceService = .shared,
+        database: Firestore = Firestore.firestore(),
+        auth: Auth = Auth.auth()
+    ) {
         self.persistence = persistence
         self.db = database
-        loadJobs()
+        self.auth = auth
+        configureAuthListener()
+    }
+
+    deinit {
+        if let authHandle { auth.removeStateDidChangeListener(authHandle) }
     }
     
     // MARK: - CRUD
@@ -192,27 +201,35 @@ class JobViewModel: ObservableObject {
     // MARK: - Persistence
     
     private func saveJobs() {
-        persistence.save(jobs, to: JobStorage.fileName)
+        guard let uid = currentUserID else { return }
+        persistence.save(jobs, to: JobStorage.fileName(for: uid))
     }
-    
-    private func loadJobs() {
-        if let stored: [Job] = persistence.load([Job].self, from: JobStorage.fileName) {
+
+    private func loadJobs(for uid: String) {
+        if let stored: [Job] = persistence.load([Job].self, from: JobStorage.fileName(for: uid)) {
             jobs = stored
             sortJobs()
             return
         }
-        
-        if let migrated: [Job] = persistence.migrateFromUserDefaults(
-            key: JobStorage.userDefaultsKey,
-            fileName: JobStorage.fileName,
-            as: [Job].self
-        ) {
-            jobs = migrated
-            sortJobs()
-            return
-        }
-        
+
         jobs = []
+    }
+
+    private func configureAuthListener() {
+        authHandle = auth.addStateDidChangeListener { [weak self] _, user in
+            self?.handleUserChange(user)
+        }
+
+        handleUserChange(auth.currentUser)
+    }
+
+    private func handleUserChange(_ user: User?) {
+        currentUserID = user?.uid
+        jobs = []
+
+        guard let uid = user?.uid else { return }
+
+        loadJobs(for: uid)
     }
     
     private func sortJobs() {
