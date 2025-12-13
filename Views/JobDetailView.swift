@@ -71,7 +71,7 @@ struct JobDetailView: View {
     private func jobLayout(estimate: Binding<Job>) -> some View {
         let estimateValue = estimate.wrappedValue
 
-        JobDocumentLayout(
+        return JobDocumentLayout(
             summary: summarySection(for: estimateValue),
             document: documentSection(for: estimateValue),
             customer: { customerSection(for: estimateValue) },
