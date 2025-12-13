@@ -32,130 +32,11 @@ struct JobDetailView: View {
 
     var body: some View {
         JobDocumentLayout(
-            summary: VStack(spacing: 12) {
-                EstimateSummaryCard(job: estimate, editLaborAction: addLaborLine)
-            },
-            document: EstimateDocumentCard(
-                estimate: estimate,
-                previewAction: previewEstimate,
-                shareAction: shareEstimatePDF,
-                editAction: editEstimate,
-                convertAction: convertToInvoice
-            ),
-            customer: {
-                EstimateCustomerCard(
-                    client: client(for: estimate),
-                    assignAction: { isShowingClientPicker = true },
-                    changeAction: client(for: estimate) != nil ? { isShowingClientPicker = true } : nil
-                )
-            },
-            quickActions: {
-                EstimateQuickActionsCard(
-                    client: client(for: estimate),
-                    callAction: callClient,
-                    textAction: textClient,
-                    followUpAction: followUpClient
-                )
-            },
-            materials: {
-                VStack(spacing: 16) {
-                    RoundedCard {
-                        VStack(alignment: .leading, spacing: 16) {
-                            HStack(alignment: .center) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Labor")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundColor(.white.opacity(0.7))
-
-                                    Text("\(estimate.laborLines.count) items")
-                                        .font(.caption2)
-                                        .foregroundColor(.white.opacity(0.6))
-                                }
-
-                                Spacer()
-
-                                Button(action: addLaborLine) {
-                                    Label("Add Labor Line", systemImage: "plus")
-                                        .font(.caption.weight(.semibold))
-                                        .padding(.vertical, 6)
-                                        .padding(.horizontal, 10)
-                                        .background(Color.white.opacity(0.16))
-                                        .clipShape(Capsule())
-                                        .foregroundColor(.white)
-                                }
-                            }
-
-                            if estimate.laborLines.isEmpty {
-                                Text("No labor added yet.")
-                                    .font(.subheadline)
-                                    .foregroundColor(.white.opacity(0.7))
-                            } else {
-                                ForEach($estimate.laborLines) { $labor in
-                                    EditableLaborRow(
-                                        laborLine: $labor,
-                                        isLast: labor.id == estimate.laborLines.last?.id,
-                                        deleteAction: { deleteLaborLine(labor) }
-                                    )
-                                }
-                            }
-
-                            Divider().overlay(Color.white.opacity(0.15))
-
-                            HStack {
-                                Text("Labor Subtotal")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundColor(.white.opacity(0.8))
-                                Spacer()
-                                Text(estimate.laborSubtotal, format: .currency(code: "USD"))
-                                    .font(.headline.weight(.semibold))
-                                    .foregroundColor(.white)
-                            }
-                        }
-                    }
-
-                    RoundedCard {
-                        VStack(alignment: .leading, spacing: 16) {
-                            HStack(alignment: .center) {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Materials")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundColor(.white.opacity(0.7))
-
-                                    Text("\(estimate.materials.count) items")
-                                        .font(.caption2)
-                                        .foregroundColor(.white.opacity(0.6))
-                                }
-
-                                Spacer()
-
-                                Button(action: addMaterial) {
-                                    Label("Add Material", systemImage: "plus")
-                                        .font(.caption.weight(.semibold))
-                                        .padding(.vertical, 6)
-                                        .padding(.horizontal, 10)
-                                        .background(Color.white.opacity(0.16))
-                                        .clipShape(Capsule())
-                                        .foregroundColor(.white)
-                                }
-                            }
-
-                            if estimate.materials.isEmpty {
-                                Text("No materials added yet.")
-                                    .font(.subheadline)
-                                    .foregroundColor(.white.opacity(0.7))
-                            } else {
-                                ForEach($estimate.materials) { $material in
-                                    EditableMaterialRow(
-                                        material: $material,
-                                        showDivider: material.id != estimate.materials.last?.id,
-                                        deleteAction: { deleteMaterial(material) }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            summary: summarySection,
+            document: documentSection,
+            customer: { customerSection },
+            quickActions: { quickActionsSection },
+            materials: { materialsSection }
         )
         .navigationTitle("Estimate")
         .navigationBarTitleDisplayMode(.inline)
@@ -248,6 +129,145 @@ struct JobDetailView: View {
         }
         .onChange(of: estimate.laborLines) { _ in
             vm.update(estimate)
+        }
+    }
+
+    private var currentClient: Client? {
+        client(for: estimate)
+    }
+
+    @ViewBuilder
+    private var summarySection: some View {
+        VStack(spacing: 12) {
+            EstimateSummaryCard(job: estimate, editLaborAction: addLaborLine)
+        }
+    }
+
+    private var documentSection: some View {
+        EstimateDocumentCard(
+            estimate: estimate,
+            previewAction: previewEstimate,
+            shareAction: shareEstimatePDF,
+            editAction: editEstimate,
+            convertAction: convertToInvoice
+        )
+    }
+
+    private var customerSection: some View {
+        EstimateCustomerCard(
+            client: currentClient,
+            assignAction: { isShowingClientPicker = true },
+            changeAction: currentClient != nil ? { isShowingClientPicker = true } : nil
+        )
+    }
+
+    private var quickActionsSection: some View {
+        EstimateQuickActionsCard(
+            client: currentClient,
+            callAction: callClient,
+            textAction: textClient,
+            followUpAction: followUpClient
+        )
+    }
+
+    @ViewBuilder
+    private var materialsSection: some View {
+        VStack(spacing: 16) {
+            RoundedCard {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(alignment: .center) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Labor")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.white.opacity(0.7))
+
+                            Text("\(estimate.laborLines.count) items")
+                                .font(.caption2)
+                                .foregroundColor(.white.opacity(0.6))
+                        }
+
+                        Spacer()
+
+                        Button(action: addLaborLine) {
+                            Label("Add Labor Line", systemImage: "plus")
+                                .font(.caption.weight(.semibold))
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 10)
+                                .background(Color.white.opacity(0.16))
+                                .clipShape(Capsule())
+                                .foregroundColor(.white)
+                        }
+                    }
+
+                    if estimate.laborLines.isEmpty {
+                        Text("No labor added yet.")
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.7))
+                    } else {
+                        ForEach($estimate.laborLines) { $labor in
+                            EditableLaborRow(
+                                laborLine: $labor,
+                                isLast: labor.id == estimate.laborLines.last?.id,
+                                deleteAction: { deleteLaborLine(labor) }
+                            )
+                        }
+                    }
+
+                    Divider().overlay(Color.white.opacity(0.15))
+
+                    HStack {
+                        Text("Labor Subtotal")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.white.opacity(0.8))
+                        Spacer()
+                        Text(estimate.laborSubtotal, format: .currency(code: "USD"))
+                            .font(.headline.weight(.semibold))
+                            .foregroundColor(.white)
+                    }
+                }
+            }
+
+            RoundedCard {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(alignment: .center) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Materials")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.white.opacity(0.7))
+
+                            Text("\(estimate.materials.count) items")
+                                .font(.caption2)
+                                .foregroundColor(.white.opacity(0.6))
+                        }
+
+                        Spacer()
+
+                        Button(action: addMaterial) {
+                            Label("Add Material", systemImage: "plus")
+                                .font(.caption.weight(.semibold))
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 10)
+                                .background(Color.white.opacity(0.16))
+                                .clipShape(Capsule())
+                                .foregroundColor(.white)
+                        }
+                    }
+
+                    if estimate.materials.isEmpty {
+                        Text("No materials added yet.")
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.7))
+                    } else {
+                        ForEach($estimate.materials) { $material in
+                            EditableMaterialRow(
+                                material: $material,
+                                showDivider: material.id != estimate.materials.last?.id,
+                                deleteAction: { deleteMaterial(material) }
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 
