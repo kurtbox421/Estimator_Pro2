@@ -47,6 +47,7 @@ struct RootView: View {
     @EnvironmentObject private var jobVM: JobViewModel
     @EnvironmentObject private var clientVM: ClientViewModel
     @EnvironmentObject private var invoiceVM: InvoiceViewModel
+    @EnvironmentObject private var onboarding: OnboardingProgressStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var selectedTab: AppTab = .estimates
@@ -54,6 +55,8 @@ struct RootView: View {
     @State private var showingNewInvoice = false
     @State private var showingNewClient = false
     @State private var showingMaterialGenerator = false
+    @State private var showingCompanyDetails = false
+    @State private var onboardingPreviewJobID: Job.ID?
 
     var body: some View {
         GeometryReader { geometry in
@@ -73,6 +76,18 @@ struct RootView: View {
 
                     heroCard
                         .frame(maxWidth: layout.contentWidth, alignment: .center)
+
+                    if onboarding.shouldShowOnboarding && !onboarding.didCompleteOnboarding {
+                        OnboardingChecklistCard(
+                            goToCompanySettings: goToCompanySettings,
+                            goToAddClient: goToAddClient,
+                            goToCreateEstimate: goToCreateEstimate,
+                            goToPreviewPDF: goToPreviewPDF
+                        )
+                        .environmentObject(onboarding)
+                        .frame(maxWidth: layout.contentWidth, alignment: .center)
+                        .transition(.opacity)
+                    }
 
                     contentForSelectedTab
                         .frame(maxWidth: layout.contentWidth)
@@ -103,6 +118,30 @@ struct RootView: View {
             .presentationDetents([.medium])
             .presentationDragIndicator(.visible)
         }
+        .background(
+            NavigationLink(
+                "",
+                destination: CompanyDetailsView(),
+                isActive: $showingCompanyDetails
+            )
+            .opacity(0)
+        )
+        .background(
+            NavigationLink(
+                "",
+                destination: onboardingPreviewDestination,
+                isActive: Binding(
+                    get: { onboardingPreviewJobID != nil },
+                    set: { isActive in
+                        if !isActive { onboardingPreviewJobID = nil }
+                    }
+                )
+            )
+            .opacity(0)
+        )
+        .onAppear(perform: refreshOnboardingProgress)
+        .onChange(of: jobVM.jobs.count) { _, _ in refreshOnboardingProgress() }
+        .onChange(of: clientVM.clients.count) { _, _ in refreshOnboardingProgress() }
     }
 
     // MARK: Header
@@ -339,6 +378,42 @@ struct RootView: View {
             ]
         }
     }
+
+    private func goToCompanySettings() {
+        selectedTab = .settings
+        showingCompanyDetails = true
+    }
+
+    private func goToAddClient() {
+        selectedTab = .clients
+        showingNewClient = true
+    }
+
+    private func goToCreateEstimate() {
+        selectedTab = .estimates
+        showingNewEstimate = true
+    }
+
+    private func goToPreviewPDF() {
+        selectedTab = .estimates
+        onboardingPreviewJobID = jobVM.jobs.first?.id
+    }
+
+    private func refreshOnboardingProgress() {
+        onboarding.hasAtLeastOneEstimate = !jobVM.jobs.isEmpty
+        onboarding.hasAtLeastOneClient = !clientVM.clients.isEmpty
+        onboarding.evaluateCompletion()
+    }
+
+    @ViewBuilder
+    private var onboardingPreviewDestination: some View {
+        if let jobID = onboardingPreviewJobID,
+           let job = jobVM.job(for: jobID) {
+            JobDetailView(estimateID: job.id)
+        } else {
+            EmptyView()
+        }
+    }
 }
 
 // MARK: - Hero card
@@ -380,6 +455,7 @@ struct HeroCardView: View {
 
 struct EstimatesTabView: View {
     @EnvironmentObject private var vm: JobViewModel
+    @EnvironmentObject private var onboarding: OnboardingProgressStore
     private let rowInsets = EdgeInsets(top: 0, leading: 24, bottom: 12, trailing: 24)
 
     var body: some View {
@@ -417,6 +493,13 @@ struct EstimatesTabView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        .onAppear(perform: updateOnboardingProgress)
+        .onChange(of: vm.jobs.count) { _, _ in updateOnboardingProgress() }
+    }
+
+    private func updateOnboardingProgress() {
+        onboarding.hasAtLeastOneEstimate = !vm.jobs.isEmpty
+        onboarding.evaluateCompletion()
     }
 }
 
@@ -556,6 +639,7 @@ struct ClientsTabView: View {
     @EnvironmentObject private var clientVM: ClientViewModel
     @EnvironmentObject private var jobVM: JobViewModel
     @EnvironmentObject private var invoiceVM: InvoiceViewModel
+    @EnvironmentObject private var onboarding: OnboardingProgressStore
     private let rowInsets = EdgeInsets(top: 0, leading: 24, bottom: 12, trailing: 24)
 
     var body: some View {
@@ -597,6 +681,13 @@ struct ClientsTabView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        .onAppear(perform: updateOnboardingProgress)
+        .onChange(of: clientVM.clients.count) { _, _ in updateOnboardingProgress() }
+    }
+
+    private func updateOnboardingProgress() {
+        onboarding.hasAtLeastOneClient = !clientVM.clients.isEmpty
+        onboarding.evaluateCompletion()
     }
 
     private func projectCount(for client: Client) -> Int {
@@ -1163,6 +1254,7 @@ private struct SettingRow: View {
 
 struct CompanyDetailsView: View {
     @EnvironmentObject private var companySettings: CompanySettingsStore
+    @EnvironmentObject private var onboarding: OnboardingProgressStore
 
     var body: some View {
         Form {
@@ -1177,6 +1269,21 @@ struct CompanyDetailsView: View {
             }
         }
         .navigationTitle("Company details")
+        .onAppear(perform: updateCompletion)
+        .onChange(of: companySettings.companyName) { _, _ in updateCompletion() }
+        .onChange(of: companySettings.companyAddress) { _, _ in updateCompletion() }
+        .onChange(of: companySettings.companyPhone) { _, _ in updateCompletion() }
+        .onChange(of: companySettings.companyEmail) { _, _ in updateCompletion() }
+    }
+
+    private func updateCompletion() {
+        let nameFilled = !companySettings.companyName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let addressFilled = !companySettings.companyAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let phoneFilled = !companySettings.companyPhone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let emailFilled = !companySettings.companyEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+
+        onboarding.companyProfileComplete = nameFilled && addressFilled && phoneFilled && emailFilled
+        onboarding.evaluateCompletion()
     }
 }
 

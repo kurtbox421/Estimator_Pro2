@@ -13,11 +13,17 @@ final class AuthManager {
     func signUp(email: String,
                 password: String,
                 displayName: String,
+                onboarding: OnboardingProgressStore? = nil,
                 completion: @escaping (Result<User, Error>) -> Void) {
         Auth.auth().createUser(withEmail: email, password: password) { result, error in
             if let error = error {
                 completion(.failure(error))
                 return
+            }
+
+            if let result,
+               result.additionalUserInfo?.isNewUser == true {
+                onboarding?.activateForNewAccount()
             }
             guard let user = result?.user else {
                 completion(.failure(AuthError.noUser))
