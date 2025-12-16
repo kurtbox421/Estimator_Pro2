@@ -224,6 +224,6 @@ private struct TransactionRow: View {
     }
 }
 
-private extension String: Identifiable {
+extension String: Identifiable {
     public var id: String { self }
 }
