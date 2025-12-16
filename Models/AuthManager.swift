@@ -28,12 +28,8 @@ final class AuthManager {
 
             let isNewUser = result?.additionalUserInfo?.isNewUser ?? false
             if isNewUser {
-                if Thread.isMainThread {
+                Task { @MainActor in
                     onboarding?.activateForNewAccount()
-                } else {
-                    DispatchQueue.main.async {
-                        onboarding?.activateForNewAccount()
-                    }
                 }
             }
 
