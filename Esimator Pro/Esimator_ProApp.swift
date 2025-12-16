@@ -14,6 +14,7 @@ struct EstimatorProApp: App {
     @StateObject private var invoiceVM = InvoiceViewModel()
     @StateObject private var estimateVM = EstimateViewModel()
     @StateObject private var clientVM = ClientViewModel()
+    @StateObject private var inventoryVM = InventoryViewModel()
     @StateObject private var companySettings = CompanySettingsStore()
     @StateObject private var emailTemplateSettings = EmailTemplateSettingsStore()
     @StateObject private var settingsManager = SettingsManager()
@@ -45,6 +46,7 @@ struct EstimatorProApp: App {
                     .environmentObject(invoiceVM)
                     .environmentObject(estimateVM)
                     .environmentObject(clientVM)
+                    .environmentObject(inventoryVM)
                     .environmentObject(companySettings)
                     .environmentObject(emailTemplateSettings)
                     .environmentObject(settingsManager)
@@ -64,6 +66,7 @@ struct EstimatorProApp: App {
             .environmentObject(materialsStore)
             .environmentObject(materialIntelligence)
             .environmentObject(onboarding)
+            .environmentObject(inventoryVM)
         }
     }
 
