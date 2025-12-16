@@ -4,8 +4,6 @@ struct InventoryView: View {
     @EnvironmentObject private var inventoryVM: InventoryViewModel
 
     @State private var searchText: String = ""
-    @State private var showingAddSupply = false
-    @State private var editingSupply: SupplyItem?
 
     private var filteredSupplies: [SupplyItem] {
         guard !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -20,42 +18,48 @@ struct InventoryView: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 12) {
-                ForEach(filteredSupplies, id: \.stableId) { supply in
-                    NavigationLink {
-                        SupplyDetailView(supply: supply)
-                    } label: {
-                        SupplyRowCard(supply: supply)
-                    }
-                    .buttonStyle(.plain)
-                }
+            VStack(spacing: 16) {
+                searchBar
+                    .padding(.horizontal, 24)
 
-                if inventoryVM.supplies.isEmpty {
-                    SupplyEmptyStateCard()
+                LazyVStack(spacing: 12) {
+                    ForEach(filteredSupplies, id: \.stableId) { supply in
+                        NavigationLink {
+                            SupplyDetailView(supply: supply)
+                        } label: {
+                            SupplyRowCard(supply: supply)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    if inventoryVM.supplies.isEmpty {
+                        SupplyEmptyStateCard()
+                    }
                 }
+                .padding(.horizontal, 24)
             }
-            .padding(.horizontal, 24)
             .padding(.vertical, 8)
         }
         .navigationTitle("Inventory")
-        .searchable(text: $searchText)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    editingSupply = nil
-                    showingAddSupply = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-            }
+        .tint(.white)
+    }
+}
+
+private extension InventoryView {
+    var searchBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.white.opacity(0.7))
+
+            TextField("", text: $searchText, prompt: Text("Search").foregroundColor(.white.opacity(0.7)))
+                .foregroundColor(.white)
+                .tint(.white)
+                .textInputAutocapitalization(.none)
         }
-        .sheet(isPresented: $showingAddSupply) {
-            NavigationView {
-                AddEditSupplyView(supply: editingSupply) { supply in
-                    inventoryVM.upsertSupply(supply)
-                }
-            }
-        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
