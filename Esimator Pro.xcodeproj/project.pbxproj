@@ -49,6 +49,12 @@
 		39CCEF4A2EE12DAD0075521B /* MaterialsRecommender.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39CCEF492EE12DAD0075521B /* MaterialsRecommender.swift */; };
 		39E0A0112F00000100000001 /* ImportDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39E0A0102F00000100000001 /* ImportDataView.swift */; };
 		39E46E9F2EE240D80096D2A4 /* firestore.rules in Resources */ = {isa = PBXBuildFile; fileRef = 39E46E9E2EE240D80096D2A4 /* firestore.rules */; };
+		39F405992EF1FD28000337A7 /* InventoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F405982EF1FD28000337A7 /* InventoryViewModel.swift */; };
+		39F4059B2EF1FD3A000337A7 /* InventoryTransaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F4059A2EF1FD3A000337A7 /* InventoryTransaction.swift */; };
+		39F4059D2EF1FD44000337A7 /* SupplyItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F4059C2EF1FD44000337A7 /* SupplyItem.swift */; };
+		39F4059F2EF1FD59000337A7 /* AddEditSupplyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F4059E2EF1FD59000337A7 /* AddEditSupplyView.swift */; };
+		39F405A12EF1FD66000337A7 /* InventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F405A02EF1FD66000337A7 /* InventoryView.swift */; };
+		39F405A32EF1FD6C000337A7 /* SupplyDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F405A22EF1FD6C000337A7 /* SupplyDetailView.swift */; };
 		417F12F378444C99BAD178E0 /* EmailTemplateSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4A4D7919D79412D88ED443B /* EmailTemplateSettingsView.swift */; };
 		AA02AA02AA02AA02AA02AA02 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA01AA01AA01AA01AA01AA01 /* SettingsManager.swift */; };
 		AA04AA04AA04AA04AA04AA04 /* SavedMaterial.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA03AA03AA03AA03AA03AA03 /* SavedMaterial.swift */; };
@@ -112,6 +118,12 @@
 		39CCEF492EE12DAD0075521B /* MaterialsRecommender.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialsRecommender.swift; sourceTree = "<group>"; };
 		39E0A0102F00000100000001 /* ImportDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportDataView.swift; sourceTree = "<group>"; };
 		39E46E9E2EE240D80096D2A4 /* firestore.rules */ = {isa = PBXFileReference; lastKnownFileType = text; path = firestore.rules; sourceTree = "<group>"; };
+		39F405982EF1FD28000337A7 /* InventoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryViewModel.swift; sourceTree = "<group>"; };
+		39F4059A2EF1FD3A000337A7 /* InventoryTransaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryTransaction.swift; sourceTree = "<group>"; };
+		39F4059C2EF1FD44000337A7 /* SupplyItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplyItem.swift; sourceTree = "<group>"; };
+		39F4059E2EF1FD59000337A7 /* AddEditSupplyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditSupplyView.swift; sourceTree = "<group>"; };
+		39F405A02EF1FD66000337A7 /* InventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryView.swift; sourceTree = "<group>"; };
+		39F405A22EF1FD6C000337A7 /* SupplyDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplyDetailView.swift; sourceTree = "<group>"; };
 		64B8AB8123854E578A12EEE7 /* EmailTemplateSettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailTemplateSettingsStore.swift; sourceTree = "<group>"; };
 		AA01AA01AA01AA01AA01AA01 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
 		AA03AA03AA03AA03AA03AA03 /* SavedMaterial.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedMaterial.swift; sourceTree = "<group>"; };
@@ -184,6 +196,8 @@
 		3969FD032ECD36610005C1AE /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				39F4059C2EF1FD44000337A7 /* SupplyItem.swift */,
+				39F4059A2EF1FD3A000337A7 /* InventoryTransaction.swift */,
 				39B8DC822EDCDB50005D0E08 /* AuthManager.swift */,
 				398D93D52ECE902900A168FC /* Client.swift */,
 				39A395202ECD7EE400D5E76D /* Invoice.swift */,
@@ -199,6 +213,7 @@
 		3969FD042ECD366F0005C1AE /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
+				39F405982EF1FD28000337A7 /* InventoryViewModel.swift */,
 				39B8DC842EDCDB60005D0E08 /* SessionViewModel.swift */,
 				AA05AA05AA05AA05AA05AA05 /* CompanySettingsStore.swift */,
 				AA01AA01AA01AA01AA01AA01 /* SettingsManager.swift */,
@@ -215,6 +230,9 @@
 		3969FD052ECD36830005C1AE /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				39F405A22EF1FD6C000337A7 /* SupplyDetailView.swift */,
+				39F405A02EF1FD66000337A7 /* InventoryView.swift */,
+				39F4059E2EF1FD59000337A7 /* AddEditSupplyView.swift */,
 				3988C3242EEDEB9300957F3B /* OnboardingChecklistCard.swift */,
 				AA0AAA0AAA0AAA0AAA0AAA0F /* PDFPreviewSheet.swift */,
 				39B8DCAD2EDCF57E005D0E08 /* JobDocumentLayout.swift */,
@@ -371,6 +389,8 @@
 				39B8DC852EDCDB60005D0E08 /* SessionViewModel.swift in Sources */,
 				39B8DC652EDB60C0005D0E08 /* PersistenceService.swift in Sources */,
 				39B8DC832EDCDB50005D0E08 /* AuthManager.swift in Sources */,
+				39F4059B2EF1FD3A000337A7 /* InventoryTransaction.swift in Sources */,
+				39F4059D2EF1FD44000337A7 /* SupplyItem.swift in Sources */,
 				398D93EC2ECFBAAE00A168FC /* ClientCardViews.swift in Sources */,
 				39B8DC812EDCD1B8005D0E08 /* NewClientForm.swift in Sources */,
 				397D69672EDE36C7005E0657 /* InvoiceNumberManager.swift in Sources */,
@@ -390,6 +410,7 @@
 				AA09AA09AA09AA09AA09AA09 /* InvoicePDFRenderer.swift in Sources */,
 				AA08AA08AA08AA08AA08AA08 /* InvoicePDFGenerator.swift in Sources */,
 				AA0AAA0AAA0AAA0AAA0AAA0 /* PDFPreviewSheet.swift in Sources */,
+				39F405992EF1FD28000337A7 /* InventoryViewModel.swift in Sources */,
 				D00400042FFF000400000001 /* PDFTempWriter.swift in Sources */,
 				D00100022FFF000100000001 /* MaterialsCatalog.swift in Sources */,
 				D00200022FFF000200000001 /* MaterialPreferences.swift in Sources */,
@@ -406,6 +427,8 @@
 				398D93D42ECE8FFC00A168FC /* ClientViewModel.swift in Sources */,
 				AA04AA04AA04AA04AA04AA04 /* SavedMaterial.swift in Sources */,
 				398D94022ECFCEFE00A168FC /* InvoiceDetailView.swift in Sources */,
+				39F405A12EF1FD66000337A7 /* InventoryView.swift in Sources */,
+				39F4059F2EF1FD59000337A7 /* AddEditSupplyView.swift in Sources */,
 				D00400022FFF000400000001 /* ShareSheet.swift in Sources */,
 				417F12F378444C99BAD178E0 /* EmailTemplateSettingsView.swift in Sources */,
 				B1E7E0112F01000100000001 /* MaterialEditView.swift in Sources */,
@@ -421,6 +444,7 @@
 				D003000A2FFF000300000001 /* NumericHelpers.swift in Sources */,
 				D003000C2FFF000300000001 /* MaterialResolutionHelper.swift in Sources */,
 				39B8DCAE2EDCF57E005D0E08 /* JobDocumentLayout.swift in Sources */,
+				39F405A32EF1FD6C000337A7 /* SupplyDetailView.swift in Sources */,
 				39A395232ECD7EFF00D5E76D /* AddEditInvoiceView.swift in Sources */,
 				3988C3272EEDEBA600957F3B /* OnboardingProgressStore.swift in Sources */,
 			);
