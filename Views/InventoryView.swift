@@ -20,7 +20,7 @@ struct InventoryView: View {
 
     var body: some View {
         List {
-            ForEach(filteredSupplies, id: \.self) { supply in
+            ForEach(filteredSupplies, id: \.stableId) { supply in
                 NavigationLink {
                     SupplyDetailView(supply: supply)
                 } label: {

@@ -8,18 +8,18 @@ struct InventoryTransaction: Identifiable, Codable, Hashable {
         case adjustment
     }
 
-    @DocumentID var id: UUID?
+    @DocumentID var id: String?
     var ownerUserId: String
-    var supplyId: UUID
+    var supplyId: String
     var qtyChange: Double
     var type: TransactionType
     var note: String?
     var createdAt: Date
 
     init(
-        id: UUID? = UUID(),
+        id: String? = nil,
         ownerUserId: String,
-        supplyId: UUID,
+        supplyId: String,
         qtyChange: Double,
         type: TransactionType,
         note: String? = nil,
@@ -32,5 +32,9 @@ struct InventoryTransaction: Identifiable, Codable, Hashable {
         self.type = type
         self.note = note
         self.createdAt = createdAt
+    }
+
+    var stableId: String {
+        id ?? "local-\(createdAt.timeIntervalSince1970)-\(qtyChange)"
     }
 }

@@ -46,9 +46,9 @@ struct SupplyDetailView: View {
                 .foregroundColor(.red)
             }
 
-            if let transactions = inventoryVM.transactionsBySupply[supply.id ?? UUID()] {
+            if let transactions = inventoryVM.transactionsBySupply[supply.id ?? supply.stableId] {
                 Section(header: Text("Transaction History")) {
-                    ForEach(transactions, id: \.self) { transaction in
+                    ForEach(transactions, id: \.stableId) { transaction in
                         TransactionRow(transaction: transaction, unit: supply.unit)
                     }
 

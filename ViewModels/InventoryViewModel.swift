@@ -6,7 +6,7 @@ import FirebaseFirestoreSwift
 @MainActor
 final class InventoryViewModel: ObservableObject {
     @Published var supplies: [SupplyItem] = []
-    @Published var transactionsBySupply: [UUID: [InventoryTransaction]] = [:]
+    @Published var transactionsBySupply: [String: [InventoryTransaction]] = [:]
     @Published var errorMessage: String?
 
     private let db: Firestore
@@ -81,27 +81,27 @@ final class InventoryViewModel: ObservableObject {
         var supplyToSave = supply
         supplyToSave.ownerUserId = uid
         supplyToSave.updatedAt = Date()
-        if supplyToSave.id == nil { supplyToSave.id = UUID() }
+        if supplyToSave.id == nil { supplyToSave.id = UUID().uuidString }
         if supplyToSave.createdAt > supplyToSave.updatedAt { supplyToSave.createdAt = Date() }
 
         do {
             try db.collection("users")
                 .document(uid)
                 .collection("supplies")
-                .document(supplyToSave.id!.uuidString)
+                .document(supplyToSave.id!)
                 .setData(from: supplyToSave)
         } catch {
             errorMessage = "Unable to save supply: \(error.localizedDescription)"
         }
     }
 
-    func fetchTransactions(for supplyId: UUID, limit: Int = 50) {
+    func fetchTransactions(for supplyId: String, limit: Int = 50) {
         guard let uid = auth.currentUser?.uid else { return }
 
         db.collection("users")
             .document(uid)
             .collection("supplies")
-            .document(supplyId.uuidString)
+            .document(supplyId)
             .collection("transactions")
             .order(by: "createdAt", descending: true)
             .limit(to: limit)
@@ -169,12 +169,12 @@ final class InventoryViewModel: ObservableObject {
         let supplyRef = db.collection("users")
             .document(uid)
             .collection("supplies")
-            .document(supplyId.uuidString)
+            .document(supplyId)
 
-        let transactionId = UUID()
+        let transactionId = UUID().uuidString
         let transactionRef = supplyRef
             .collection("transactions")
-            .document(transactionId.uuidString)
+            .document(transactionId)
 
         let encoder = Firestore.Encoder()
         let now = Date()
