@@ -19,27 +19,24 @@ struct InventoryView: View {
     }
 
     var body: some View {
-        List {
-            ForEach(filteredSupplies, id: \.stableId) { supply in
-                NavigationLink {
-                    SupplyDetailView(supply: supply)
-                } label: {
-                    SupplyRowView(supply: supply)
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                ForEach(filteredSupplies, id: \.stableId) { supply in
+                    NavigationLink {
+                        SupplyDetailView(supply: supply)
+                    } label: {
+                        SupplyRowCard(supply: supply)
+                    }
+                    .buttonStyle(.plain)
                 }
-            }
 
-            if inventoryVM.supplies.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("No supplies yet")
-                        .font(.headline)
-                    Text("Tap + to add your first item.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                if inventoryVM.supplies.isEmpty {
+                    SupplyEmptyStateCard()
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 8)
         }
-        .listStyle(.insetGrouped)
         .navigationTitle("Inventory")
         .searchable(text: $searchText)
         .toolbar {
@@ -62,34 +59,73 @@ struct InventoryView: View {
     }
 }
 
-private struct SupplyRowView: View {
+private struct SupplyRowCard: View {
     let supply: SupplyItem
 
     var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
                     Text(supply.displayName)
-                        .font(.headline)
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.white)
 
                     if supply.isLowStock {
                         Text("Low")
-                            .font(.caption.bold())
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.red.opacity(0.15))
-                            .foregroundColor(.red)
+                            .font(.caption.weight(.semibold))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color.red.opacity(0.45))
+                            .foregroundColor(.white)
                             .clipShape(Capsule())
                     }
                 }
 
                 Text("On hand: \(supply.onHand, specifier: "%.2f") \(supply.unit)")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white.opacity(0.8))
             }
 
             Spacer()
+
+            HStack(spacing: 6) {
+                Text("\(supply.onHand, specifier: "%.0f")")
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.white)
+
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.bold))
+                    .foregroundColor(.white.opacity(0.6))
+            }
         }
-        .padding(.vertical, 4)
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBackground)
     }
+}
+
+private struct SupplyEmptyStateCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("No supplies yet")
+                .font(.headline.weight(.semibold))
+                .foregroundColor(.white)
+
+            Text("Tap + to add your first item.")
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.8))
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBackground)
+    }
+}
+
+private var cardBackground: some View {
+    RoundedRectangle(cornerRadius: 24, style: .continuous)
+        .fill(Color.white.opacity(0.06))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        )
 }
