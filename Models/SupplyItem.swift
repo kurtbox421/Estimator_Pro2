@@ -2,7 +2,7 @@ import Foundation
 import FirebaseFirestoreSwift
 
 struct SupplyItem: Identifiable, Codable, Hashable {
-    @DocumentID var id: UUID?
+    @DocumentID var id: String?
     var ownerUserId: String
     var name: String
     var unit: String
@@ -12,7 +12,7 @@ struct SupplyItem: Identifiable, Codable, Hashable {
     var updatedAt: Date
 
     init(
-        id: UUID? = UUID(),
+        id: String? = nil,
         ownerUserId: String = "",
         name: String = "",
         unit: String = "",
@@ -38,5 +38,9 @@ struct SupplyItem: Identifiable, Codable, Hashable {
 
     var displayName: String {
         name.isEmpty ? "Untitled" : name
+    }
+
+    var stableId: String {
+        id ?? "local-\(createdAt.timeIntervalSince1970)"
     }
 }

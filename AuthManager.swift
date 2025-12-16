@@ -23,7 +23,9 @@ final class AuthManager {
 
             if let result,
                result.additionalUserInfo?.isNewUser == true {
-                onboarding?.activateForNewAccount()
+                Task { @MainActor in
+                    onboarding?.activateForNewAccount()
+                }
             }
             guard let user = result?.user else {
                 completion(.failure(AuthError.noUser))
