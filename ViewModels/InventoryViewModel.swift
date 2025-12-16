@@ -182,10 +182,12 @@ final class InventoryViewModel: ObservableObject {
         _ = try await db.runTransaction { transaction, errorPointer in
             do {
                 let snapshot = try transaction.getDocument(supplyRef)
-                guard var currentSupply = try snapshot.data(as: SupplyItem.self) else {
+                guard snapshot.exists else {
                     errorPointer?.pointee = NSError(domain: "Inventory", code: 0, userInfo: [NSLocalizedDescriptionKey: InventoryError.missingSupply.localizedDescription])
                     return nil
                 }
+
+                var currentSupply = try snapshot.data(as: SupplyItem.self)
 
                 let updatedOnHand = currentSupply.onHand + amount
                 if updatedOnHand < 0 {
