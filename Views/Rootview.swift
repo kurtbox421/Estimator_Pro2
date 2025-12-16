@@ -13,6 +13,7 @@ enum AppTab: String, CaseIterable {
     case estimates = "Estimates"
     case invoices  = "Invoices"
     case clients   = "Clients"
+    case inventory = "Inventory"
     case settings  = "Settings"
 }
 
@@ -47,6 +48,7 @@ struct RootView: View {
     @EnvironmentObject private var jobVM: JobViewModel
     @EnvironmentObject private var clientVM: ClientViewModel
     @EnvironmentObject private var invoiceVM: InvoiceViewModel
+    @EnvironmentObject private var inventoryVM: InventoryViewModel
     @EnvironmentObject private var onboarding: OnboardingProgressStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -54,6 +56,7 @@ struct RootView: View {
     @State private var showingNewEstimate = false
     @State private var showingNewInvoice = false
     @State private var showingNewClient = false
+    @State private var showingNewSupply = false
     @State private var showingMaterialGenerator = false
     @State private var showingCompanyDetails = false
     @State private var onboardingPreviewJobID: Job.ID?
@@ -106,6 +109,13 @@ struct RootView: View {
         .sheet(isPresented: $showingNewInvoice) {
             NavigationView {
                 AddEditInvoiceView(mode: .add)
+            }
+        }
+        .sheet(isPresented: $showingNewSupply) {
+            NavigationView {
+                AddEditSupplyView(supply: nil) { supply in
+                    inventoryVM.upsertSupply(supply)
+                }
             }
         }
         .sheet(isPresented: $showingMaterialGenerator) {
@@ -196,6 +206,8 @@ struct RootView: View {
                         showingNewInvoice = true
                     case .clients:
                         showingNewClient = true
+                    case .inventory:
+                        showingNewSupply = true
                     case .settings:
                         break
                     }
@@ -327,6 +339,12 @@ struct RootView: View {
                 subtitle: "Know your customers",
                 bodyText: "Store contact details, view project history, and launch quick follow-ups in a tap."
             )
+        case .inventory:
+            HeroCardView(
+                title: "Track your supplies",
+                subtitle: "Restock with confidence",
+                bodyText: "Monitor materials, log restocks and usage, and keep everything separated per account."
+            )
         case .settings:
             HeroCardView(
                 title: "Workspace settings",
@@ -347,6 +365,8 @@ struct RootView: View {
             InvoicesTabView()
         case .clients:
             ClientsTabView()
+        case .inventory:
+            InventoryView()
         case .settings:
             SettingsTabView()
         }
@@ -370,6 +390,11 @@ struct RootView: View {
             return [
                 Color(red: 0.08, green: 0.40, blue: 0.50),
                 Color(red: 0.16, green: 0.18, blue: 0.40)
+            ]
+        case .inventory:
+            return [
+                Color(red: 0.12, green: 0.22, blue: 0.24),
+                Color(red: 0.05, green: 0.35, blue: 0.30)
             ]
         case .settings:
             return [
