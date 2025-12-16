@@ -1,37 +1,24 @@
 import UIKit
-import UniformTypeIdentifiers
-
 final class PDFActivityItemSource: NSObject, UIActivityItemSource {
-    private let url: URL
-    private let title: String
+    let url: URL
+    let subject: String
 
-    init(url: URL, title: String) {
+    init(url: URL, subject: String = "Estimator Pro Document") {
         self.url = url
-        self.title = title
+        self.subject = subject
     }
 
     func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
-        return url
+        url
     }
 
-    func activityViewController(
-        _ activityViewController: UIActivityViewController,
-        itemForActivityType activityType: UIActivity.ActivityType?
-    ) -> Any? {
-        return url
+    func activityViewController(_ activityViewController: UIActivityViewController,
+                                itemForActivityType activityType: UIActivity.ActivityType?) -> Any? {
+        url
     }
 
-    func activityViewController(
-        _ activityViewController: UIActivityViewController,
-        dataTypeIdentifierForActivityType activityType: UIActivity.ActivityType?
-    ) -> String {
-        UTType.pdf.identifier
-    }
-
-    func activityViewController(
-        _ activityViewController: UIActivityViewController,
-        subjectForActivityType activityType: UIActivity.ActivityType?
-    ) -> String {
-        title
+    func activityViewController(_ activityViewController: UIActivityViewController,
+                                subjectForActivityType activityType: UIActivity.ActivityType?) -> String {
+        subject
     }
 }
