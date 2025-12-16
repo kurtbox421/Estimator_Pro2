@@ -40,7 +40,6 @@ struct InventoryView: View {
             }
             .padding(.vertical, 8)
         }
-        .navigationTitle("Inventory")
         .tint(.white)
     }
 }
