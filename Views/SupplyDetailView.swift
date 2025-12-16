@@ -135,9 +135,19 @@ struct SupplyDetailView: View {
                 }
             }
         }
-        .alert(item: $alertMessage) { message in
-            Alert(title: Text("Error"), message: Text(message), dismissButton: .default(Text("OK")))
-        }
+        .alert(
+            "Error",
+            isPresented: Binding(
+                get: { alertMessage != nil },
+                set: { isPresented in
+                    if !isPresented { alertMessage = nil }
+                }
+            ),
+            actions: {},
+            message: {
+                Text(alertMessage ?? "")
+            }
+        )
     }
 
     private func dismissSheet() {
@@ -222,8 +232,4 @@ private struct TransactionRow: View {
         }
         .padding(.vertical, 4)
     }
-}
-
-extension String: Identifiable {
-    public var id: String { self }
 }

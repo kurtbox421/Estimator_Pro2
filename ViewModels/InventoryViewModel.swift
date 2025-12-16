@@ -179,7 +179,7 @@ final class InventoryViewModel: ObservableObject {
         let encoder = Firestore.Encoder()
         let now = Date()
 
-        try await db.runTransaction { transaction, errorPointer in
+        _ = try await db.runTransaction { transaction, errorPointer in
             do {
                 let snapshot = try transaction.getDocument(supplyRef)
                 guard var currentSupply = try snapshot.data(as: SupplyItem.self) else {
