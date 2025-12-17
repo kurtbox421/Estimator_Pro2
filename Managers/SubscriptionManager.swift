@@ -46,6 +46,9 @@ final class SubscriptionManager: ObservableObject {
                 let rhsIndex = Self.productIDs.firstIndex(of: rhs.id) ?? .max
                 return lhsIndex < rhsIndex
             }
+#if DEBUG
+            print("Loaded StoreKit products:", sorted.map(\.id))
+#endif
             products = sorted
         } catch {
             lastError = error.localizedDescription

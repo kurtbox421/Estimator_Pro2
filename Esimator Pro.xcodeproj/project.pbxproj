@@ -147,9 +147,10 @@
 		D00300092FFF000300000001 /* NumericHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NumericHelpers.swift; sourceTree = "<group>"; };
 		D003000B2FFF000300000001 /* MaterialResolutionHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialResolutionHelper.swift; sourceTree = "<group>"; };
 		D00400012FFF000400000001 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
-		D00400032FFF000400000001 /* PDFTempWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFTempWriter.swift; sourceTree = "<group>"; };
-		D00500012FFF000500000001 /* LaborLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaborLine.swift; sourceTree = "<group>"; };
-		E4A4D7919D79412D88ED443B /* EmailTemplateSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailTemplateSettingsView.swift; sourceTree = "<group>"; };
+                D00400032FFF000400000001 /* PDFTempWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFTempWriter.swift; sourceTree = "<group>"; };
+                D00500012FFF000500000001 /* LaborLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaborLine.swift; sourceTree = "<group>"; };
+                E4A4D7919D79412D88ED443B /* EmailTemplateSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailTemplateSettingsView.swift; sourceTree = "<group>"; };
+                D00600012FFF000600000001 /* EstimatorPro.storekit */ = {isa = PBXFileReference; lastKnownFileType = file.storekit; path = EstimatorPro.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -177,18 +178,19 @@
 /* Begin PBXGroup section */
 		3969FCE82ECD35790005C1AE = {
 			isa = PBXGroup;
-			children = (
-				3969FCF32ECD35790005C1AE /* Esimator Pro */,
-				3969FD072ECD36970005C1AE /* Utilities */,
-				3969FD062ECD368D0005C1AE /* Managers */,
-				3969FD052ECD36830005C1AE /* Views */,
-				3969FD042ECD366F0005C1AE /* ViewModels */,
-				3969FD032ECD36610005C1AE /* Models */,
-				D00100072FFF000100000001 /* MaterialsCatalog.json */,
-				3969FCF22ECD35790005C1AE /* Products */,
-			);
-			sourceTree = "<group>";
-		};
+                        children = (
+                                3969FCF32ECD35790005C1AE /* Esimator Pro */,
+                                3969FD072ECD36970005C1AE /* Utilities */,
+                                3969FD062ECD368D0005C1AE /* Managers */,
+                                3969FD052ECD36830005C1AE /* Views */,
+                                3969FD042ECD366F0005C1AE /* ViewModels */,
+                                3969FD032ECD36610005C1AE /* Models */,
+                                D00100072FFF000100000001 /* MaterialsCatalog.json */,
+                                D00600012FFF000600000001 /* EstimatorPro.storekit */,
+                                3969FCF22ECD35790005C1AE /* Products */,
+                        );
+                        sourceTree = "<group>";
+                };
 		3969FCF22ECD35790005C1AE /* Products */ = {
 			isa = PBXGroup;
 			children = (

@@ -1,0 +1,35 @@
+{
+  "identifier" : "EstimatorPro",
+  "description" : "Local StoreKit configuration for simulator testing.",
+  "version" : {
+    "major" : 1,
+    "minor" : 0
+  },
+  "products" : [
+    {
+      "id" : "estimator_pro_monthly",
+      "type" : "Auto-Renewable Subscription",
+      "displayName" : "Estimator Pro Monthly",
+      "subscription" : {
+        "group" : "EstimatorProSubscriptions",
+        "duration" : "P1M"
+      },
+      "price" : 4.99,
+      "familyShareable" : false
+    },
+    {
+      "id" : "estimator_pro_yearly",
+      "type" : "Auto-Renewable Subscription",
+      "displayName" : "Estimator Pro Yearly",
+      "subscription" : {
+        "group" : "EstimatorProSubscriptions",
+        "duration" : "P1Y"
+      },
+      "price" : 49.99,
+      "familyShareable" : false
+    }
+  ],
+  "settings" : {
+    "sandboxEnvironment" : "Default"
+  }
+}
