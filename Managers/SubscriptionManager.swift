@@ -1,5 +1,6 @@
 import Foundation
 import StoreKit
+import SwiftUI
 
 @MainActor
 final class SubscriptionManager: ObservableObject {
@@ -128,9 +129,11 @@ final class SubscriptionManager: ObservableObject {
         }
     }
 
-    func presentPaywallFromRoot(afterDismissing dismissAction: (() -> Void)? = nil, delay: TimeInterval = 0.35) {
-        dismissAction?()
-        presentPaywall(after: dismissAction == nil ? 0 : delay)
+    func presentPaywallFromRoot(afterDismissing dismiss: DismissAction) {
+        dismiss()
+        Task { @MainActor in
+            shouldShowPaywall = true
+        }
     }
 
     private func handle(transactionResult: VerificationResult<Transaction>) async {
