@@ -123,7 +123,7 @@ struct AddEditJobView: View {
 
                         case .newClient:
                             guard subscriptionManager.isPro else {
-                                subscriptionManager.shouldShowPaywall = true
+                                presentPaywallAfterDismissing()
                                 return
                             }
                             isPresentingNewClientSheet = true
@@ -347,7 +347,7 @@ struct AddEditJobView: View {
                 print("[Paywall] Estimate limit exceeded for free tier.")
                 Task { @MainActor in
                     print("[Paywall] Triggering paywall for estimate save.")
-                    subscriptionManager.shouldShowPaywall = true
+                    presentPaywallAfterDismissing()
                 }
                 return
             }
@@ -383,6 +383,10 @@ struct AddEditJobView: View {
         if materialDrafts[index].unitCost.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             materialDrafts[index].unitCost = String(format: "%.2f", price)
         }
+    }
+
+    private func presentPaywallAfterDismissing() {
+        subscriptionManager.presentPaywallFromRoot(afterDismissing: dismiss)
     }
 }
 
@@ -428,17 +432,17 @@ struct NewClientSheet: View {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") { dismiss() }
             }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
-                    guard subscriptionManager.isPro else {
-                        subscriptionManager.shouldShowPaywall = true
-                        return
-                    }
-                    let newClient = clientVM.addClient(
-                        name: name.trimmingCharacters(in: .whitespaces),
-                        company: company,
-                        address: address,
-                        phone: phone,
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        guard subscriptionManager.isPro else {
+                            showPaywallAfterDismissingSheet()
+                            return
+                        }
+                        let newClient = clientVM.addClient(
+                            name: name.trimmingCharacters(in: .whitespaces),
+                            company: company,
+                            address: address,
+                            phone: phone,
                         email: email,
                         notes: notes
                     )
@@ -448,5 +452,9 @@ struct NewClientSheet: View {
                 .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
+    }
+
+    private func showPaywallAfterDismissingSheet() {
+        subscriptionManager.presentPaywallFromRoot(afterDismissing: dismiss)
     }
 }

@@ -122,7 +122,7 @@ struct AddMaterialView: View {
         switch mode {
         case .add, .addToInvoice:
             guard subscriptionManager.isPro else {
-                subscriptionManager.shouldShowPaywall = true
+                presentPaywallAfterDismissing()
                 return
             }
         case .edit, .editInInvoice:
@@ -188,6 +188,10 @@ struct AddMaterialView: View {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let url = URL(string: trimmed), let scheme = url.scheme, !scheme.isEmpty else { return nil }
         return url
+    }
+
+    private func presentPaywallAfterDismissing() {
+        subscriptionManager.presentPaywallFromRoot(afterDismissing: dismiss)
     }
 }
 

@@ -28,6 +28,21 @@ struct EstimatorProApp: App {
 
     init() {
         FirebaseApp.configure()
+
+#if DEBUG
+        let bundleID = Bundle.main.bundleIdentifier ?? "(missing bundle identifier)"
+        let schemeName = ProcessInfo.processInfo.environment["XCODE_SCHEME"] ?? "(unknown scheme)"
+        let storeKitConfigName = "EstimatorPro"
+        let storeKitResourceURL = Bundle.main.url(forResource: storeKitConfigName, withExtension: "storekit")?.path ?? "(not found in bundle)"
+        let storeKitEnvPath = ProcessInfo.processInfo.environment["SIMULATOR_MAIN_STOREKIT_CONFIG"] ??
+            ProcessInfo.processInfo.environment["STOREKIT_CONFIG"] ??
+            "(environment path not set)"
+
+        print("[Launch] Bundle ID: \(bundleID)")
+        print("[Launch] Scheme: \(schemeName)")
+        print("[Launch] StoreKit resource path: \(storeKitResourceURL)")
+        print("[Launch] StoreKit config env: \(storeKitEnvPath)")
+#endif
     }
 
     var body: some Scene {

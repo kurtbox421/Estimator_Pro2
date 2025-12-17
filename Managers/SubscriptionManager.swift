@@ -119,6 +119,20 @@ final class SubscriptionManager: ObservableObject {
         userDefaults.set(newValue, forKey: isProDefaultsKey)
     }
 
+    func presentPaywall(after delay: TimeInterval = 0) {
+        Task { @MainActor in
+            if delay > 0 {
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            }
+            shouldShowPaywall = true
+        }
+    }
+
+    func presentPaywallFromRoot(afterDismissing dismissAction: (() -> Void)? = nil, delay: TimeInterval = 0.35) {
+        dismissAction?()
+        presentPaywall(after: dismissAction == nil ? 0 : delay)
+    }
+
     private func handle(transactionResult: VerificationResult<Transaction>) async {
         switch transactionResult {
         case .verified(let transaction):

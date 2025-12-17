@@ -54,7 +54,7 @@ struct NewClientForm: View {
         guard !trimmedName.isEmpty else { return }
 
         guard subscriptionManager.isPro else {
-            subscriptionManager.shouldShowPaywall = true
+            presentPaywallAfterDismissing()
             return
         }
 
@@ -68,6 +68,10 @@ struct NewClientForm: View {
 
         onSave(client)
         dismiss()
+    }
+
+    private func presentPaywallAfterDismissing() {
+        subscriptionManager.presentPaywallFromRoot(afterDismissing: dismiss)
     }
 }
 
