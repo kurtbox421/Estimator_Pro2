@@ -10,6 +10,7 @@ struct AddEditInvoiceView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var invoiceVM: InvoiceViewModel
     @EnvironmentObject private var clientVM: ClientViewModel
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
 
     let mode: Mode
 
@@ -82,6 +83,10 @@ struct AddEditInvoiceView: View {
                         Divider()
 
                         Button {
+                            guard subscriptionManager.isPro else {
+                                subscriptionManager.shouldShowPaywall = true
+                                return
+                            }
                             isPresentingNewClientSheet = true
                         } label: {
                             Label("New client…", systemImage: "person.badge.plus")
@@ -317,6 +322,10 @@ struct AddEditInvoiceView: View {
 
         switch mode {
         case .add:
+            if !subscriptionManager.isPro && invoiceVM.invoices.count >= 2 {
+                subscriptionManager.shouldShowPaywall = true
+                return
+            }
             let invoice = Invoice(
                 ownerID: Auth.auth().currentUser?.uid ?? "",
                 invoiceNumber: InvoiceNumberManager.shared.generateInvoiceNumber(),

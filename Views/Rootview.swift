@@ -50,6 +50,7 @@ struct RootView: View {
     @EnvironmentObject private var invoiceVM: InvoiceViewModel
     @EnvironmentObject private var inventoryVM: InventoryViewModel
     @EnvironmentObject private var onboarding: OnboardingProgressStore
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var selectedTab: AppTab = .estimates
@@ -205,8 +206,16 @@ struct RootView: View {
                     case .invoices:
                         showingNewInvoice = true
                     case .clients:
+                        guard subscriptionManager.isPro else {
+                            subscriptionManager.shouldShowPaywall = true
+                            return
+                        }
                         showingNewClient = true
                     case .inventory:
+                        guard subscriptionManager.isPro else {
+                            subscriptionManager.shouldShowPaywall = true
+                            return
+                        }
                         showingNewSupply = true
                     case .settings:
                         break

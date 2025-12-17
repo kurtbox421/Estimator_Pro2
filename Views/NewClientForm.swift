@@ -2,6 +2,7 @@ import SwiftUI
 
 struct NewClientForm: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
 
     @State private var name: String = ""
     @State private var address: String = ""
@@ -51,6 +52,11 @@ struct NewClientForm: View {
     private func saveClient() {
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
         guard !trimmedName.isEmpty else { return }
+
+        guard subscriptionManager.isPro else {
+            subscriptionManager.shouldShowPaywall = true
+            return
+        }
 
         let client = Client(
             name: trimmedName,
