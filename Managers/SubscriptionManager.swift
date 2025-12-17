@@ -116,9 +116,7 @@ final class SubscriptionManager: ObservableObject {
             await transaction.finish()
             await refreshEntitlements()
         case .unverified(_, let error):
-            if let error {
-                lastError = error.localizedDescription
-            }
+            lastError = error.localizedDescription
         }
     }
 }
