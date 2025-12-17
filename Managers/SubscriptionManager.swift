@@ -42,7 +42,7 @@ final class SubscriptionManager: ObservableObject {
 
         do {
             #if DEBUG
-            print("Requesting StoreKit products:", Self.productIDs)
+            print("[StoreKit] Requesting products:", Self.productIDs)
             #endif
             let fetched = try await Product.products(for: Self.productIDs)
             let sorted = fetched.sorted { lhs, rhs in
@@ -50,9 +50,12 @@ final class SubscriptionManager: ObservableObject {
                 let rhsIndex = Self.productIDs.firstIndex(of: rhs.id) ?? .max
                 return lhsIndex < rhsIndex
             }
-#if DEBUG
-            print("Loaded StoreKit products:", sorted.map(\.id))
-#endif
+            #if DEBUG
+            let fetchedIDs = fetched.map(\.id)
+            let sortedIDs = sorted.map(\.id)
+            print("[StoreKit] Fetched products:", fetchedIDs)
+            print("[StoreKit] Sorted products:", sortedIDs)
+            #endif
             products = sorted
         } catch {
             #if DEBUG
