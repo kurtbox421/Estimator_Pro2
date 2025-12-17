@@ -25,7 +25,7 @@ final class SubscriptionManager: ObservableObject {
 
         updatesTask = Task { [weak self] in
             guard let self else { return }
-            for await result in Transaction.updates {
+            for await result in StoreKit.Transaction.updates {
                 await self.handle(transactionResult: result)
             }
         }
@@ -98,7 +98,7 @@ final class SubscriptionManager: ObservableObject {
     func refreshEntitlements() async {
         var hasProAccess = false
 
-        for await entitlement in Transaction.currentEntitlements {
+        for await entitlement in StoreKit.Transaction.currentEntitlements {
             guard case .verified(let transaction) = entitlement else { continue }
             guard Self.productIDs.contains(transaction.productID) else { continue }
 
@@ -136,7 +136,7 @@ final class SubscriptionManager: ObservableObject {
         }
     }
 
-    private func handle(transactionResult: VerificationResult<Transaction>) async {
+    private func handle(transactionResult: VerificationResult<StoreKit.Transaction>) async {
         switch transactionResult {
         case .verified(let transaction):
             await transaction.finish()
