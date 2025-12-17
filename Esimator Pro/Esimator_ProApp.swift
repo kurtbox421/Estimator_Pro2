@@ -70,10 +70,6 @@ struct EstimatorProApp: App {
             .environmentObject(onboarding)
             .environmentObject(inventoryVM)
             .environmentObject(subscriptionManager)
-            .sheet(isPresented: $subscriptionManager.shouldShowPaywall) {
-                PaywallView()
-                    .environmentObject(subscriptionManager)
-            }
             .task {
                 await subscriptionManager.loadProducts()
                 await subscriptionManager.refreshEntitlements()
