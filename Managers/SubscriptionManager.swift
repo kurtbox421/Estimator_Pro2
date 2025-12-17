@@ -53,8 +53,8 @@ final class SubscriptionManager: ObservableObject {
             #if DEBUG
             let fetchedIDs = fetched.map(\.id)
             let sortedIDs = sorted.map(\.id)
-            print("[StoreKit] Fetched products:", fetchedIDs)
-            print("[StoreKit] Sorted products:", sortedIDs)
+            print("[StoreKit] Fetched product identifiers:", fetchedIDs)
+            print("[StoreKit] Sorted product identifiers:", sortedIDs)
             #endif
             products = sorted
         } catch {
