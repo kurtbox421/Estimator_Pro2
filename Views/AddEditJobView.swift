@@ -23,6 +23,7 @@ struct AddEditJobView: View {
     @EnvironmentObject private var vm: JobViewModel
     @EnvironmentObject private var clientVM: ClientViewModel
     @EnvironmentObject private var settingsManager: SettingsManager
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
 
     let mode: Mode
 
@@ -121,6 +122,10 @@ struct AddEditJobView: View {
                             lastNonNewClientSelection = newSelection
 
                         case .newClient:
+                            guard subscriptionManager.isPro else {
+                                subscriptionManager.shouldShowPaywall = true
+                                return
+                            }
                             isPresentingNewClientSheet = true
                             DispatchQueue.main.async {
                                 clientSelection = lastNonNewClientSelection
@@ -337,6 +342,10 @@ struct AddEditJobView: View {
 
         switch mode {
         case .add:
+            if !subscriptionManager.isPro && vm.jobs.count >= 2 {
+                subscriptionManager.shouldShowPaywall = true
+                return
+            }
             let job = Job(
                 name: trimmedName,
                 category: trimmedCategory,
@@ -374,6 +383,7 @@ struct AddEditJobView: View {
 
 struct NewClientSheet: View {
     @EnvironmentObject private var clientVM: ClientViewModel
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @Environment(\.dismiss) private var dismiss
 
     @State private var name: String = ""
@@ -415,6 +425,10 @@ struct NewClientSheet: View {
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save") {
+                    guard subscriptionManager.isPro else {
+                        subscriptionManager.shouldShowPaywall = true
+                        return
+                    }
                     let newClient = clientVM.addClient(
                         name: name.trimmingCharacters(in: .whitespaces),
                         company: company,

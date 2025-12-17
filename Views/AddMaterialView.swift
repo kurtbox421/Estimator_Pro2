@@ -18,6 +18,7 @@ struct AddMaterialView: View {
 
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var settingsManager: SettingsManager
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
 
     let mode: Mode
     @ObservedObject var jobVM: JobViewModel
@@ -117,6 +118,16 @@ struct AddMaterialView: View {
         guard let q = parseDouble(quantityText),
               let u = parseDouble(unitCostText)
         else { return }
+
+        switch mode {
+        case .add, .addToInvoice:
+            guard subscriptionManager.isPro else {
+                subscriptionManager.shouldShowPaywall = true
+                return
+            }
+        case .edit, .editInInvoice:
+            break
+        }
 
         let quantity = debugCheckNaN(q, label: "material quantity")
         let unitCost = debugCheckNaN(u, label: "material unit cost")

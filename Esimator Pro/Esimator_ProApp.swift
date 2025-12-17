@@ -22,6 +22,7 @@ struct EstimatorProApp: App {
     @StateObject private var materialsStore = MaterialsCatalogStore()
     @StateObject private var materialIntelligence = MaterialIntelligenceStore()
     @StateObject private var onboarding = OnboardingProgressStore()
+    @StateObject private var subscriptionManager = SubscriptionManager()
 
     @State private var showingSplash = true
 
@@ -53,6 +54,7 @@ struct EstimatorProApp: App {
                     .environmentObject(materialsStore)
                     .environmentObject(materialIntelligence)
                     .environmentObject(onboarding)
+                    .environmentObject(subscriptionManager)
                 }
 
                 if showingSplash && !session.isLoading {
@@ -67,6 +69,15 @@ struct EstimatorProApp: App {
             .environmentObject(materialIntelligence)
             .environmentObject(onboarding)
             .environmentObject(inventoryVM)
+            .environmentObject(subscriptionManager)
+            .sheet(isPresented: $subscriptionManager.shouldShowPaywall) {
+                PaywallView()
+                    .environmentObject(subscriptionManager)
+            }
+            .task {
+                await subscriptionManager.loadProducts()
+                await subscriptionManager.refreshEntitlements()
+            }
         }
     }
 

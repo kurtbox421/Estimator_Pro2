@@ -2,6 +2,7 @@ import SwiftUI
 
 struct InventoryView: View {
     @EnvironmentObject private var inventoryVM: InventoryViewModel
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
 
     @State private var searchText: String = ""
 
@@ -17,30 +18,70 @@ struct InventoryView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                searchBar
-                    .padding(.horizontal, 24)
+        ZStack {
+            ScrollView {
+                VStack(spacing: 16) {
+                    searchBar
+                        .padding(.horizontal, 24)
 
-                LazyVStack(spacing: 12) {
-                    ForEach(filteredSupplies, id: \.stableId) { supply in
-                        NavigationLink {
-                            SupplyDetailView(supply: supply)
-                        } label: {
-                            SupplyRowCard(supply: supply)
+                    LazyVStack(spacing: 12) {
+                        ForEach(filteredSupplies, id: \.stableId) { supply in
+                            NavigationLink {
+                                SupplyDetailView(supply: supply)
+                            } label: {
+                                SupplyRowCard(supply: supply)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
-                    }
 
-                    if inventoryVM.supplies.isEmpty {
-                        SupplyEmptyStateCard()
+                        if inventoryVM.supplies.isEmpty {
+                            SupplyEmptyStateCard()
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                }
+                .padding(.vertical, 8)
+            }
+            .tint(.white)
+            .allowsHitTesting(subscriptionManager.isPro)
+
+            if !subscriptionManager.isPro {
+                VStack(spacing: 14) {
+                    Text("Inventory is a Pro feature")
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.white)
+
+                    Text("Upgrade to track supplies, restock history, and usage.")
+                        .foregroundColor(.white.opacity(0.85))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+
+                    Button {
+                        subscriptionManager.shouldShowPaywall = true
+                    } label: {
+                        Text("View plans")
+                            .font(.subheadline.weight(.bold))
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 10)
+                            .background(Color.blue.opacity(0.9), in: Capsule())
+                            .foregroundColor(.white)
                     }
                 }
-                .padding(.horizontal, 24)
+                .padding(24)
+                .frame(maxWidth: 360)
+                .background(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(Color.black.opacity(0.65))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                        )
+                )
+                .padding()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black.opacity(0.35).ignoresSafeArea())
             }
-            .padding(.vertical, 8)
         }
-        .tint(.white)
     }
 }
 
