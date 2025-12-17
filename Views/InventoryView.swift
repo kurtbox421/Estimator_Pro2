@@ -57,7 +57,7 @@ struct InventoryView: View {
                         .padding(.horizontal)
 
                     Button {
-                        subscriptionManager.shouldShowPaywall = true
+                        subscriptionManager.presentPaywall()
                     } label: {
                         Text("View plans")
                             .font(.subheadline.weight(.bold))

@@ -84,7 +84,7 @@ struct AddEditInvoiceView: View {
 
                         Button {
                             guard subscriptionManager.isPro else {
-                                subscriptionManager.shouldShowPaywall = true
+                                presentPaywallAfterDismissing()
                                 return
                             }
                             isPresentingNewClientSheet = true
@@ -327,7 +327,7 @@ struct AddEditInvoiceView: View {
                 print("[Paywall] Invoice limit exceeded for free tier.")
                 Task { @MainActor in
                     print("[Paywall] Triggering paywall for invoice save.")
-                    subscriptionManager.shouldShowPaywall = true
+                    presentPaywallAfterDismissing()
                 }
                 return
             }
@@ -430,6 +430,10 @@ struct AddEditInvoiceView: View {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let url = URL(string: trimmed), let scheme = url.scheme, !scheme.isEmpty else { return nil }
         return url
+    }
+
+    private func presentPaywallAfterDismissing() {
+        subscriptionManager.presentPaywallFromRoot(afterDismissing: dismiss)
     }
 }
 
