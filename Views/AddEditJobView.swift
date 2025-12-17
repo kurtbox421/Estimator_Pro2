@@ -342,8 +342,13 @@ struct AddEditJobView: View {
 
         switch mode {
         case .add:
+            print("[Paywall] Running free limit check for estimates. Current count: \(vm.jobs.count)")
             if !subscriptionManager.isPro && vm.jobs.count >= 2 {
-                subscriptionManager.shouldShowPaywall = true
+                print("[Paywall] Estimate limit exceeded for free tier.")
+                Task { @MainActor in
+                    print("[Paywall] Triggering paywall for estimate save.")
+                    subscriptionManager.shouldShowPaywall = true
+                }
                 return
             }
             let job = Job(

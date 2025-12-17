@@ -186,6 +186,10 @@ struct RootView: View {
                 }
             }
         }
+        .sheet(isPresented: $subscriptionManager.shouldShowPaywall) {
+            PaywallView()
+                .environmentObject(subscriptionManager)
+        }
     }
 
     private var segmentedControl: some View {

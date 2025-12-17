@@ -322,8 +322,13 @@ struct AddEditInvoiceView: View {
 
         switch mode {
         case .add:
+            print("[Paywall] Running free limit check for invoices. Current count: \(invoiceVM.invoices.count)")
             if !subscriptionManager.isPro && invoiceVM.invoices.count >= 2 {
-                subscriptionManager.shouldShowPaywall = true
+                print("[Paywall] Invoice limit exceeded for free tier.")
+                Task { @MainActor in
+                    print("[Paywall] Triggering paywall for invoice save.")
+                    subscriptionManager.shouldShowPaywall = true
+                }
                 return
             }
             let invoice = Invoice(
