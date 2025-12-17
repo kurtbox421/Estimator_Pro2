@@ -8,6 +8,7 @@
   "products" : [
     {
       "id" : "estimator_pro_monthly",
+      "productID" : "estimator_pro_monthly",
       "type" : "Auto-Renewable Subscription",
       "displayName" : "Estimator Pro Monthly",
       "subscription" : {
@@ -19,6 +20,7 @@
     },
     {
       "id" : "estimator_pro_yearly",
+      "productID" : "estimator_pro_yearly",
       "type" : "Auto-Renewable Subscription",
       "displayName" : "Estimator Pro Yearly",
       "subscription" : {
