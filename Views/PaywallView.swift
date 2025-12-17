@@ -23,6 +23,19 @@ struct PaywallView: View {
         return orderedProducts.first
     }
 
+    private func setDefaultSelection() {
+        guard selectedProductID == nil else { return }
+
+        if let yearly = orderedProducts.first(where: { $0.id == "estimator_pro_yearly" }) {
+            selectedProductID = yearly.id
+            return
+        }
+
+        if let first = orderedProducts.first {
+            selectedProductID = first.id
+        }
+    }
+
     var body: some View {
         ZStack {
             LinearGradient(
@@ -63,13 +76,6 @@ struct PaywallView: View {
                         .tint(.white)
                 }
 
-                if let error = subscriptionManager.lastError {
-                    Text(error)
-                        .font(.footnote)
-                        .foregroundColor(.red.opacity(0.9))
-                        .padding(.top, 4)
-                }
-
                 #if DEBUG
                 Text("DEBUG: isPro = \(subscriptionManager.isPro ? "true" : "false")")
                     .font(.caption)
@@ -89,6 +95,9 @@ struct PaywallView: View {
             .padding(.horizontal, 24)
         }
         .task { await subscriptionManager.loadProducts() }
+        .onChange(of: subscriptionManager.products) { _, _ in
+            setDefaultSelection()
+        }
         .onChange(of: subscriptionManager.lastError) { _, newValue in
             showingErrorAlert = newValue != nil
         }
@@ -186,6 +195,13 @@ struct PaywallView: View {
                         .fill(Color.white.opacity(0.06))
                 )
             }
+
+            if let error = subscriptionManager.lastError {
+                Text(error)
+                    .font(.caption2.monospaced())
+                    .foregroundColor(.red.opacity(0.9))
+                    .padding(.top, 4)
+            }
         }
     }
 
@@ -208,7 +224,11 @@ struct PaywallView: View {
                 .foregroundColor(.white)
                 .cornerRadius(18)
         }
-        .disabled(subscriptionManager.isLoading || selectedProduct == nil)
+        .disabled(
+            subscriptionManager.isLoading ||
+            subscriptionManager.products.isEmpty ||
+            selectedProduct == nil
+        )
     }
 }
 

@@ -40,6 +40,9 @@ final class SubscriptionManager: ObservableObject {
         lastError = nil
 
         do {
+            #if DEBUG
+            print("Requesting StoreKit products:", Self.productIDs)
+            #endif
             let fetched = try await Product.products(for: Self.productIDs)
             let sorted = fetched.sorted { lhs, rhs in
                 let lhsIndex = Self.productIDs.firstIndex(of: lhs.id) ?? .max
@@ -51,6 +54,9 @@ final class SubscriptionManager: ObservableObject {
 #endif
             products = sorted
         } catch {
+            #if DEBUG
+            print("Failed to load StoreKit products:", error.localizedDescription)
+            #endif
             lastError = error.localizedDescription
         }
     }
