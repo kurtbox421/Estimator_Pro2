@@ -152,7 +152,8 @@ struct PaywallView: View {
     @ViewBuilder
     private var debugSection: some View {
         #if DEBUG
-        Text("DEBUG: isPro = \(subscriptionManager.isPro ? \"true\" : \"false\")")
+        let isProText = subscriptionManager.isPro ? "true" : "false"
+        Text("DEBUG: isPro = \(isProText)")
             .font(.caption)
             .foregroundColor(.white.opacity(0.6))
         #endif
