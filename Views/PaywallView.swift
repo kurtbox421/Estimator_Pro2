@@ -131,10 +131,7 @@ struct PaywallView: View {
     #if DEBUG
     @ViewBuilder
     private var debugSection: some View {
-        let isProText = subscriptionManager.isPro ? "true" : "false"
-        Text("DEBUG: isPro = \(isProText)")
-            .font(.caption)
-            .foregroundColor(.white.opacity(0.6))
+        EmptyView()
     }
     #else
     private var debugSection: some View { EmptyView() }
@@ -241,12 +238,13 @@ private struct PaywallContentView<Header: View, Benefits: View, Selection: View,
         .frame(maxWidth: 520)
         .background(
             RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(Color(red: 0.14, green: 0.16, blue: 0.18))
                 .overlay(
                     RoundedRectangle(cornerRadius: 26, style: .continuous)
-                        .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
                 )
         )
+        .shadow(color: .black.opacity(0.35), radius: 20, x: 0, y: 12)
     }
 }
 
@@ -279,8 +277,14 @@ private struct PaywallProductSelectionView: View {
             if let error = subscriptionManager.lastError, case .failed = state {
                 Text(error)
                     .font(.caption2.monospaced())
-                    .foregroundColor(.red.opacity(0.9))
-                    .padding(.top, 4)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(Color.black.opacity(0.45))
+                    )
             }
         }
     }
@@ -296,7 +300,7 @@ private struct PaywallProductSelectionView: View {
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.white.opacity(0.06))
+                .fill(Color.white.opacity(0.08))
         )
     }
 
@@ -304,7 +308,7 @@ private struct PaywallProductSelectionView: View {
         VStack(spacing: 8) {
             Text(message)
                 .font(.subheadline)
-                .foregroundColor(.white.opacity(0.9))
+                .foregroundColor(.white)
                 .multilineTextAlignment(.center)
             retryButton()
         }
@@ -312,7 +316,7 @@ private struct PaywallProductSelectionView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.white.opacity(0.06))
+                .fill(Color.black.opacity(0.45))
         )
     }
 
@@ -320,7 +324,7 @@ private struct PaywallProductSelectionView: View {
         VStack(spacing: 8) {
             if let message {
                 Text(message)
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundColor(.white)
             }
             Button {
                 Task { await subscriptionManager.loadProducts() }
