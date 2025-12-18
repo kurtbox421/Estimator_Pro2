@@ -15,6 +15,12 @@
 		3969FD0F2ECD37F10005C1AE /* Material.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3969FD0E2ECD37F10005C1AE /* Material.swift */; };
 		3969FD152ECD3F410005C1AE /* AddMaterialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3969FD142ECD3F410005C1AE /* AddMaterialView.swift */; };
 		397D69672EDE36C7005E0657 /* InvoiceNumberManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397D69662EDE36C7005E0657 /* InvoiceNumberManager.swift */; };
+		398814022EF4C1EE00665406 /* DeleteAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398814012EF4C1EE00665406 /* DeleteAccountView.swift */; };
+		398814042EF4C1FA00665406 /* PrivacyAndSecurityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398814032EF4C1FA00665406 /* PrivacyAndSecurityView.swift */; };
+		398814062EF4C20100665406 /* PrivacyPolicyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398814052EF4C20100665406 /* PrivacyPolicyView.swift */; };
+		398814082EF4C21F00665406 /* DeleteAccountViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398814072EF4C21F00665406 /* DeleteAccountViewModel.swift */; };
+		3988140A2EF4C22F00665406 /* PrivacyPolicyContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398814092EF4C22F00665406 /* PrivacyPolicyContent.swift */; };
+		3988140C2EF4C24600665406 /* AccountDeletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3988140B2EF4C24600665406 /* AccountDeletionService.swift */; };
 		3988C3252EEDEB9300957F3B /* OnboardingChecklistCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3988C3242EEDEB9300957F3B /* OnboardingChecklistCard.swift */; };
 		3988C3272EEDEBA600957F3B /* OnboardingProgressStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3988C3262EEDEBA600957F3B /* OnboardingProgressStore.swift */; };
 		398AE90C2EECC2450082B0DE /* PDFActivityItemSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398AE90B2EECC2450082B0DE /* PDFActivityItemSource.swift */; };
@@ -91,6 +97,12 @@
 		3969FD0E2ECD37F10005C1AE /* Material.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Material.swift; sourceTree = "<group>"; };
 		3969FD142ECD3F410005C1AE /* AddMaterialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddMaterialView.swift; sourceTree = "<group>"; };
 		397D69662EDE36C7005E0657 /* InvoiceNumberManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoiceNumberManager.swift; sourceTree = "<group>"; };
+		398814012EF4C1EE00665406 /* DeleteAccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeleteAccountView.swift; sourceTree = "<group>"; };
+		398814032EF4C1FA00665406 /* PrivacyAndSecurityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyAndSecurityView.swift; sourceTree = "<group>"; };
+		398814052EF4C20100665406 /* PrivacyPolicyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyPolicyView.swift; sourceTree = "<group>"; };
+		398814072EF4C21F00665406 /* DeleteAccountViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeleteAccountViewModel.swift; sourceTree = "<group>"; };
+		398814092EF4C22F00665406 /* PrivacyPolicyContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyPolicyContent.swift; sourceTree = "<group>"; };
+		3988140B2EF4C24600665406 /* AccountDeletionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDeletionService.swift; sourceTree = "<group>"; };
 		3988C3242EEDEB9300957F3B /* OnboardingChecklistCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingChecklistCard.swift; sourceTree = "<group>"; };
 		3988C3262EEDEBA600957F3B /* OnboardingProgressStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingProgressStore.swift; sourceTree = "<group>"; };
 		398AE90B2EECC2450082B0DE /* PDFActivityItemSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFActivityItemSource.swift; sourceTree = "<group>"; };
@@ -219,6 +231,7 @@
 		3969FD042ECD366F0005C1AE /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
+				398814072EF4C21F00665406 /* DeleteAccountViewModel.swift */,
 				39F405982EF1FD28000337A7 /* InventoryViewModel.swift */,
 				39B8DC842EDCDB60005D0E08 /* SessionViewModel.swift */,
 				AA05AA05AA05AA05AA05AA05 /* CompanySettingsStore.swift */,
@@ -236,6 +249,9 @@
 		3969FD052ECD36830005C1AE /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				398814052EF4C20100665406 /* PrivacyPolicyView.swift */,
+				398814032EF4C1FA00665406 /* PrivacyAndSecurityView.swift */,
+				398814012EF4C1EE00665406 /* DeleteAccountView.swift */,
 				39F405A22EF1FD6C000337A7 /* SupplyDetailView.swift */,
 				39F405A02EF1FD66000337A7 /* InventoryView.swift */,
 				39F4059E2EF1FD59000337A7 /* AddEditSupplyView.swift */,
@@ -281,6 +297,7 @@
 		3969FD072ECD36970005C1AE /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				398814092EF4C22F00665406 /* PrivacyPolicyContent.swift */,
 				39E46E9E2EE240D80096D2A4 /* firestore.rules */,
 				39CCEF492EE12DAD0075521B /* MaterialsRecommender.swift */,
 				AA09AA09AA09AA09AA09AA08 /* InvoicePDFRenderer.swift */,
@@ -300,6 +317,7 @@
 		39B8DC642EDB60C0005D0E08 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				3988140B2EF4C24600665406 /* AccountDeletionService.swift */,
 				3988C3262EEDEBA600957F3B /* OnboardingProgressStore.swift */,
 				39B5C6182EEA574000291220 /* MaterialIntelligenceStore.swift */,
 				39B8DC632EDB60C0005D0E08 /* PersistenceService.swift */,
@@ -394,6 +412,8 @@
 				39B5C6192EEA574000291220 /* MaterialIntelligenceStore.swift in Sources */,
 				39A395212ECD7EE400D5E76D /* Invoice.swift in Sources */,
 				398AE90C2EECC2450082B0DE /* PDFActivityItemSource.swift in Sources */,
+				3988140C2EF4C24600665406 /* AccountDeletionService.swift in Sources */,
+				398814062EF4C20100665406 /* PrivacyPolicyView.swift in Sources */,
 				39B8DC852EDCDB60005D0E08 /* SessionViewModel.swift in Sources */,
 				39B8DC652EDB60C0005D0E08 /* PersistenceService.swift in Sources */,
 				39B8DC832EDCDB50005D0E08 /* AuthManager.swift in Sources */,
@@ -412,6 +432,7 @@
 				39B8DC8B2EDCDB7C005D0E08 /* SignInView.swift in Sources */,
 				AA02AA02AA02AA02AA02AA02 /* SettingsManager.swift in Sources */,
 				39B8DC732EDB6F4D005D0E08 /* MaterialSuggestionEngine.swift in Sources */,
+				398814042EF4C1FA00665406 /* PrivacyAndSecurityView.swift in Sources */,
 				3969FD0D2ECD372A0005C1AE /* JobDetailView.swift in Sources */,
 				3969FD022ECD36190005C1AE /* JobViewModel.swift in Sources */,
 				39B8DC712EDB6779005D0E08 /* Formatting.swift in Sources */,
@@ -419,6 +440,7 @@
 				AA08AA08AA08AA08AA08AA08 /* InvoicePDFGenerator.swift in Sources */,
 				AA0AAA0AAA0AAA0AAA0AAA0 /* PDFPreviewSheet.swift in Sources */,
 				39F405992EF1FD28000337A7 /* InventoryViewModel.swift in Sources */,
+				398814082EF4C21F00665406 /* DeleteAccountViewModel.swift in Sources */,
 				D00400042FFF000400000001 /* PDFTempWriter.swift in Sources */,
 				D00100022FFF000100000001 /* MaterialsCatalog.swift in Sources */,
 				D00200022FFF000200000001 /* MaterialPreferences.swift in Sources */,
@@ -449,6 +471,7 @@
 				39E0A0112F00000100000001 /* ImportDataView.swift in Sources */,
 				3969FD092ECD36E10005C1AE /* JobListView.swift in Sources */,
 				39A3951D2ECD7EB500D5E76D /* SplashScreenView.swift in Sources */,
+				398814022EF4C1EE00665406 /* DeleteAccountView.swift in Sources */,
 				39B8DC962EDCE6D4005D0E08 /* AuthScreenView.swift in Sources */,
 				398D93EE2ECFC27900A168FC /* (null) in Sources */,
 				D003000A2FFF000300000001 /* NumericHelpers.swift in Sources */,
@@ -456,6 +479,7 @@
 				39B8DCAE2EDCF57E005D0E08 /* JobDocumentLayout.swift in Sources */,
 				39F405A32EF1FD6C000337A7 /* SupplyDetailView.swift in Sources */,
 				39A395232ECD7EFF00D5E76D /* AddEditInvoiceView.swift in Sources */,
+				3988140A2EF4C22F00665406 /* PrivacyPolicyContent.swift in Sources */,
 				3988C3272EEDEBA600957F3B /* OnboardingProgressStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
