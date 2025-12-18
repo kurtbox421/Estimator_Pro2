@@ -103,7 +103,7 @@ struct RootView: View {
 
                 if subscriptionManager.shouldShowPaywall {
                     ZStack {
-                        Color.black.opacity(0.0)
+                        Color.black.opacity(0.35)
                             .ignoresSafeArea()
                             .contentShape(Rectangle())
                             .onTapGesture { subscriptionManager.shouldShowPaywall = false }
