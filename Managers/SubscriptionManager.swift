@@ -56,7 +56,7 @@ final class SubscriptionManager: ObservableObject {
             let fetchedIDs = fetched.map(\.id)
             print("[StoreKit] Retrieved product ids:", fetchedIDs)
 
-            if fetched.isEmpty {
+            guard !fetched.isEmpty else {
                 let message = "No products returned from the App Store. Please try again."
                 print("[StoreKit] Product fetch returned empty list")
                 lastError = message
@@ -94,12 +94,12 @@ final class SubscriptionManager: ObservableObject {
             case .success(let verification):
                 print("[StoreKit] Purchase success for product:", product.id)
                 await handle(transactionResult: verification)
-            case .userCancelled, .pending:
-                print("[StoreKit] Purchase cancelled or pending for product:", product.id)
-                break
+            case .userCancelled:
+                print("[StoreKit] Purchase cancelled by user for product:", product.id)
+            case .pending:
+                print("[StoreKit] Purchase pending for product:", product.id)
             @unknown default:
                 print("[StoreKit] Purchase returned unknown state for product:", product.id)
-                break
             }
         } catch {
             print("[StoreKit] Purchase failed for product \(product.id):", error.localizedDescription)
