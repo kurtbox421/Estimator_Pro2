@@ -193,9 +193,11 @@ final class SubscriptionManager: ObservableObject {
     }
 
     func presentPaywall(after delay: TimeInterval = 0) {
+        let nanoseconds = UInt64(max(0, delay) * 1_000_000_000)
+
         Task { @MainActor in
-            if delay > 0 {
-                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            if nanoseconds > 0 {
+                try? await Task.sleep(nanoseconds: nanoseconds)
             }
             shouldShowPaywall = true
         }
@@ -224,14 +226,18 @@ final class SubscriptionManager: ObservableObject {
     }
 
     private func fetchProducts(within timeout: TimeInterval) async throws -> [Product] {
-        try await withThrowingTaskGroup(of: [Product].self) { group in
-            group.addTask { [ids = Set(Self.productIDs)] in
-                debugLog("[StoreKit] Requesting products:", Array(ids))
+        let ids = Set(Self.productIDs)
+        let nanoseconds = UInt64(max(0, timeout) * 1_000_000_000)
+        let logger = debugLog
+
+        return try await withThrowingTaskGroup(of: [Product].self) { group in
+            group.addTask {
+                logger("[StoreKit] Requesting products:", Array(ids))
                 return try await Product.products(for: ids)
             }
 
             group.addTask {
-                try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                try await Task.sleep(nanoseconds: nanoseconds)
                 throw ProductLoadingError.timeout
             }
 
