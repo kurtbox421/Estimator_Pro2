@@ -192,7 +192,6 @@ private struct PaywallContentView<Header: View, Benefits: View, Selection: View,
                         .stroke(Color.white.opacity(0.14), lineWidth: 1)
                 )
         )
-        .padding(.horizontal, 24)
     }
 }
 
@@ -382,7 +381,12 @@ private struct PaywallScaffoldView<Content: View>: View {
             )
             .ignoresSafeArea()
 
-            content
+            VStack {
+                Spacer()
+                content
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 }
