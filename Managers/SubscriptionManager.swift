@@ -22,6 +22,7 @@ final class SubscriptionManager: ObservableObject {
     @Published var lastError: String?
     @Published var shouldShowPaywall: Bool = false
     @Published var productState: ProductLoadState = .idle
+    @Published private(set) var productStateChangeToken: Int = 0
 
     private let userDefaults: UserDefaults
     private let isProDefaultsKey = "SubscriptionManager.isPro"
@@ -45,7 +46,7 @@ final class SubscriptionManager: ObservableObject {
 
     func loadProducts() async {
         isLoading = true
-        productState = .loading
+        setProductState(.loading)
         defer { isLoading = false }
         lastError = nil
 
@@ -60,7 +61,7 @@ final class SubscriptionManager: ObservableObject {
                 let message = "No products returned from the App Store. Please try again."
                 print("[StoreKit] Product fetch returned empty list")
                 lastError = message
-                productState = .failed(message)
+                setProductState(.failed(message))
                 products = []
                 return
             }
@@ -74,11 +75,11 @@ final class SubscriptionManager: ObservableObject {
             let sortedIDs = sorted.map(\.id)
             print("[StoreKit] Sorted product identifiers:", sortedIDs)
             products = sorted
-            productState = .loaded(sorted)
+            setProductState(.loaded(sorted))
         } catch {
             print("[StoreKit] Failed to load products:", error.localizedDescription)
             lastError = error.localizedDescription
-            productState = .failed(error.localizedDescription)
+            setProductState(.failed(error.localizedDescription))
         }
     }
 
@@ -162,6 +163,11 @@ final class SubscriptionManager: ObservableObject {
         Task { @MainActor in
             shouldShowPaywall = true
         }
+    }
+
+    private func setProductState(_ newState: ProductLoadState) {
+        productState = newState
+        productStateChangeToken &+= 1
     }
 
     private func handle(transactionResult: VerificationResult<StoreKit.Transaction>) async {
