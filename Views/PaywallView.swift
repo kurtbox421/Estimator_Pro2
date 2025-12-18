@@ -98,6 +98,14 @@ struct PaywallView: View {
                 dismiss()
             }
             .foregroundColor(.white.opacity(0.7))
+
+            if let message = subscriptionManager.statusMessage {
+                Text(message)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(subscriptionManager.lastError == nil ? .green : .red)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 6)
+            }
         }
     }
 
