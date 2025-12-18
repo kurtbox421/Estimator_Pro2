@@ -75,7 +75,9 @@ struct PaywallView: View {
         PaywallPrimaryButtonView(
             state: state,
             isLoading: subscriptionManager.isLoading,
+            selectedProductID: selectedProductID,
             selectedProductProvider: selectedProduct(in:),
+            onUnavailable: handleUnavailablePurchase,
             purchaseAction: { product in
                 Task { await subscriptionManager.purchase(product) }
             }
@@ -146,6 +148,12 @@ struct PaywallView: View {
 
     private func handleErrorChange(_ newValue: String?) {
         showingErrorAlert = newValue != nil
+    }
+
+    private func handleUnavailablePurchase() {
+        let message = "Subscriptions are not available yet. Tap Retry."
+        print("[Paywall] Subscribe tapped before products were ready. Message: \(message)")
+        subscriptionManager.lastError = message
     }
 }
 
@@ -269,13 +277,28 @@ private struct PaywallProductSelectionView: View {
 private struct PaywallPrimaryButtonView: View {
     let state: SubscriptionManager.ProductLoadState
     let isLoading: Bool
+    let selectedProductID: String?
     let selectedProductProvider: ([Product]) -> Product?
+    let onUnavailable: () -> Void
     let purchaseAction: (Product) -> Void
 
     var body: some View {
         Button {
-            guard case let .loaded(products) = state,
-                  let product = selectedProductProvider(products) else { return }
+            logTap()
+            guard case let .loaded(products) = state else {
+                onUnavailable()
+                return
+            }
+
+            print("[Paywall] Loaded product IDs: \(products.map(\.id))")
+
+            guard let product = selectedProductProvider(products) else {
+                print("[Paywall] No selected product available for purchase.")
+                onUnavailable()
+                return
+            }
+
+            print("[Paywall] Initiating purchase for product: \(product.id)")
             purchaseAction(product)
         } label: {
             Text("Subscribe")
@@ -292,12 +315,20 @@ private struct PaywallPrimaryButtonView: View {
                 .foregroundColor(.white)
                 .cornerRadius(18)
         }
-        .disabled(isLoading || !hasSelection(in: state))
+        .disabled(isLoading)
     }
 
-    private func hasSelection(in state: SubscriptionManager.ProductLoadState) -> Bool {
-        guard case let .loaded(products) = state else { return false }
-        return selectedProductProvider(products) != nil
+    private func logTap() {
+        let selection = selectedProductID ?? "nil"
+        let stateDescription: String
+        switch state {
+        case .idle: stateDescription = "idle"
+        case .loading: stateDescription = "loading"
+        case .loaded: stateDescription = "loaded"
+        case .failed: stateDescription = "failed"
+        }
+
+        print("[Paywall] Subscribe tapped. State: \(stateDescription). Selected product ID: \(selection)")
     }
 }
 

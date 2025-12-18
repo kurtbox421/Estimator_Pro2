@@ -91,16 +91,23 @@ final class SubscriptionManager: ObservableObject {
         do {
             print("[StoreKit] Purchasing product:", product.id)
             let result = try await product.purchase()
+            print("[StoreKit] Purchase result received for product \(product.id):", String(describing: result))
             switch result {
             case .success(let verification):
                 print("[StoreKit] Purchase success for product:", product.id)
                 await handle(transactionResult: verification)
+                if case .verified = verification, isPro {
+                    print("[StoreKit] Pro access granted. Dismissing paywall.")
+                    shouldShowPaywall = false
+                }
             case .userCancelled:
                 print("[StoreKit] Purchase cancelled by user for product:", product.id)
             case .pending:
                 print("[StoreKit] Purchase pending for product:", product.id)
+                lastError = "Purchase is pending. Please check your App Store purchases."
             @unknown default:
                 print("[StoreKit] Purchase returned unknown state for product:", product.id)
+                lastError = "Unknown purchase result. Please try again."
             }
         } catch {
             print("[StoreKit] Purchase failed for product \(product.id):", error.localizedDescription)
@@ -178,7 +185,7 @@ final class SubscriptionManager: ObservableObject {
             await refreshEntitlements()
         case .unverified(_, let error):
             print("[StoreKit] Unverified transaction error:", error.localizedDescription)
-            lastError = error.localizedDescription
+            lastError = "Purchase verification failed: \(error.localizedDescription)"
         }
     }
 }
