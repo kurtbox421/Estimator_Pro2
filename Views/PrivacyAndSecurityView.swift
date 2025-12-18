@@ -1,42 +1,60 @@
 import SwiftUI
 
 struct PrivacyAndSecurityView: View {
+    @State private var showingDeleteAccount = false
+
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                RoundedCard {
-                    VStack(spacing: 0) {
-                        NavigationLink {
-                            PrivacyPolicyView()
-                        } label: {
-                            SettingsRow(
-                                icon: "doc.plaintext",
-                                title: "Privacy Policy",
-                                tint: .white
-                            )
-                        }
-                        .buttonStyle(.plain)
+        ZStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    RoundedCard {
+                        VStack(spacing: 0) {
+                            NavigationLink {
+                                PrivacyPolicyView()
+                            } label: {
+                                SettingsRow(
+                                    icon: "doc.plaintext",
+                                    title: "Privacy Policy",
+                                    tint: .white
+                                )
+                            }
+                            .buttonStyle(.plain)
 
-                        Divider().overlay(Color.white.opacity(0.12))
+                            Divider().overlay(Color.white.opacity(0.12))
 
-                        NavigationLink {
-                            DeleteAccountView()
-                        } label: {
-                            SettingsRow(
-                                icon: "trash",
-                                title: "Delete Account",
-                                tint: .red,
-                                titleColor: .red
-                            )
+                            Button {
+                                showingDeleteAccount = true
+                            } label: {
+                                SettingsRow(
+                                    icon: "trash",
+                                    title: "Delete Account",
+                                    tint: .red,
+                                    titleColor: .red
+                                )
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
+                    .frame(maxWidth: 560)
+                    .padding(.horizontal, 24)
                 }
-                .frame(maxWidth: 560)
-                .padding(.horizontal, 24)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 32)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 32)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            if showingDeleteAccount {
+                Color.black.opacity(0.6)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        showingDeleteAccount = false
+                    }
+
+                DeleteAccountModalView(isPresented: $showingDeleteAccount)
+                    .frame(maxWidth: 520)
+                    .transition(.scale.combined(with: .opacity))
+                    .zIndex(1)
+            }
         }
         .background(
             LinearGradient(
@@ -48,6 +66,10 @@ struct PrivacyAndSecurityView: View {
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
+        )
+        .animation(
+            .spring(response: 0.35, dampingFraction: 0.82, blendDuration: 0.2),
+            value: showingDeleteAccount
         )
         .navigationTitle("Privacy & security")
     }
