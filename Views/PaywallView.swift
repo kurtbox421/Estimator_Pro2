@@ -3,7 +3,6 @@ import StoreKit
 
 struct PaywallView: View {
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
-    @Environment(\.dismiss) private var dismiss
 
     @State private var selectedProductID: String?
     @State private var showingErrorAlert = false
@@ -94,10 +93,8 @@ struct PaywallView: View {
                     .foregroundColor(.white.opacity(0.9))
             }
 
-            Button("Not now") {
-                dismiss()
-            }
-            .foregroundColor(.white.opacity(0.7))
+            Button("Not now", action: dismissPaywall)
+                .foregroundColor(.white.opacity(0.7))
 
             if let message = subscriptionManager.statusMessage {
                 Text(message)
@@ -117,6 +114,12 @@ struct PaywallView: View {
             .font(.caption)
             .foregroundColor(.white.opacity(0.6))
         #endif
+    }
+
+    private func dismissPaywall() {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.82, blendDuration: 0.2)) {
+            subscriptionManager.shouldShowPaywall = false
+        }
     }
 
     private func orderedProducts(from products: [Product]) -> [Product] {
@@ -373,21 +376,13 @@ private struct PaywallScaffoldView<Content: View>: View {
     }
 
     var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [Color.black.opacity(0.95), Color(red: 0.09, green: 0.12, blue: 0.18)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-
-            VStack {
-                Spacer()
-                content
-                Spacer()
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        VStack {
+            Spacer()
+            content
+            Spacer()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
     }
 }
 
