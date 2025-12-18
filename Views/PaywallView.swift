@@ -106,15 +106,17 @@ struct PaywallView: View {
         }
     }
 
+    #if DEBUG
     @ViewBuilder
     private var debugSection: some View {
-        #if DEBUG
         let isProText = subscriptionManager.isPro ? "true" : "false"
         Text("DEBUG: isPro = \(isProText)")
             .font(.caption)
             .foregroundColor(.white.opacity(0.6))
-        #endif
     }
+    #else
+    private var debugSection: some View { EmptyView() }
+    #endif
 
     private func dismissPaywall() {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.82, blendDuration: 0.2)) {
