@@ -9,43 +9,26 @@ struct PaywallView: View {
     @State private var showingErrorAlert = false
 
     var body: some View {
+        PaywallSideEffectView(
+            content: content,
+            subscriptionManager: subscriptionManager,
+            showingErrorAlert: $showingErrorAlert,
+            onProductStateChange: handleProductStateChange,
+            onErrorChange: handleErrorChange
+        )
+    }
+
+    private var content: some View {
         PaywallScaffoldView {
-            VStack(spacing: 20) {
-                headerSection
-                benefitsList
-                productSelection(for: subscriptionManager.productState)
-                primaryButton(for: subscriptionManager.productState)
-                footerButtons
-                debugSection
-            }
-            .padding(24)
-            .frame(maxWidth: 520)
-            .background(
-                RoundedRectangle(cornerRadius: 26, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 26, style: .continuous)
-                            .stroke(Color.white.opacity(0.14), lineWidth: 1)
-                    )
+            PaywallContentView(
+                headerSection: headerSection,
+                benefitsList: benefitsList,
+                productSelection: productSelection(for: subscriptionManager.productState),
+                primaryButton: primaryButton(for: subscriptionManager.productState),
+                footerButtons: footerButtons,
+                debugSection: debugSection
             )
-            .padding(.horizontal, 24)
         }
-        .task { await subscriptionManager.loadProducts() }
-        .onChange(of: subscriptionManager.productState) { _, newValue in
-            if case let .loaded(products) = newValue {
-                setDefaultSelection(with: products)
-            }
-        }
-        .onChange(of: subscriptionManager.lastError) { _, newValue in
-            showingErrorAlert = newValue != nil
-        }
-        .alert("Purchase Error", isPresented: $showingErrorAlert, actions: {
-            Button("OK", role: .cancel) { subscriptionManager.lastError = nil }
-        }, message: {
-            if let error = subscriptionManager.lastError {
-                Text(error)
-            }
-        })
     }
 
     private var headerSection: some View {
@@ -79,57 +62,24 @@ struct PaywallView: View {
         }
     }
 
-    @ViewBuilder
     private func productSelection(for state: SubscriptionManager.ProductLoadState) -> some View {
-        VStack(spacing: 12) {
-            switch state {
-            case .idle:
-                retryButton(message: "Products not loaded yet.")
-            case .loading:
-                loadingRow
-            case .failed(let error):
-                failureView(message: error)
-            case .loaded(let products):
-                ForEach(orderedProducts(from: products), id: \.id) { product in
-                    ProductRow(
-                        product: product,
-                        isSelected: selectedProductID == product.id,
-                        onSelect: { selectedProductID = product.id }
-                    )
-                    .disabled(subscriptionManager.isLoading)
-                }
-            }
-
-            if let error = subscriptionManager.lastError, case .failed = state {
-                Text(error)
-                    .font(.caption2.monospaced())
-                    .foregroundColor(.red.opacity(0.9))
-                    .padding(.top, 4)
-            }
-        }
+        PaywallProductSelectionView(
+            state: state,
+            selectedProductID: $selectedProductID,
+            subscriptionManager: subscriptionManager,
+            orderedProducts: orderedProducts(from:)
+        )
     }
 
     private func primaryButton(for state: SubscriptionManager.ProductLoadState) -> some View {
-        Button {
-            guard case let .loaded(products) = state,
-                  let product = selectedProduct(in: products) else { return }
-            Task { await subscriptionManager.purchase(product) }
-        } label: {
-            Text("Subscribe")
-                .font(.headline.weight(.bold))
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(
-                    LinearGradient(
-                        colors: [Color.blue.opacity(0.9), Color.purple.opacity(0.9)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .foregroundColor(.white)
-                .cornerRadius(18)
-        }
-        .disabled(subscriptionManager.isLoading || !hasSelection(in: state))
+        PaywallPrimaryButtonView(
+            state: state,
+            isLoading: subscriptionManager.isLoading,
+            selectedProductProvider: selectedProduct(in:),
+            purchaseAction: { product in
+                Task { await subscriptionManager.purchase(product) }
+            }
+        )
     }
 
     private var footerButtons: some View {
@@ -157,6 +107,112 @@ struct PaywallView: View {
             .font(.caption)
             .foregroundColor(.white.opacity(0.6))
         #endif
+    }
+
+    private func orderedProducts(from products: [Product]) -> [Product] {
+        products.sorted { lhs, rhs in
+            let lhsIndex = SubscriptionManager.productIDs.firstIndex(of: lhs.id) ?? .max
+            let rhsIndex = SubscriptionManager.productIDs.firstIndex(of: rhs.id) ?? .max
+            return lhsIndex < rhsIndex
+        }
+    }
+
+    private func selectedProduct(in products: [Product]) -> Product? {
+        if let id = selectedProductID {
+            return orderedProducts(from: products).first { $0.id == id }
+        }
+        return orderedProducts(from: products).first
+    }
+
+    private func setDefaultSelection(with products: [Product]) {
+        guard selectedProductID == nil else { return }
+        let ordered = orderedProducts(from: products)
+
+        if let yearly = ordered.first(where: { $0.id == "estimator_pro_yearly" }) {
+            selectedProductID = yearly.id
+            return
+        }
+
+        if let first = ordered.first {
+            selectedProductID = first.id
+        }
+    }
+
+    private func handleProductStateChange(_ newValue: SubscriptionManager.ProductLoadState) {
+        if case let .loaded(products) = newValue {
+            setDefaultSelection(with: products)
+        }
+    }
+
+    private func handleErrorChange(_ newValue: String?) {
+        showingErrorAlert = newValue != nil
+    }
+}
+
+private struct PaywallContentView<Header: View, Benefits: View, Selection: View, Primary: View, Footer: View, Debug: View>: View {
+    let headerSection: Header
+    let benefitsList: Benefits
+    let productSelection: Selection
+    let primaryButton: Primary
+    let footerButtons: Footer
+    let debugSection: Debug
+
+    var body: some View {
+        VStack(spacing: 20) {
+            headerSection
+            benefitsList
+            productSelection
+            primaryButton
+            footerButtons
+            debugSection
+        }
+        .padding(24)
+        .frame(maxWidth: 520)
+        .background(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                )
+        )
+        .padding(.horizontal, 24)
+    }
+}
+
+private struct PaywallProductSelectionView: View {
+    let state: SubscriptionManager.ProductLoadState
+    @Binding var selectedProductID: String?
+    let subscriptionManager: SubscriptionManager
+    let orderedProducts: ([Product]) -> [Product]
+
+    var body: some View {
+        VStack(spacing: 12) {
+            switch state {
+            case .idle:
+                retryButton(message: "Products not loaded yet.")
+            case .loading:
+                loadingRow
+            case .failed(let error):
+                failureView(message: error)
+            case .loaded(let products):
+                ForEach(orderedProducts(products), id: \.id) { product in
+                    ProductRow(
+                        product: product,
+                        isSelected: selectedProductID == product.id,
+                        onSelect: { selectedProductID = product.id }
+                    )
+                    .disabled(subscriptionManager.isLoading)
+                }
+            }
+
+            if let error = subscriptionManager.lastError, case .failed = state {
+                Text(error)
+                    .font(.caption2.monospaced())
+                    .foregroundColor(.red.opacity(0.9))
+                    .padding(.top, 4)
+            }
+        }
     }
 
     private var loadingRow: some View {
@@ -208,39 +264,66 @@ struct PaywallView: View {
             }
         }
     }
+}
 
-    private func orderedProducts(from products: [Product]) -> [Product] {
-        products.sorted { lhs, rhs in
-            let lhsIndex = SubscriptionManager.productIDs.firstIndex(of: lhs.id) ?? .max
-            let rhsIndex = SubscriptionManager.productIDs.firstIndex(of: rhs.id) ?? .max
-            return lhsIndex < rhsIndex
+private struct PaywallPrimaryButtonView: View {
+    let state: SubscriptionManager.ProductLoadState
+    let isLoading: Bool
+    let selectedProductProvider: ([Product]) -> Product?
+    let purchaseAction: (Product) -> Void
+
+    var body: some View {
+        Button {
+            guard case let .loaded(products) = state,
+                  let product = selectedProductProvider(products) else { return }
+            purchaseAction(product)
+        } label: {
+            Text("Subscribe")
+                .font(.headline.weight(.bold))
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(
+                    LinearGradient(
+                        colors: [Color.blue.opacity(0.9), Color.purple.opacity(0.9)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .foregroundColor(.white)
+                .cornerRadius(18)
         }
-    }
-
-    private func selectedProduct(in products: [Product]) -> Product? {
-        if let id = selectedProductID {
-            return orderedProducts(from: products).first { $0.id == id }
-        }
-        return orderedProducts(from: products).first
-    }
-
-    private func setDefaultSelection(with products: [Product]) {
-        guard selectedProductID == nil else { return }
-        let ordered = orderedProducts(from: products)
-
-        if let yearly = ordered.first(where: { $0.id == "estimator_pro_yearly" }) {
-            selectedProductID = yearly.id
-            return
-        }
-
-        if let first = ordered.first {
-            selectedProductID = first.id
-        }
+        .disabled(isLoading || !hasSelection(in: state))
     }
 
     private func hasSelection(in state: SubscriptionManager.ProductLoadState) -> Bool {
         guard case let .loaded(products) = state else { return false }
-        return selectedProduct(in: products) != nil
+        return selectedProductProvider(products) != nil
+    }
+}
+
+private struct PaywallSideEffectView<Content: View>: View {
+    let content: Content
+    @ObservedObject var subscriptionManager: SubscriptionManager
+    @Binding var showingErrorAlert: Bool
+    let onProductStateChange: (SubscriptionManager.ProductLoadState) -> Void
+    let onErrorChange: (String?) -> Void
+
+    var body: some View {
+        content
+            .task { await subscriptionManager.loadProducts() }
+            .onChange(of: subscriptionManager.productState) { _, newValue in
+                onProductStateChange(newValue)
+            }
+            .onChange(of: subscriptionManager.lastError) { _, newValue in
+                onErrorChange(newValue)
+            }
+            .alert("Purchase Error", isPresented: $showingErrorAlert, actions: {
+                Button("OK", role: .cancel) { subscriptionManager.lastError = nil }
+            }, message: {
+                if let error = subscriptionManager.lastError {
+                    Text(error)
+                }
+            })
     }
 }
 
