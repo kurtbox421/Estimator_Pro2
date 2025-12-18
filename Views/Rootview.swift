@@ -100,7 +100,26 @@ struct RootView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .padding(.top, 12)
                 .padding(.horizontal, layout.horizontalPadding)
+
+                if subscriptionManager.shouldShowPaywall {
+                    ZStack {
+                        Color.black.opacity(0.0)
+                            .ignoresSafeArea()
+                            .contentShape(Rectangle())
+                            .onTapGesture { subscriptionManager.shouldShowPaywall = false }
+
+                        PaywallView()
+                            .environmentObject(subscriptionManager)
+                            .transition(.scale.combined(with: .opacity))
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .zIndex(1)
+                }
             }
+            .animation(
+                .spring(response: 0.35, dampingFraction: 0.82, blendDuration: 0.2),
+                value: subscriptionManager.shouldShowPaywall
+            )
         }
         .sheet(isPresented: $showingNewEstimate) {
             NavigationView {
@@ -185,10 +204,6 @@ struct RootView: View {
                     actionButtons
                 }
             }
-        }
-        .fullScreenCover(isPresented: $subscriptionManager.shouldShowPaywall) {
-            PaywallView()
-                .environmentObject(subscriptionManager)
         }
     }
 
