@@ -93,8 +93,30 @@ struct PaywallView: View {
                     .foregroundColor(.white.opacity(0.9))
             }
 
+            Link("Manage Subscription", destination: URL(string: "https://apps.apple.com/account/subscriptions")!)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.white.opacity(0.85))
+
             Button("Not now", action: dismissPaywall)
                 .foregroundColor(.white.opacity(0.7))
+
+            if let disclosure = selectedProductDisclosure() {
+                Text(disclosure)
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.75))
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 2)
+            }
+
+            HStack(spacing: 14) {
+                Link("Terms of Use", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.75))
+
+                Link("Privacy Policy", destination: URL(string: "https://www.apple.com/legal/privacy/en-ww/")!)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.75))
+            }
 
             if let message = subscriptionManager.statusMessage {
                 Text(message)
@@ -165,8 +187,36 @@ struct PaywallView: View {
 
     private func handleUnavailablePurchase() {
         let message = "Subscriptions are not available yet. Tap Retry."
-        print("[Paywall] Subscribe tapped before products were ready. Message: \(message)")
         subscriptionManager.lastError = message
+    }
+
+    private func selectedProductDisclosure() -> String? {
+        guard case let .loaded(products) = subscriptionManager.productState,
+              let product = selectedProduct(in: products) else {
+            return "Subscriptions renew automatically. Cancel anytime in your App Store account settings."
+        }
+
+        let periodDescription: String
+        if let period = product.subscription?.subscriptionPeriod {
+            let unit: String
+            switch period.unit {
+            case .day: unit = period.value == 1 ? "day" : "days"
+            case .week: unit = period.value == 1 ? "week" : "weeks"
+            case .month: unit = period.value == 1 ? "month" : "months"
+            case .year: unit = period.value == 1 ? "year" : "years"
+            @unknown default: unit = "period"
+            }
+            periodDescription = "every \(period.value) \(unit)"
+        } else {
+            periodDescription = ""
+        }
+
+        let priceText = product.displayPrice
+        if periodDescription.isEmpty {
+            return "\(priceText) subscription. Auto-renews until cancelled in Settings."
+        }
+
+        return "\(priceText) billed \(periodDescription). Auto-renews until cancelled in Settings."
     }
 }
 
@@ -296,51 +346,45 @@ private struct PaywallPrimaryButtonView: View {
 
     var body: some View {
         Button {
-            logTap()
             guard case let .loaded(products) = state else {
                 onUnavailable()
                 return
             }
 
-            print("[Paywall] Loaded product IDs: \(products.map(\.id))")
-
             guard let product = selectedProductProvider(products) else {
-                print("[Paywall] No selected product available for purchase.")
                 onUnavailable()
                 return
             }
-
-            print("[Paywall] Initiating purchase for product: \(product.id)")
             purchaseAction(product)
         } label: {
-            Text("Subscribe")
-                .font(.headline.weight(.bold))
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(
-                    LinearGradient(
-                        colors: [Color.blue.opacity(0.9), Color.purple.opacity(0.9)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
+            HStack {
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .tint(.white)
+                }
+                Text(isLoading ? "Processing…" : "Subscribe")
+                    .font(.headline.weight(.bold))
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(
+                LinearGradient(
+                    colors: [Color.blue.opacity(0.9), Color.purple.opacity(0.9)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
-                .foregroundColor(.white)
-                .cornerRadius(18)
+            )
+            .foregroundColor(.white)
+            .cornerRadius(18)
         }
-        .disabled(isLoading)
+        .disabled(isLoading || !isReadyToPurchase)
     }
 
-    private func logTap() {
-        let selection = selectedProductID ?? "nil"
-        let stateDescription: String
-        switch state {
-        case .idle: stateDescription = "idle"
-        case .loading: stateDescription = "loading"
-        case .loaded: stateDescription = "loaded"
-        case .failed: stateDescription = "failed"
-        }
-
-        print("[Paywall] Subscribe tapped. State: \(stateDescription). Selected product ID: \(selection)")
+    private var isReadyToPurchase: Bool {
+        guard case let .loaded(products) = state else { return false }
+        guard let selectedProductID, selectedProductProvider(products)?.id == selectedProductID else { return false }
+        return true
     }
 }
 

@@ -9,6 +9,10 @@ final class SubscriptionManager: ObservableObject {
         "estimator_pro_yearly"
     ]
 
+    private enum ProductLoadingError: Error {
+        case timeout
+    }
+
     enum ProductLoadState {
         case idle
         case loading
@@ -45,22 +49,20 @@ final class SubscriptionManager: ObservableObject {
         updatesTask?.cancel()
     }
 
-    func loadProducts() async {
+    func loadProducts(timeout: TimeInterval = 10) async {
         isLoading = true
         setProductState(.loading)
         defer { isLoading = false }
         lastError = nil
+        statusMessage = nil
 
         do {
-            let idSet = Set(Self.productIDs)
-            print("[StoreKit] Requesting products:", Array(idSet))
-            let fetched = try await Product.products(for: idSet)
+            let fetched = try await fetchProducts(within: timeout)
             let fetchedIDs = fetched.map(\.id)
-            print("[StoreKit] Retrieved product ids:", fetchedIDs)
+            debugLog("[StoreKit] Retrieved product ids:", fetchedIDs)
 
             guard !fetched.isEmpty else {
                 let message = "No products returned from the App Store. Please try again."
-                print("[StoreKit] Product fetch returned empty list")
                 lastError = message
                 setProductState(.failed(message))
                 products = []
@@ -74,13 +76,19 @@ final class SubscriptionManager: ObservableObject {
             }
 
             let sortedIDs = sorted.map(\.id)
-            print("[StoreKit] Sorted product identifiers:", sortedIDs)
+            debugLog("[StoreKit] Sorted product identifiers:", sortedIDs)
             products = sorted
             setProductState(.loaded(sorted))
+        } catch ProductLoadingError.timeout {
+            let message = "Unable to reach the App Store right now. Check your connection and try again."
+            lastError = message
+            setProductState(.failed(message))
         } catch {
-            print("[StoreKit] Failed to load products:", error.localizedDescription)
-            lastError = error.localizedDescription
-            setProductState(.failed(error.localizedDescription))
+            let message = error.localizedDescription.isEmpty
+                ? "Something went wrong. Please try again."
+                : error.localizedDescription
+            lastError = message
+            setProductState(.failed(message))
         }
     }
 
@@ -88,61 +96,57 @@ final class SubscriptionManager: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         lastError = nil
+        statusMessage = "Processing purchase…"
 
         do {
-            print("[StoreKit] Purchasing product:", product.id)
             let result = try await product.purchase()
-            print("[StoreKit] Purchase result received for product \(product.id):", String(describing: result))
             switch result {
             case .success(let verification):
-                print("[StoreKit] Purchase success for product:", product.id)
                 await handle(transactionResult: verification)
                 if case .verified = verification, isPro {
-                    print("[StoreKit] Pro access granted. Dismissing paywall.")
+                    statusMessage = "Thanks for subscribing to Pro!"
                     shouldShowPaywall = false
                 }
             case .userCancelled:
-                print("[StoreKit] Purchase cancelled by user for product:", product.id)
+                statusMessage = "Purchase cancelled."
             case .pending:
-                print("[StoreKit] Purchase pending for product:", product.id)
                 lastError = "Purchase is pending. Please check your App Store purchases."
+                statusMessage = lastError
             @unknown default:
-                print("[StoreKit] Purchase returned unknown state for product:", product.id)
                 lastError = "Unknown purchase result. Please try again."
+                statusMessage = lastError
             }
         } catch {
-            print("[StoreKit] Purchase failed for product \(product.id):", error.localizedDescription)
-            lastError = error.localizedDescription
+            let message = error.localizedDescription.isEmpty
+                ? "Purchase failed. Please try again."
+                : error.localizedDescription
+            lastError = message
+            statusMessage = message
         }
     }
 
     func restorePurchases() async {
-        print("[StoreKit] Restore tapped")
         isLoading = true
         defer { isLoading = false }
         lastError = nil
-        statusMessage = nil
+        statusMessage = "Checking App Store purchases…"
 
         do {
-            print("[StoreKit] Starting AppStore.sync()")
             try await AppStore.sync()
-            print("[StoreKit] Finished AppStore.sync()")
 
             if let entitlement = await activeSubscriptionEntitlement() {
-                print("[StoreKit] Active entitlement found during restore for product: \(entitlement.productID)")
                 setIsPro(true)
-                statusMessage = "Restored successfully"
+                statusMessage = "Restored Estimator Pro (\(entitlement.productID))."
             } else {
-                print("[StoreKit] No active entitlements found during restore")
                 setIsPro(false)
-                statusMessage = "No purchases found to restore"
+                statusMessage = "No purchases found to restore."
             }
-
-            print("[StoreKit] Restore completed. isPro = \(isPro)")
         } catch {
-            lastError = error.localizedDescription
-            statusMessage = error.localizedDescription
-            print("[StoreKit] Restore failed with error:", error.localizedDescription)
+            let message = error.localizedDescription.isEmpty
+                ? "Restore failed. Please try again."
+                : error.localizedDescription
+            lastError = message
+            statusMessage = message
         }
     }
 
@@ -156,17 +160,31 @@ final class SubscriptionManager: ObservableObject {
             guard case .verified(let transaction) = entitlement else { continue }
             guard Self.productIDs.contains(transaction.productID) else { continue }
 
-            if let expiration = transaction.expirationDate, expiration < Date() {
-                continue
+            if isTransactionActive(transaction) {
+                return transaction
             }
-            if transaction.revocationDate != nil {
-                continue
-            }
+        }
 
-            return transaction
+        for productID in Self.productIDs {
+            guard let latest = try? await StoreKit.Transaction.latest(for: productID) else { continue }
+
+            if case .verified(let transaction) = latest, isTransactionActive(transaction) {
+                return transaction
+            }
         }
 
         return nil
+    }
+
+    private func isTransactionActive(_ transaction: StoreKit.Transaction) -> Bool {
+        if let expiration = transaction.expirationDate, expiration < Date() {
+            return false
+        }
+        if transaction.revocationDate != nil {
+            return false
+        }
+
+        return true
     }
 
     private func setIsPro(_ newValue: Bool) {
@@ -198,12 +216,34 @@ final class SubscriptionManager: ObservableObject {
     private func handle(transactionResult: VerificationResult<StoreKit.Transaction>) async {
         switch transactionResult {
         case .verified(let transaction):
-            print("[StoreKit] Verified transaction for product:", transaction.productID)
             await transaction.finish()
             await refreshEntitlements()
         case .unverified(_, let error):
-            print("[StoreKit] Unverified transaction error:", error.localizedDescription)
             lastError = "Purchase verification failed: \(error.localizedDescription)"
         }
+    }
+
+    private func fetchProducts(within timeout: TimeInterval) async throws -> [Product] {
+        try await withThrowingTaskGroup(of: [Product].self) { group in
+            group.addTask { [ids = Set(Self.productIDs)] in
+                debugLog("[StoreKit] Requesting products:", Array(ids))
+                return try await Product.products(for: ids)
+            }
+
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                throw ProductLoadingError.timeout
+            }
+
+            guard let result = try await group.next() else { throw ProductLoadingError.timeout }
+            group.cancelAll()
+            return result
+        }
+    }
+
+    nonisolated private func debugLog(_ items: Any...) {
+        #if DEBUG
+        print(items.map { String(describing: $0) }.joined(separator: " "))
+        #endif
     }
 }
