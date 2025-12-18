@@ -102,10 +102,16 @@ struct RootView: View {
                 .padding(.horizontal, layout.horizontalPadding)
 
                 if subscriptionManager.shouldShowPaywall {
+                    Color.black.opacity(0.6)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            subscriptionManager.shouldShowPaywall = false
+                        }
+
                     PaywallView()
                         .environmentObject(subscriptionManager)
+                        .frame(maxWidth: 520)
                         .transition(.scale.combined(with: .opacity))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .zIndex(1)
                 }
             }
@@ -1345,21 +1351,41 @@ struct BrandingLogoView: View {
     @State private var showPaywall = false
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                logoPreview
+        ZStack {
+            ScrollView {
+                VStack(spacing: 24) {
+                    logoPreview
 
-                logoPickerButton
+                    logoPickerButton
 
-                Text("Your logo will appear on estimates and invoices where you add it later.")
-                    .font(.footnote)
-                    .foregroundColor(.white.opacity(0.85))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
+                    Text("Your logo will appear on estimates and invoices where you add it later.")
+                        .font(.footnote)
+                        .foregroundColor(.white.opacity(0.85))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 32)
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 32)
+
+            if showPaywall {
+                Color.black.opacity(0.6)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        showPaywall = false
+                    }
+
+                PaywallView()
+                    .environmentObject(subscriptionManager)
+                    .frame(maxWidth: 520)
+                    .transition(.scale.combined(with: .opacity))
+                    .zIndex(1)
+            }
         }
+        .animation(
+            .spring(response: 0.35, dampingFraction: 0.82, blendDuration: 0.2),
+            value: showPaywall
+        )
         .navigationTitle("Branding & logo")
         .onAppear(perform: loadStoredLogo)
         .onReceive(companySettings.$logoImage) { newLogo in
@@ -1369,10 +1395,6 @@ struct BrandingLogoView: View {
             if newValue {
                 showPaywall = false
             }
-        }
-        .sheet(isPresented: $showPaywall) {
-            PaywallView()
-                .environmentObject(subscriptionManager)
         }
         .alert("Couldn't save logo", isPresented: $showSaveErrorAlert, presenting: uploadError) { _ in
             Button("OK", role: .cancel) { }

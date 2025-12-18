@@ -18,22 +18,15 @@ struct PaywallView: View {
     }
 
     private var content: some View {
-        ZStack {
-            Color.black.opacity(0.6)
-                .ignoresSafeArea()
-                .contentShape(Rectangle())
-                .onTapGesture(perform: dismissPaywall)
-
-            PaywallContentView(
-                headerSection: headerSection,
-                benefitsList: benefitsList,
-                productSelection: productSelection(for: subscriptionManager.productState),
-                primaryButton: primaryButton(for: subscriptionManager.productState),
-                footerButtons: footerButtons,
-                debugSection: debugSection
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        }
+        PaywallContentView(
+            headerSection: headerSection,
+            benefitsList: benefitsList,
+            productSelection: productSelection(for: subscriptionManager.productState),
+            primaryButton: primaryButton(for: subscriptionManager.productState),
+            footerButtons: footerButtons,
+            debugSection: debugSection
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
     }
 
     private var headerSection: some View {
