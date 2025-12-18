@@ -102,18 +102,11 @@ struct RootView: View {
                 .padding(.horizontal, layout.horizontalPadding)
 
                 if subscriptionManager.shouldShowPaywall {
-                    ZStack {
-                        Color.black.opacity(0.6)
-                            .ignoresSafeArea()
-                            .contentShape(Rectangle())
-                            .onTapGesture { subscriptionManager.shouldShowPaywall = false }
-
-                        PaywallView()
-                            .environmentObject(subscriptionManager)
-                            .transition(.scale.combined(with: .opacity))
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .zIndex(1)
+                    PaywallView()
+                        .environmentObject(subscriptionManager)
+                        .transition(.scale.combined(with: .opacity))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .zIndex(1)
                 }
             }
             .animation(
