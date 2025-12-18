@@ -1344,51 +1344,25 @@ struct CompanyDetailsView: View {
 
 struct BrandingLogoView: View {
     @EnvironmentObject private var companySettings: CompanySettingsStore
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
     @State private var selectedItem: PhotosPickerItem?
     @State private var logoImage: UIImage?
     @State private var uploadError: String?
+    @State private var showSaveErrorAlert = false
+    @State private var showPaywall = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
                 logoPreview
 
-                PhotosPicker(selection: $selectedItem, matching: .images) {
-                    HStack(spacing: 10) {
-                        Image(systemName: "photo.on.rectangle.angled")
-                            .font(.headline)
-                        Text("Choose logo from Photos")
-                            .font(.headline)
-                    }
-                    .foregroundColor(.white)
-                    .padding(.vertical, 12)
-                    .padding(.horizontal, 18)
-                    .background(
-                        Capsule()
-                            .fill(Color.accentColor)
-                    )
-                }
-                .buttonStyle(.plain)
-                .onChange(of: selectedItem) { _, newItem in
-                    Task {
-                        guard let data = try? await newItem?.loadTransferable(type: Data.self) else { return }
-                        await companySettings.uploadLogo(data: data)
-                        logoImage = companySettings.logoImage
-                        uploadError = companySettings.logoImage == nil ? "Couldn’t save logo. Try again." : nil
-                    }
-                }
+                logoPickerButton
 
                 Text("Your logo will appear on estimates and invoices where you add it later.")
                     .font(.footnote)
                     .foregroundColor(.white.opacity(0.85))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
-
-                if let uploadError {
-                    Text(uploadError)
-                        .font(.footnote)
-                        .foregroundColor(.red.opacity(0.9))
-                }
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 32)
@@ -1397,6 +1371,20 @@ struct BrandingLogoView: View {
         .onAppear(perform: loadStoredLogo)
         .onReceive(companySettings.$logoImage) { newLogo in
             logoImage = newLogo
+        }
+        .onChange(of: subscriptionManager.isPro) { _, newValue in
+            if newValue {
+                showPaywall = false
+            }
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+                .environmentObject(subscriptionManager)
+        }
+        .alert("Couldn't save logo", isPresented: $showSaveErrorAlert, presenting: uploadError) { _ in
+            Button("OK", role: .cancel) { }
+        } message: { errorMessage in
+            Text(errorMessage)
         }
     }
 
@@ -1432,6 +1420,48 @@ struct BrandingLogoView: View {
 
     private func loadStoredLogo() {
         logoImage = companySettings.logoImage
+    }
+
+    @ViewBuilder
+    private var logoPickerButton: some View {
+        if subscriptionManager.isPro {
+            PhotosPicker(selection: $selectedItem, matching: .images) {
+                pickerLabel
+            }
+            .buttonStyle(.plain)
+            .onChange(of: selectedItem) { _, newItem in
+                Task {
+                    guard let data = try? await newItem?.loadTransferable(type: Data.self) else { return }
+                    await companySettings.uploadLogo(data: data)
+                    logoImage = companySettings.logoImage
+                    uploadError = companySettings.logoImage == nil ? "Couldn’t save logo. Please try again." : nil
+                    showSaveErrorAlert = uploadError != nil
+                }
+            }
+        } else {
+            Button {
+                showPaywall = true
+            } label: {
+                pickerLabel
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var pickerLabel: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "photo.on.rectangle.angled")
+                .font(.headline)
+            Text("Choose logo from Photos")
+                .font(.headline)
+        }
+        .foregroundColor(.white)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 18)
+        .background(
+            Capsule()
+                .fill(Color.accentColor)
+        )
     }
 }
 
