@@ -71,11 +71,6 @@ struct PaywallView: View {
                     .foregroundColor(.white.opacity(0.7))
                 }
 
-                if subscriptionManager.isLoading {
-                    ProgressView()
-                        .tint(.white)
-                }
-
                 #if DEBUG
                 Text("DEBUG: isPro = \(subscriptionManager.isPro ? "true" : "false")")
                     .font(.caption)
@@ -95,8 +90,10 @@ struct PaywallView: View {
             .padding(.horizontal, 24)
         }
         .task { await subscriptionManager.loadProducts() }
-        .onChange(of: subscriptionManager.products) { _, _ in
-            setDefaultSelection()
+        .onChange(of: subscriptionManager.productState) { _, newValue in
+            if case .loaded = newValue {
+                setDefaultSelection()
+            }
         }
         .onChange(of: subscriptionManager.lastError) { _, newValue in
             showingErrorAlert = newValue != nil
@@ -141,66 +138,106 @@ struct PaywallView: View {
 
     private var productSelection: some View {
         VStack(spacing: 12) {
-            ForEach(orderedProducts, id: \.id) { product in
-                Button {
-                    selectedProductID = product.id
-                } label: {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(product.displayName)
-                                .font(.headline.weight(.semibold))
-                                .foregroundColor(.white)
-                            Text(product.displayPrice)
-                                .foregroundColor(.white.opacity(0.85))
-                                .font(.subheadline)
-                        }
-                        Spacer()
-                        if product.id == "estimator_pro_yearly" {
-                            Text("Save 2 months")
-                                .font(.caption2.weight(.bold))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(Color.green.opacity(0.25), in: Capsule())
-                                .foregroundColor(.green)
-                        }
-                        Image(systemName: selectedProduct?.id == product.id ? "checkmark.circle.fill" : "circle")
-                            .foregroundColor(.white)
-                            .font(.title3)
-                    }
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color.white.opacity(selectedProduct?.id == product.id ? 0.16 : 0.06))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
-                            )
-                    )
+            switch subscriptionManager.productState {
+            case .idle:
+                retryButton(message: "Products not loaded yet.")
+            case .loading:
+                loadingRow
+            case .failed(let error):
+                VStack(spacing: 8) {
+                    Text(error)
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.9))
+                        .multilineTextAlignment(.center)
+                    retryButton()
                 }
-                .disabled(subscriptionManager.isLoading)
-            }
-
-            if orderedProducts.isEmpty {
-                HStack {
-                    ProgressView()
-                        .tint(.white)
-                    Text("Loading products…")
-                        .foregroundColor(.white.opacity(0.8))
-                }
-                .padding()
                 .frame(maxWidth: .infinity)
+                .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .fill(Color.white.opacity(0.06))
                 )
+            case .loaded:
+                ForEach(orderedProducts, id: \.id) { product in
+                    Button {
+                        selectedProductID = product.id
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(product.displayName)
+                                    .font(.headline.weight(.semibold))
+                                    .foregroundColor(.white)
+                                Text(product.displayPrice)
+                                    .foregroundColor(.white.opacity(0.85))
+                                    .font(.subheadline)
+                            }
+                            Spacer()
+                            if product.id == "estimator_pro_yearly" {
+                                Text("Save 2 months")
+                                    .font(.caption2.weight(.bold))
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(Color.green.opacity(0.25), in: Capsule())
+                                    .foregroundColor(.green)
+                            }
+                            Image(systemName: selectedProduct?.id == product.id ? "checkmark.circle.fill" : "circle")
+                                .foregroundColor(.white)
+                                .font(.title3)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(Color.white.opacity(selectedProduct?.id == product.id ? 0.16 : 0.06))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                                )
+                        )
+                    }
+                    .disabled(subscriptionManager.isLoading)
+                }
             }
 
-            if let error = subscriptionManager.lastError {
+            if let error = subscriptionManager.lastError, case .failed = subscriptionManager.productState {
                 Text(error)
                     .font(.caption2.monospaced())
                     .foregroundColor(.red.opacity(0.9))
                     .padding(.top, 4)
+            }
+        }
+    }
+
+    private var loadingRow: some View {
+        HStack {
+            ProgressView()
+                .tint(.white)
+            Text("Loading products…")
+                .foregroundColor(.white.opacity(0.8))
+        }
+        .padding()
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.white.opacity(0.06))
+        )
+    }
+
+    private func retryButton(message: String? = nil) -> some View {
+        VStack(spacing: 8) {
+            if let message {
+                Text(message)
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            Button {
+                Task { await subscriptionManager.loadProducts() }
+            } label: {
+                Text("Retry")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.blue.opacity(0.4), in: Capsule())
             }
         }
     }

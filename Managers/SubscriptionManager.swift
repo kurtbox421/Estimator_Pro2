@@ -9,11 +9,19 @@ final class SubscriptionManager: ObservableObject {
         "estimator_pro_yearly"
     ]
 
+    enum ProductLoadState {
+        case idle
+        case loading
+        case loaded([Product])
+        case failed(String)
+    }
+
     @Published var products: [Product] = []
     @Published var isPro: Bool
     @Published var isLoading: Bool = false
     @Published var lastError: String?
     @Published var shouldShowPaywall: Bool = false
+    @Published var productState: ProductLoadState = .idle
 
     private let userDefaults: UserDefaults
     private let isProDefaultsKey = "SubscriptionManager.isPro"
@@ -37,36 +45,40 @@ final class SubscriptionManager: ObservableObject {
 
     func loadProducts() async {
         isLoading = true
+        productState = .loading
         defer { isLoading = false }
         lastError = nil
 
         do {
-            #if DEBUG
-            print("[StoreKit] Requesting products:", Self.productIDs)
-            #endif
-            let fetched = try await Product.products(for: Self.productIDs)
-            #if DEBUG
-            for product in fetched {
-                print("[StoreKit] Retrieved product id:", product.id)
+            let idSet = Set(Self.productIDs)
+            print("[StoreKit] Requesting products:", Array(idSet))
+            let fetched = try await Product.products(for: idSet)
+            let fetchedIDs = fetched.map(\.id)
+            print("[StoreKit] Retrieved product ids:", fetchedIDs)
+
+            if fetched.isEmpty {
+                let message = "No products returned from the App Store. Please try again."
+                print("[StoreKit] Product fetch returned empty list")
+                lastError = message
+                productState = .failed(message)
+                products = []
+                return
             }
-            #endif
+
             let sorted = fetched.sorted { lhs, rhs in
                 let lhsIndex = Self.productIDs.firstIndex(of: lhs.id) ?? .max
                 let rhsIndex = Self.productIDs.firstIndex(of: rhs.id) ?? .max
                 return lhsIndex < rhsIndex
             }
-            #if DEBUG
-            let fetchedIDs = fetched.map(\.id)
+
             let sortedIDs = sorted.map(\.id)
-            print("[StoreKit] Fetched product identifiers:", fetchedIDs)
             print("[StoreKit] Sorted product identifiers:", sortedIDs)
-            #endif
             products = sorted
+            productState = .loaded(sorted)
         } catch {
-            #if DEBUG
-            print("Failed to load StoreKit products:", error.localizedDescription)
-            #endif
+            print("[StoreKit] Failed to load products:", error.localizedDescription)
             lastError = error.localizedDescription
+            productState = .failed(error.localizedDescription)
         }
     }
 
@@ -76,16 +88,21 @@ final class SubscriptionManager: ObservableObject {
         lastError = nil
 
         do {
+            print("[StoreKit] Purchasing product:", product.id)
             let result = try await product.purchase()
             switch result {
             case .success(let verification):
+                print("[StoreKit] Purchase success for product:", product.id)
                 await handle(transactionResult: verification)
             case .userCancelled, .pending:
+                print("[StoreKit] Purchase cancelled or pending for product:", product.id)
                 break
             @unknown default:
+                print("[StoreKit] Purchase returned unknown state for product:", product.id)
                 break
             }
         } catch {
+            print("[StoreKit] Purchase failed for product \(product.id):", error.localizedDescription)
             lastError = error.localizedDescription
         }
     }
@@ -104,8 +121,11 @@ final class SubscriptionManager: ObservableObject {
     }
 
     func refreshEntitlements() async {
-        var hasProAccess = false
+        let hasProAccess = await hasActiveSubscription()
+        setIsPro(hasProAccess)
+    }
 
+    func hasActiveSubscription() async -> Bool {
         for await entitlement in StoreKit.Transaction.currentEntitlements {
             guard case .verified(let transaction) = entitlement else { continue }
             guard Self.productIDs.contains(transaction.productID) else { continue }
@@ -117,10 +137,10 @@ final class SubscriptionManager: ObservableObject {
                 continue
             }
 
-            hasProAccess = true
+            return true
         }
 
-        setIsPro(hasProAccess)
+        return false
     }
 
     private func setIsPro(_ newValue: Bool) {
@@ -147,9 +167,11 @@ final class SubscriptionManager: ObservableObject {
     private func handle(transactionResult: VerificationResult<StoreKit.Transaction>) async {
         switch transactionResult {
         case .verified(let transaction):
+            print("[StoreKit] Verified transaction for product:", transaction.productID)
             await transaction.finish()
             await refreshEntitlements()
         case .unverified(_, let error):
+            print("[StoreKit] Unverified transaction error:", error.localizedDescription)
             lastError = error.localizedDescription
         }
     }
