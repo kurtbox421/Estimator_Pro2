@@ -311,8 +311,8 @@ private struct PaywallSideEffectView<Content: View>: View {
     var body: some View {
         content
             .task { await subscriptionManager.loadProducts() }
-            .onChange(of: subscriptionManager.productState) { _, newValue in
-                onProductStateChange(newValue)
+            .onChange(of: subscriptionManager.productStateChangeToken) { _, _ in
+                onProductStateChange(subscriptionManager.productState)
             }
             .onChange(of: subscriptionManager.lastError) { _, newValue in
                 onErrorChange(newValue)
