@@ -20,6 +20,7 @@ final class SubscriptionManager: ObservableObject {
     @Published var isPro: Bool
     @Published var isLoading: Bool = false
     @Published var lastError: String?
+    @Published var statusMessage: String?
     @Published var shouldShowPaywall: Bool = false
     @Published var productState: ProductLoadState = .idle
     @Published private(set) var productStateChangeToken: Int = 0
@@ -116,24 +117,41 @@ final class SubscriptionManager: ObservableObject {
     }
 
     func restorePurchases() async {
+        print("[StoreKit] Restore tapped")
         isLoading = true
         defer { isLoading = false }
         lastError = nil
+        statusMessage = nil
 
         do {
+            print("[StoreKit] Starting AppStore.sync()")
             try await AppStore.sync()
-            await refreshEntitlements()
+            print("[StoreKit] Finished AppStore.sync()")
+
+            if let entitlement = await activeSubscriptionEntitlement() {
+                print("[StoreKit] Active entitlement found during restore for product: \(entitlement.productID)")
+                setIsPro(true)
+                statusMessage = "Restored successfully"
+            } else {
+                print("[StoreKit] No active entitlements found during restore")
+                setIsPro(false)
+                statusMessage = "No purchases found to restore"
+            }
+
+            print("[StoreKit] Restore completed. isPro = \(isPro)")
         } catch {
             lastError = error.localizedDescription
+            statusMessage = error.localizedDescription
+            print("[StoreKit] Restore failed with error:", error.localizedDescription)
         }
     }
 
     func refreshEntitlements() async {
-        let hasProAccess = await hasActiveSubscription()
-        setIsPro(hasProAccess)
+        let entitlement = await activeSubscriptionEntitlement()
+        setIsPro(entitlement != nil)
     }
 
-    func hasActiveSubscription() async -> Bool {
+    private func activeSubscriptionEntitlement() async -> StoreKit.Transaction? {
         for await entitlement in StoreKit.Transaction.currentEntitlements {
             guard case .verified(let transaction) = entitlement else { continue }
             guard Self.productIDs.contains(transaction.productID) else { continue }
@@ -145,10 +163,10 @@ final class SubscriptionManager: ObservableObject {
                 continue
             }
 
-            return true
+            return transaction
         }
 
-        return false
+        return nil
     }
 
     private func setIsPro(_ newValue: Bool) {
