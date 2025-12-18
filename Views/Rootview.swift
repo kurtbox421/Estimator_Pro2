@@ -186,7 +186,7 @@ struct RootView: View {
                 }
             }
         }
-        .sheet(isPresented: $subscriptionManager.shouldShowPaywall) {
+        .fullScreenCover(isPresented: $subscriptionManager.shouldShowPaywall) {
             PaywallView()
                 .environmentObject(subscriptionManager)
         }
