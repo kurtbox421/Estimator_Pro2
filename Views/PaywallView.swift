@@ -24,16 +24,15 @@ struct PaywallView: View {
                 .contentShape(Rectangle())
                 .onTapGesture(perform: dismissPaywall)
 
-            PaywallScaffoldView {
-                PaywallContentView(
-                    headerSection: headerSection,
-                    benefitsList: benefitsList,
-                    productSelection: productSelection(for: subscriptionManager.productState),
-                    primaryButton: primaryButton(for: subscriptionManager.productState),
-                    footerButtons: footerButtons,
-                    debugSection: debugSection
-                )
-            }
+            PaywallContentView(
+                headerSection: headerSection,
+                benefitsList: benefitsList,
+                productSelection: productSelection(for: subscriptionManager.productState),
+                primaryButton: primaryButton(for: subscriptionManager.productState),
+                footerButtons: footerButtons,
+                debugSection: debugSection
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
     }
 
@@ -422,24 +421,6 @@ private struct PaywallSideEffectView<Content: View>: View {
                     Text(error)
                 }
             })
-    }
-}
-
-private struct PaywallScaffoldView<Content: View>: View {
-    private let content: Content
-
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack {
-            Spacer()
-            content
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding()
     }
 }
 
