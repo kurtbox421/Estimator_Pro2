@@ -8,7 +8,7 @@ struct MaterialGeneratorView: View {
     @EnvironmentObject private var materialInsights: MaterialIntelligenceStore
     @Environment(\.dismiss) private var dismiss
 
-    @State private var selectedGroupID: String?
+    @State private var selectedGroupIDs: Set<String> = []
     @State private var lengthText: String = ""
     @State private var secondaryText: String = ""
     @State private var suggestedMaterials: [MaterialRecommendation] = []
@@ -21,15 +21,19 @@ struct MaterialGeneratorView: View {
         materialsStore.materialGroups.sorted { $0.sortOrder < $1.sortOrder }
     }
 
-    private var selectedGroup: MaterialGroup? {
-        let groups = orderedGroups
-        guard !groups.isEmpty else { return nil }
-        let activeID = selectedGroupID ?? groups.first?.id
-        return groups.first(where: { $0.id == activeID })
+    private var selectedGroups: [MaterialGroup] {
+        orderedGroups.filter { selectedGroupIDs.contains($0.id) }
+    }
+
+    private var primarySelectedGroup: MaterialGroup? {
+        if let selected = selectedGroups.first {
+            return selected
+        }
+        return orderedGroups.first
     }
 
     private var selectedTemplate: MaterialGroupTemplateType {
-        selectedGroup?.templateType ?? .interiorWallBuild
+        primarySelectedGroup?.templateType ?? .interiorWallBuild
     }
 
     var body: some View {
@@ -39,48 +43,34 @@ struct MaterialGeneratorView: View {
             Section {
                 let groups = orderedGroups
 
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(groups) { group in
-                            Button {
-                                selectedGroupID = group.id
-                            } label: {
-                                Text(group.name)
-                                    .font(.subheadline)
-                                    .padding(.vertical, 6)
-                                    .padding(.horizontal, 12)
-                                    .background(
-                                        selectedGroupID == group.id || (selectedGroupID == nil && group.id == groups.first?.id)
-                                            ? Color.accentColor.opacity(0.15)
-                                            : Color.clear
-                                    )
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .stroke(
-                                                selectedGroupID == group.id || (selectedGroupID == nil && group.id == groups.first?.id)
-                                                    ? Color.accentColor
-                                                    : Color.secondary.opacity(0.4),
-                                                lineWidth: 1
-                                            )
-                                    )
-                                    .cornerRadius(10)
-                            }
-                            .buttonStyle(.plain)
-                        }
+                WrappedLayout(spacing: 8) {
+                    ForEach(groups) { group in
+                        jobTypeChip(for: group)
                     }
-                    .padding(.vertical, 4)
                 }
+                .padding(.vertical, 4)
             } header: {
                 VStack(spacing: 4) {
-                    Text("Beta")
+                    Text("BETA")
                         .font(.caption)
                         .foregroundColor(.orange)
                         .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
 
-                    Text("JOB TYPE")
-                        .font(.headline)
-                        .padding(.top, 2)
+                    HStack {
+                        Text("JOB TYPE")
+                            .font(.headline)
+
+                        Spacer()
+
+                        Button("Clear") {
+                            selectedGroupIDs.removeAll()
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .disabled(selectedGroupIDs.isEmpty)
+                    }
+                    .padding(.top, 2)
                 }
             }
 
@@ -97,6 +87,7 @@ struct MaterialGeneratorView: View {
             Button("Generate Materials") {
                 generateMaterials()
             }
+            .disabled(selectedGroupIDs.isEmpty)
 
             if let validationMessage {
                 Text(validationMessage)
@@ -173,13 +164,18 @@ struct MaterialGeneratorView: View {
                 }
             }
         }
-        .onAppear {
-            if selectedGroupID == nil {
-                selectedGroupID = orderedGroups.first?.id
-            }
-        }
         .onChange(of: lengthText) { _, _ in regenerateAfterDimensionChange() }
         .onChange(of: secondaryText) { _, _ in regenerateAfterDimensionChange() }
+        .onChange(of: selectedGroupIDs) { _, _ in
+            if selectedGroupIDs.isEmpty {
+                validationMessage = nil
+                suggestedMaterials = []
+                generated = []
+                selectedMaterialName = nil
+            } else {
+                regenerateAfterDimensionChange()
+            }
+        }
     }
 
     private var smartSuggestionsSection: some View {
@@ -206,6 +202,42 @@ struct MaterialGeneratorView: View {
                 suggestionGroup(title: "Commonly paired", stats: paired)
             }
         }
+    }
+
+    private func jobTypeChip(for group: MaterialGroup) -> some View {
+        let isSelected = selectedGroupIDs.contains(group.id)
+
+        return Button {
+            if isSelected {
+                selectedGroupIDs.remove(group.id)
+            } else {
+                selectedGroupIDs.insert(group.id)
+            }
+        } label: {
+            HStack(spacing: 6) {
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.caption)
+                }
+
+                Text(group.name)
+                    .font(.subheadline)
+                    .lineLimit(1)
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .foregroundColor(isSelected ? .accentColor : .primary)
+            .background(isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
+            .overlay(
+                Capsule()
+                    .stroke(
+                        isSelected ? Color.accentColor : Color.secondary.opacity(0.4),
+                        lineWidth: 1
+                    )
+            )
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     private func suggestionGroup(title: String, stats: [MaterialUsageStats]) -> some View {
@@ -289,8 +321,8 @@ struct MaterialGeneratorView: View {
         let length = parseDouble(lengthText)
         let secondary = parseDouble(secondaryText)
 
-        guard let group = selectedGroup else {
-            validationMessage = "Add materials in Material Pricing to create job types."
+        guard !selectedGroups.isEmpty else {
+            validationMessage = "Select at least one job type."
             generated = []
             suggestedMaterials = []
             return
@@ -303,7 +335,7 @@ struct MaterialGeneratorView: View {
             return
         }
 
-        guard !materialsStore.items(inGroupID: group.id).isEmpty else {
+        guard selectedGroups.allSatisfy({ !materialsStore.items(inGroupID: $0.id).isEmpty }) else {
             validationMessage = "Add materials in Material Pricing to create job types."
             generated = []
             suggestedMaterials = []
@@ -312,26 +344,29 @@ struct MaterialGeneratorView: View {
 
         validationMessage = nil
 
-        let context = JobContext(
-            jobType: group.templateType.jobType,
-            lengthFeet: length,
-            secondaryFeet: secondary,
-            heightFeet: nil,
-            areaSqFt: nil,
-            doorCount: 0,
-            windowCount: 0,
-            coats: 2,
-            includesCeiling: true,
-            wasteFactor: 0.1,
-            notes: nil
-        )
+        let recommendations = selectedGroups.flatMap { group in
+            let context = JobContext(
+                jobType: group.templateType.jobType,
+                lengthFeet: length,
+                secondaryFeet: secondary,
+                heightFeet: nil,
+                areaSqFt: nil,
+                doorCount: 0,
+                windowCount: 0,
+                coats: 2,
+                includesCeiling: true,
+                wasteFactor: 0.1,
+                notes: nil
+            )
 
-        let recommendations = MaterialsRecommender(catalog: materialsStore)
-            .recommendMaterials(for: group, context: context)
-        suggestedMaterials = recommendations
-        debugGuardForGroupConsistency(recommendations, selectedGroup: group)
-        generated = recommendations.map(materialFromRecommendation)
-        selectedMaterialName = recommendations.first?.name
+            return MaterialsRecommender(catalog: materialsStore)
+                .recommendMaterials(for: group, context: context)
+        }
+        let mergedRecommendations = mergeRecommendations(recommendations)
+        suggestedMaterials = mergedRecommendations
+        debugGuardForGroupConsistency(mergedRecommendations, selectedGroupIDs: selectedGroupIDs)
+        generated = mergedRecommendations.map(materialFromRecommendation)
+        selectedMaterialName = mergedRecommendations.first?.name
     }
 
     private func regenerateAfterDimensionChange() {
@@ -369,7 +404,7 @@ struct MaterialGeneratorView: View {
             unit: unit,
             category: "Smart suggestion",
             notes: note,
-            sourceGroupID: selectedGroup?.id ?? "",
+            sourceGroupID: primarySelectedGroup?.id ?? "",
             estimatedUnitCost: stats.averageUnitCost.map { safeNumber($0) }
         )
     }
@@ -378,9 +413,71 @@ struct MaterialGeneratorView: View {
         recs.map(materialFromRecommendation)
     }
 
+    private func mergeRecommendations(_ recs: [MaterialRecommendation]) -> [MaterialRecommendation] {
+        struct RecommendationKey: Hashable {
+            let name: String
+            let unit: String
+        }
+
+        struct RecommendationAccumulator {
+            var name: String
+            var unit: String
+            var category: String
+            var notes: String?
+            var sourceGroupID: String
+            var quantity: Double
+            var estimatedUnitCost: Double?
+        }
+
+        var merged: [RecommendationKey: RecommendationAccumulator] = [:]
+
+        for rec in recs {
+            let key = RecommendationKey(
+                name: rec.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+                unit: rec.unit.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            )
+
+            if var existing = merged[key] {
+                existing.quantity += rec.quantity
+                if existing.estimatedUnitCost == nil {
+                    existing.estimatedUnitCost = rec.estimatedUnitCost
+                }
+                if existing.notes == nil {
+                    existing.notes = rec.notes
+                }
+                merged[key] = existing
+            } else {
+                merged[key] = RecommendationAccumulator(
+                    name: rec.name,
+                    unit: rec.unit,
+                    category: rec.category,
+                    notes: rec.notes,
+                    sourceGroupID: rec.sourceGroupID,
+                    quantity: rec.quantity,
+                    estimatedUnitCost: rec.estimatedUnitCost
+                )
+            }
+        }
+
+        return merged.values
+            .sorted { $0.name < $1.name }
+            .map { accumulator in
+                MaterialRecommendation(
+                    name: accumulator.name,
+                    quantity: accumulator.quantity,
+                    unit: accumulator.unit,
+                    category: accumulator.category,
+                    notes: accumulator.notes,
+                    sourceGroupID: accumulator.sourceGroupID,
+                    estimatedUnitCost: accumulator.estimatedUnitCost
+                )
+            }
+    }
+
     private func createNewEstimateFromSuggestedMaterials() {
         let materials = makeEstimateMaterials(from: suggestedMaterials)
-        _ = jobVM.createEstimate(from: materials, jobType: selectedTemplate.jobType)
+        let jobType = primarySelectedGroup?.templateType.jobType ?? selectedTemplate.jobType
+        _ = jobVM.createEstimate(from: materials, jobType: jobType)
         dismiss()
     }
 
@@ -389,14 +486,63 @@ struct MaterialGeneratorView: View {
         jobVM.appendMaterials(materials, to: job.id)
     }
 
-    private func debugGuardForGroupConsistency(_ recommendations: [MaterialRecommendation], selectedGroup: MaterialGroup) {
-        let invalid = recommendations.filter { $0.sourceGroupID != selectedGroup.id }
+    private func debugGuardForGroupConsistency(_ recommendations: [MaterialRecommendation], selectedGroupIDs: Set<String>) {
+        let invalid = recommendations.filter { !selectedGroupIDs.contains($0.sourceGroupID) }
         if !invalid.isEmpty {
-            print("❌ Generator leakage: selectedGroup=\(selectedGroup.name) (\(selectedGroup.id))")
+            print("❌ Generator leakage: selectedGroupIDs=\(selectedGroupIDs)")
             invalid.forEach { item in
                 print("  - \(item.name) sourceGroupID=\(item.sourceGroupID)")
             }
-            assertionFailure("Suggested materials include items not in selected group")
+            assertionFailure("Suggested materials include items not in selected groups")
+        }
+    }
+}
+
+private struct WrappedLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? .greatestFiniteMagnitude
+        var rowWidth: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        var totalHeight: CGFloat = 0
+        var maxRowWidth: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if rowWidth > 0, rowWidth + spacing + size.width > maxWidth {
+                totalHeight += rowHeight + spacing
+                maxRowWidth = max(maxRowWidth, rowWidth)
+                rowWidth = size.width
+                rowHeight = size.height
+            } else {
+                rowWidth += (rowWidth == 0 ? 0 : spacing) + size.width
+                rowHeight = max(rowHeight, size.height)
+            }
+        }
+
+        totalHeight += rowHeight
+        maxRowWidth = max(maxRowWidth, rowWidth)
+
+        return CGSize(width: maxRowWidth, height: totalHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX
+        var y = bounds.minY
+        var rowHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x > bounds.minX, x + size.width > bounds.maxX {
+                x = bounds.minX
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+
+            subview.place(at: CGPoint(x: x, y: y), anchor: .topLeading, proposal: ProposedViewSize(size))
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
         }
     }
 }
