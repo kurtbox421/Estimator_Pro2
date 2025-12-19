@@ -145,7 +145,7 @@ struct InvoiceDetailView: View {
             previewAction: handlePreviewInvoice,
             shareAction: shareInvoicePDF,
             editAction: { isPresentingInvoiceEditor = true },
-            statusAction: markInvoiceAsSent
+            statusAction: { markInvoiceAsSent() }
         )
     }
 
@@ -311,19 +311,18 @@ struct InvoiceDetailView: View {
     }
 
     private func handleShareCompletion(completed: Bool) {
-        guard completed else { return }
-        markInvoiceAsSent(onlyIfDraft: true)
+        markInvoiceAsSentIfCompleted(completed)
     }
 
-    private func markInvoiceAsSent(onlyIfDraft: Bool = false) {
+    private func markInvoiceAsSentIfCompleted(_ completed: Bool) {
+        guard completed, invoice.status == .draft else { return }
+        markInvoiceAsSent()
+    }
+
+    private func markInvoiceAsSent() {
         let previousStatus = invoice.status
 
-        if onlyIfDraft {
-            guard invoice.status == .draft else { return }
-            invoice.status = .sent
-        } else {
-            invoice.status = invoice.status == .sent ? .draft : .sent
-        }
+        invoice.status = invoice.status == .sent ? .draft : .sent
 
         invoiceVM.update(invoice) { error in
             guard let error else { return }
