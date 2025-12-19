@@ -1309,16 +1309,60 @@ struct CompanyDetailsView: View {
     @EnvironmentObject private var onboarding: OnboardingProgressStore
 
     var body: some View {
-        Form {
-            Section("Company") {
-                TextField("Company name", text: $companySettings.companyName)
-                TextField("Address", text: $companySettings.companyAddress)
-                TextField("Phone", text: $companySettings.companyPhone)
-                    .keyboardType(.phonePad)
-                TextField("Email", text: $companySettings.companyEmail)
-                    .keyboardType(.emailAddress)
-                    .textInputAutocapitalization(.never)
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.49, green: 0.38, blue: 1.0),
+                    Color(red: 0.25, green: 0.28, blue: 0.60)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 24) {
+                    RoundedCard {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Company")
+                                .font(.headline)
+                                .foregroundColor(.white)
+
+                            VStack(spacing: 0) {
+                                TextField("Company name", text: $companySettings.companyName)
+                                    .textInputAutocapitalization(.words)
+                                    .autocorrectionDisabled()
+                                    .companyFieldStyle()
+
+                                Divider().overlay(Color.white.opacity(0.12))
+
+                                TextField("Address", text: $companySettings.companyAddress)
+                                    .textInputAutocapitalization(.words)
+                                    .companyFieldStyle()
+
+                                Divider().overlay(Color.white.opacity(0.12))
+
+                                TextField("Phone", text: $companySettings.companyPhone)
+                                    .keyboardType(.phonePad)
+                                    .companyFieldStyle()
+
+                                Divider().overlay(Color.white.opacity(0.12))
+
+                                TextField("Email", text: $companySettings.companyEmail)
+                                    .keyboardType(.emailAddress)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                                    .companyFieldStyle()
+                            }
+                        }
+                    }
+                    .frame(maxWidth: 560)
+                    .padding(.horizontal, 24)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 32)
             }
+            .scrollDismissesKeyboard(.interactively)
         }
         .navigationTitle("Company details")
         .onAppear(perform: updateCompletion)
@@ -1336,6 +1380,18 @@ struct CompanyDetailsView: View {
 
         onboarding.companyProfileComplete = nameFilled && addressFilled && phoneFilled && emailFilled
         onboarding.evaluateCompletion()
+    }
+}
+
+private extension View {
+    func companyFieldStyle() -> some View {
+        self
+            .font(.body)
+            .foregroundColor(.white)
+            .tint(.white)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 52)
+            .padding(.horizontal, 12)
     }
 }
 
@@ -1587,4 +1643,3 @@ private struct CommonMaterialRow: View {
         }
     }
 }
-
