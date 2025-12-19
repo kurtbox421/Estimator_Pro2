@@ -204,6 +204,37 @@ final class CompanySettingsStore: ObservableObject {
         }
     }
 
+    @MainActor
+    func removeLogo() async {
+        guard let uid = currentUserID else { return }
+
+        isUploadingLogo = true
+        defer { isUploadingLogo = false }
+
+        do {
+            if let currentLogoPath {
+                let ref = storage.reference(withPath: currentLogoPath)
+                try await ref.delete()
+            }
+        } catch {
+            print("Failed to remove logo: \(error.localizedDescription)")
+        }
+
+        currentLogoPath = nil
+        logoImage = nil
+        CompanyLogoLoader.clearCache(for: uid)
+
+        var updatedSettings = settings
+        updatedSettings.logoPath = nil
+        persistence.save(updatedSettings, to: CompanyStorage.fileName(for: uid))
+
+        do {
+            try companyDocument(for: uid).setData(from: updatedSettings, merge: true)
+        } catch {
+            print("Failed to clear logo path: \(error.localizedDescription)")
+        }
+    }
+
     private func fetchLogoIfNeeded(from path: String, for uid: String) {
         guard path != currentLogoPath || logoImage == nil else { return }
         if let cached = CompanyLogoLoader.loadLogo(for: uid) {

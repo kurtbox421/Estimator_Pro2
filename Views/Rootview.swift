@@ -1408,19 +1408,45 @@ struct BrandingLogoView: View {
 
     var body: some View {
         ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.49, green: 0.38, blue: 1.0),
+                    Color(red: 0.25, green: 0.28, blue: 0.60)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
             ScrollView {
                 VStack(spacing: 24) {
-                    logoPreview
+                    RoundedCard {
+                        VStack(spacing: 20) {
+                            Text("Branding")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity, alignment: .leading)
 
-                    logoPickerButton
+                            logoPreview
 
-                    Text("Your logo will appear on estimates and invoices where you add it later.")
-                        .font(.footnote)
-                        .foregroundColor(.white.opacity(0.85))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
+                            Text("Logo appears on invoices and estimates.")
+                                .font(.footnote)
+                                .foregroundColor(.white.opacity(0.7))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                            VStack(spacing: 12) {
+                                logoPickerButton
+
+                                if logoImage != nil {
+                                    removeLogoButton
+                                }
+                            }
+                        }
+                    }
+                    .frame(maxWidth: 600)
+                    .padding(.horizontal, 24)
                 }
-                .padding(.horizontal, 24)
+                .frame(maxWidth: .infinity)
                 .padding(.vertical, 32)
             }
 
@@ -1461,32 +1487,34 @@ struct BrandingLogoView: View {
 
     @ViewBuilder
     private var logoPreview: some View {
-        if let logoImage {
-            Image(uiImage: logoImage)
-                .resizable()
-                .scaledToFit()
-                .frame(maxWidth: 240, maxHeight: 240)
-                .cornerRadius(22)
-                .shadow(color: Color.black.opacity(0.25), radius: 10, x: 0, y: 8)
-                .padding(.top, 12)
-        } else {
-            VStack(spacing: 10) {
-                Image(systemName: "photo.on.rectangle.angled")
-                    .font(.system(size: 34, weight: .medium))
-                    .foregroundColor(.white.opacity(0.7))
-                Text("No logo yet")
-                    .font(.headline)
-                    .foregroundColor(.white.opacity(0.8))
+        ZStack {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color.white.opacity(0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                )
+
+            if let logoImage {
+                Image(uiImage: logoImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 180, maxHeight: 180)
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            } else {
+                VStack(spacing: 8) {
+                    Image(systemName: "building.2")
+                        .font(.system(size: 34, weight: .medium))
+                        .foregroundColor(.white.opacity(0.7))
+                    Text("No logo selected")
+                        .font(.headline)
+                        .foregroundColor(.white.opacity(0.8))
+                }
+                .padding(.vertical, 8)
             }
-            .frame(maxWidth: 260, minHeight: 200)
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(style: StrokeStyle(lineWidth: 2, dash: [8]))
-                    .foregroundColor(.white.opacity(0.35))
-            )
-            .padding(.top, 12)
         }
+        .frame(maxWidth: .infinity)
+        .frame(height: 220)
     }
 
     private func loadStoredLogo() {
@@ -1529,10 +1557,31 @@ struct BrandingLogoView: View {
         .foregroundColor(.white)
         .padding(.vertical, 12)
         .padding(.horizontal, 18)
+        .frame(maxWidth: .infinity)
         .background(
-            Capsule()
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(Color.accentColor)
         )
+    }
+
+    private var removeLogoButton: some View {
+        Button(role: .destructive) {
+            Task {
+                await companySettings.removeLogo()
+                logoImage = companySettings.logoImage
+            }
+        } label: {
+            Text("Remove logo")
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.red.opacity(0.22))
+                )
+        }
+        .buttonStyle(.plain)
+        .foregroundColor(.red)
     }
 }
 
