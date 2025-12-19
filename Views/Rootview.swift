@@ -1593,49 +1593,126 @@ struct EstimateDefaultsView: View {
     @State private var newPrice: String = ""
 
     var body: some View {
-        List {
-            Section("Common materials") {
-                if settingsManager.commonMaterials.isEmpty {
-                    Text("Add materials you use all the time (e.g., \"1/2\" drywall sheet\", \"Cement mix\").")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                        .listRowBackground(Color.clear)
-                } else {
-                    ForEach(Array(settingsManager.commonMaterials.enumerated()), id: \.element.id) { index, _ in
-                        CommonMaterialRow(
-                            name: nameBinding(for: index),
-                            price: priceBinding(for: index)
-                        )
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.49, green: 0.38, blue: 1.0),
+                    Color(red: 0.25, green: 0.28, blue: 0.60)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 24) {
+                    RoundedCard {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Common materials")
+                                .font(.headline)
+                                .foregroundColor(.white)
+
+                            Text("Add materials you use all the time (e.g., \"1/2\" drywall sheet\", \"Cement mix\").")
+                                .font(.footnote)
+                                .foregroundColor(.white.opacity(0.7))
+
+                            addMaterialRow
+
+                            if let validationMessage {
+                                Text(validationMessage)
+                                    .font(.footnote)
+                                    .foregroundColor(Color.red.opacity(0.85))
+                            }
+
+                            if settingsManager.commonMaterials.isEmpty {
+                                Text("No materials added yet.")
+                                    .font(.footnote)
+                                    .foregroundColor(.white.opacity(0.6))
+                                    .padding(.top, 4)
+                            } else {
+                                VStack(spacing: 0) {
+                                    ForEach(Array(settingsManager.commonMaterials.enumerated()), id: \.element.id) { index, _ in
+                                        CommonMaterialRow(
+                                            name: nameBinding(for: index),
+                                            price: priceBinding(for: index),
+                                            onDelete: { deleteMaterial(at: index) }
+                                        )
+
+                                        if index != settingsManager.commonMaterials.indices.last {
+                                            Divider().overlay(Color.white.opacity(0.12))
+                                        }
+                                    }
+                                }
+                                .padding(.top, 4)
+                            }
+                        }
                     }
-                    .onDelete(perform: settingsManager.deleteMaterials)
+                    .frame(maxWidth: 640)
+                    .padding(.horizontal, 24)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 32)
             }
-
-            Section("Add new") {
-                HStack(spacing: 12) {
-                    TextField("Material name", text: $newName)
-
-                    Spacer()
-
-                    TextField("Price", text: $newPrice)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 110)
-
-                    Button {
-                        addMaterial()
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title3)
-                    }
-                    .disabled(!canAddMaterial)
-                }
-            }
+            .scrollDismissesKeyboard(.interactively)
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .listRowBackground(Color.clear)
         .navigationTitle("Estimate defaults")
+    }
+
+    private var addMaterialRow: some View {
+        HStack(spacing: 12) {
+            TextField("Material name", text: $newName)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+                .materialFieldStyle()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .onSubmit(addMaterialIfPossible)
+
+            TextField("Price", text: $newPrice)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .materialFieldStyle()
+                .frame(width: 120)
+                .onSubmit(addMaterialIfPossible)
+
+            Button {
+                addMaterial()
+            } label: {
+                Image(systemName: "plus")
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        Circle()
+                            .fill(Color.white.opacity(canAddMaterial ? 0.2 : 0.08))
+                    )
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+            .disabled(!canAddMaterial)
+            .opacity(canAddMaterial ? 1 : 0.6)
+        }
+    }
+
+    private var validationMessage: String? {
+        let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let priceValue = parseDouble(newPrice)
+
+        if trimmedName.isEmpty && newPrice.isEmpty {
+            return nil
+        }
+
+        if trimmedName.isEmpty {
+            return "Enter a material name."
+        }
+
+        if priceValue == nil {
+            return "Enter a valid price."
+        }
+
+        return nil
     }
 
     private var canAddMaterial: Bool {
@@ -1652,6 +1729,15 @@ struct EstimateDefaultsView: View {
         settingsManager.addMaterial(name: trimmedName, price: safePrice)
         newName = ""
         newPrice = ""
+    }
+
+    private func addMaterialIfPossible() {
+        guard canAddMaterial else { return }
+        addMaterial()
+    }
+
+    private func deleteMaterial(at index: Int) {
+        settingsManager.deleteMaterials(at: IndexSet(integer: index))
     }
 
     private func nameBinding(for index: Int) -> Binding<String> {
@@ -1678,17 +1764,55 @@ struct EstimateDefaultsView: View {
 private struct CommonMaterialRow: View {
     let name: Binding<String>
     let price: Binding<Double>
+    let onDelete: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
             TextField("Material", text: name)
-
-            Spacer()
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+                .materialFieldStyle()
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             TextField("Price", value: price, format: .number)
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
-                .frame(width: 110)
+                .materialFieldStyle()
+                .frame(width: 120)
+
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                Image(systemName: "trash")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.red)
+                    .frame(width: 30, height: 30)
+                    .background(
+                        Circle()
+                            .fill(Color.red.opacity(0.18))
+                    )
+            }
+            .buttonStyle(.plain)
         }
+        .padding(.vertical, 6)
+    }
+}
+
+private extension View {
+    func materialFieldStyle() -> some View {
+        self
+            .font(.body)
+            .foregroundColor(.white)
+            .tint(.white)
+            .frame(height: 44)
+            .padding(.horizontal, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.white.opacity(0.08))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                    )
+            )
     }
 }
