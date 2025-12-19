@@ -5,6 +5,7 @@ struct MaterialPricingSettingsView: View {
 
     @State private var overrideValues: [String: Double] = [:]
     @State private var productURLTexts: [String: String] = [:]
+    @State private var expandedMaterialIDs: Set<String> = []
     @State private var newCustomName: String = ""
     @State private var newCustomUnit: String = ""
     @State private var newCustomPrice: String = ""
@@ -28,38 +29,53 @@ struct MaterialPricingSettingsView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            List {
-                Section {
-                    Text("Customize the unit prices used when materials are generated from the templates above. Your overrides will be saved and applied every time the generator is used.")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                        .listRowBackground(Color.clear)
-                }
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.49, green: 0.38, blue: 1.0),
+                    Color(red: 0.25, green: 0.28, blue: 0.60)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
 
-                ForEach(groupedMaterials, id: \.group.id) { group in
-                    Section(group.group.name) {
-                        ForEach(group.items, id: \.id) { material in
-                            MaterialPricingRow(
-                                material: material,
-                                price: priceBinding(for: material),
-                                productURL: productURLBinding(for: material),
-                                resetOverride: {
-                                    materialsStore.resetOverride(for: material.id)
-                                    overrideValues[material.id] = material.defaultUnitCost
-                                },
-                                onEdit: { startEditing(material) },
-                                onDelete: {
-                                    deleteTarget = material
-                                    isShowingDeleteConfirm = true
-                                },
-                                store: materialsStore
-                            )
-                        }
+            ScrollView {
+                VStack(spacing: 24) {
+                    RoundedCard {
+                        Text("Customize the unit prices used when materials are generated from the templates above. Your overrides will be saved and applied every time the generator is used.")
+                            .font(.footnote)
+                            .foregroundColor(.white.opacity(0.8))
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .id(group.group.id)
+                    .frame(maxWidth: 720)
+
+                    ForEach(groupedMaterials, id: \.group.id) { group in
+                        MaterialPricingSection(
+                            title: group.group.name,
+                            materials: group.items,
+                            store: materialsStore,
+                            expandedMaterialIDs: $expandedMaterialIDs,
+                            priceBinding: priceBinding,
+                            productURLBinding: productURLBinding,
+                            onEdit: startEditing,
+                            onDelete: { material in
+                                deleteTarget = material
+                                isShowingDeleteConfirm = true
+                            },
+                            onResetOverride: { material in
+                                materialsStore.resetOverride(for: material.id)
+                                overrideValues[material.id] = material.defaultUnitCost
+                            }
+                        )
+                        .id(group.group.id)
+                    }
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 32)
             }
+            .scrollDismissesKeyboard(.interactively)
         }
         .navigationTitle("Material pricing")
         .toolbar {
@@ -87,43 +103,99 @@ struct MaterialPricingSettingsView: View {
         }
         .sheet(isPresented: $showingMaterialSheet) {
             NavigationStack {
-                Form {
-                    Section(editTarget == nil ? "Add generator material" : "Edit generator material") {
-                        TextField("Name", text: $newCustomName)
-                        TextField("Unit (each, tube, sq ft)", text: $newCustomUnit)
-                        TextField("Unit cost", text: $newCustomPrice)
-                            .keyboardType(.decimalPad)
+                ZStack {
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.49, green: 0.38, blue: 1.0),
+                            Color(red: 0.25, green: 0.28, blue: 0.60)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .ignoresSafeArea()
 
-                        TextField("Product URL (optional)", text: $newCustomProductURL)
-                            .keyboardType(.URL)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            RoundedCard {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    Text(editTarget == nil ? "Add generator material" : "Edit generator material")
+                                        .font(.headline)
+                                        .foregroundColor(.white)
 
-                        Picker("Category", selection: $newCustomCategory) {
-                            ForEach(MaterialCategory.allCases) { category in
-                                Text(category.displayName).tag(category)
+                                    VStack(spacing: 0) {
+                                        materialField("Name", text: $newCustomName)
+                                            .textInputAutocapitalization(.words)
+
+                                        Divider().overlay(Color.white.opacity(0.12))
+
+                                        materialField("Unit (each, tube, sq ft)", text: $newCustomUnit)
+                                            .textInputAutocapitalization(.words)
+
+                                        Divider().overlay(Color.white.opacity(0.12))
+
+                                        materialField("Unit cost", text: $newCustomPrice)
+                                            .textInputAutocapitalization(.never)
+                                            .keyboardType(.decimalPad)
+                                    }
+
+                                    materialField("Product URL (optional)", text: $newCustomProductURL)
+                                        .keyboardType(.URL)
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled()
+
+                                    Picker("Category", selection: $newCustomCategory) {
+                                        ForEach(MaterialCategory.allCases) { category in
+                                            Text(category.displayName).tag(category)
+                                        }
+                                    }
+                                    .pickerStyle(.menu)
+                                    .tint(.white)
+
+                                    if newCustomCategory == .custom {
+                                        materialField("Custom category name", text: $newCustomCategoryName)
+                                            .textInputAutocapitalization(.words)
+                                    }
+                                }
                             }
+                            .frame(maxWidth: 640)
+
+                            RoundedCard {
+                                VStack(alignment: .leading, spacing: 16) {
+                                    Text("Coverage (optional)")
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+
+                                    VStack(spacing: 0) {
+                                        materialField("Coverage amount", text: $newCustomCoverageQuantity)
+                                            .textInputAutocapitalization(.never)
+                                            .keyboardType(.decimalPad)
+
+                                        Divider().overlay(Color.white.opacity(0.12))
+
+                                        Picker("Coverage unit", selection: $newCustomCoverageUnit) {
+                                            Text("Sq ft").tag("sqft")
+                                            Text("Linear ft").tag("lf")
+                                            Text("Each").tag("each")
+                                        }
+                                        .pickerStyle(.menu)
+                                        .tint(.white)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.horizontal, 12)
+                                        .frame(height: 52)
+
+                                        Divider().overlay(Color.white.opacity(0.12))
+
+                                        materialField("Waste %", text: $newCustomWastePercent)
+                                            .textInputAutocapitalization(.never)
+                                            .keyboardType(.decimalPad)
+                                    }
+                                }
+                            }
+                            .frame(maxWidth: 640)
                         }
-                        .pickerStyle(.menu)
-
-                        if newCustomCategory == .custom {
-                            TextField("Custom category name", text: $newCustomCategoryName)
-                        }
-                    }
-
-                    Section("Coverage (optional)") {
-                        TextField("Coverage amount", text: $newCustomCoverageQuantity)
-                            .keyboardType(.decimalPad)
-
-                        Picker("Coverage unit", selection: $newCustomCoverageUnit) {
-                            Text("Sq ft").tag("sqft")
-                            Text("Linear ft").tag("lf")
-                            Text("Each").tag("each")
-                        }
-                        .pickerStyle(.menu)
-
-                        TextField("Waste %", text: $newCustomWastePercent)
-                            .keyboardType(.decimalPad)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 32)
                     }
                 }
                 .navigationTitle(editTarget == nil ? "New material" : "Edit material")
@@ -382,6 +454,74 @@ struct MaterialPricingSettingsView: View {
         formatter.minimumIntegerDigits = 1
         return formatter.string(from: NSNumber(value: value)) ?? ""
     }
+
+    private func materialField(_ title: String, text: Binding<String>) -> some View {
+        TextField(title, text: text)
+            .font(.body)
+            .foregroundColor(.white)
+            .tint(.white)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 52)
+            .padding(.horizontal, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.white.opacity(0.08))
+            )
+    }
+}
+
+private struct MaterialPricingSection: View {
+    let title: String
+    let materials: [MaterialItem]
+    let store: MaterialsCatalogStore
+    @Binding var expandedMaterialIDs: Set<String>
+    let priceBinding: (MaterialItem) -> Binding<Double>
+    let productURLBinding: (MaterialItem) -> Binding<String>
+    let onEdit: (MaterialItem) -> Void
+    let onDelete: (MaterialItem) -> Void
+    let onResetOverride: (MaterialItem) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(.white.opacity(0.7))
+                .textCase(.uppercase)
+                .padding(.horizontal, 8)
+
+            RoundedCard {
+                VStack(spacing: 0) {
+                    ForEach(Array(materials.enumerated()), id: \.element.id) { index, material in
+                        MaterialPricingRow(
+                            material: material,
+                            price: priceBinding(material),
+                            productURL: productURLBinding(material),
+                            resetOverride: { onResetOverride(material) },
+                            onEdit: { onEdit(material) },
+                            onDelete: { onDelete(material) },
+                            store: store,
+                            isExpanded: Binding(
+                                get: { expandedMaterialIDs.contains(material.id) },
+                                set: { newValue in
+                                    if newValue {
+                                        expandedMaterialIDs.insert(material.id)
+                                    } else {
+                                        expandedMaterialIDs.remove(material.id)
+                                    }
+                                }
+                            )
+                        )
+
+                        if index != materials.count - 1 {
+                            Divider().overlay(Color.white.opacity(0.12))
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: 720)
+        }
+        .frame(maxWidth: .infinity)
+    }
 }
 
 private struct MaterialPricingRow: View {
@@ -392,79 +532,177 @@ private struct MaterialPricingRow: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
     let store: MaterialsCatalogStore
+    @Binding var isExpanded: Bool
+
+    @State private var priceText: String = ""
+    @State private var validationMessage: String?
+    @FocusState private var isPriceFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 10) {
             header
-            urlFields
-            overrideButton
-        }
-        .padding(.vertical, 6)
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(action: onEdit) {
-                Label("Edit", systemImage: "pencil")
-            }
 
-            Button(role: .destructive, action: onDelete) {
-                Label("Delete", systemImage: "trash")
+            if isExpanded {
+                editFields
+            } else if let url = store.productURL(for: material) {
+                Link("Product link", destination: url)
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.7))
+            }
+        }
+        .padding(.vertical, 12)
+        .onChange(of: isExpanded) { _, newValue in
+            if newValue {
+                priceText = formattedNumber(price.wrappedValue)
+                validationMessage = nil
             }
         }
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(material.name)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.primary)
+        HStack(spacing: 12) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(material.name)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.white)
 
-                Text(material.unit)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                        Text(material.unit)
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+
+                    Spacer()
+
+                    Text(price.wrappedValue.formatted(.currency(code: "USD")))
+                        .font(.headline.weight(.semibold))
+                        .foregroundColor(.white)
+
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.white.opacity(0.6))
+                }
             }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-            Spacer()
+            Menu {
+                Button(action: onEdit) {
+                    Label("Edit details", systemImage: "pencil")
+                }
 
-            TextField(
-                "Unit cost",
-                value: price,
-                format: .currency(code: "USD")
-            )
-            .keyboardType(.decimalPad)
-            .multilineTextAlignment(.trailing)
-            .frame(width: 140)
+                Button(role: .destructive, action: onDelete) {
+                    Label("Delete", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.headline)
+                    .foregroundColor(.white.opacity(0.7))
+                    .padding(.leading, 6)
+            }
         }
     }
 
-    private var urlFields: some View {
+    private var editFields: some View {
         VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 12) {
+                Text("Price")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.7))
+
+                TextField("Unit cost", text: $priceText)
+                    .keyboardType(.decimalPad)
+                    .textInputAutocapitalization(.never)
+                    .focused($isPriceFocused)
+                    .font(.body.weight(.semibold))
+                    .foregroundColor(.white)
+                    .tint(.white)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.white.opacity(0.08))
+                    )
+
+                Spacer()
+
+                Button("Save") {
+                    savePrice()
+                }
+                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.white.opacity(0.16))
+                )
+                .foregroundColor(.white)
+            }
+
+            if let validationMessage {
+                Text(validationMessage)
+                    .font(.caption)
+                    .foregroundColor(.red.opacity(0.85))
+            }
+
             TextField("Product URL (optional)", text: productURL)
                 .keyboardType(.URL)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(.white.opacity(0.7))
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.white.opacity(0.08))
+                )
 
             if let url = store.productURL(for: material) {
-                Link("See Product Information", destination: url)
-                    .font(.caption2)
-                    .foregroundColor(.accentColor)
+                Link("See product information", destination: url)
+                    .font(.caption)
+                    .foregroundColor(.white.opacity(0.8))
                     .lineLimit(1)
             }
-        }
-    }
 
-    private var overrideButton: some View {
-        Group {
             if store.override(for: material.id) != nil {
                 Button(action: resetOverride) {
                     Text("Reset to default \(material.defaultUnitCost.formatted(.currency(code: "USD")))")
                         .font(.caption)
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(.white.opacity(0.8))
                 }
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
+    }
+
+    private func savePrice() {
+        let normalized = priceText.replacingOccurrences(of: ",", with: ".")
+        guard let parsed = parseDouble(normalized) else {
+            validationMessage = "Enter a valid price."
+            return
+        }
+
+        price.wrappedValue = parsed
+        priceText = formattedNumber(parsed)
+        validationMessage = nil
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isExpanded = false
+        }
+    }
+
+    private func formattedNumber(_ value: Double?) -> String {
+        guard let value else { return "" }
+        let formatter = NumberFormatter()
+        formatter.maximumFractionDigits = 4
+        formatter.minimumFractionDigits = 0
+        formatter.minimumIntegerDigits = 1
+        return formatter.string(from: NSNumber(value: value)) ?? ""
     }
 }
