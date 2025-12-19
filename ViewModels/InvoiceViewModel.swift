@@ -31,11 +31,11 @@ class InvoiceViewModel: ObservableObject {
     // MARK: - CRUD
 
     func add(_ invoice: Invoice) {
-        persist(invoice)
+        persist(invoice, completion: nil)
     }
 
-    func update(_ invoice: Invoice) {
-        persist(invoice)
+    func update(_ invoice: Invoice, completion: ((Error?) -> Void)? = nil) {
+        persist(invoice, completion: completion)
     }
 
     func delete(at offsets: IndexSet) {
@@ -166,7 +166,7 @@ class InvoiceViewModel: ObservableObject {
             }
     }
 
-    private func persist(_ invoice: Invoice) {
+    private func persist(_ invoice: Invoice, completion: ((Error?) -> Void)? = nil) {
         guard let uid = Auth.auth().currentUser?.uid else {
             logger.error("Attempted to persist invoice without an authenticated user")
             return
@@ -174,6 +174,7 @@ class InvoiceViewModel: ObservableObject {
 
         var invoiceToSave = invoice
         invoiceToSave.ownerID = uid
+        let previousInvoice = invoices.first(where: { $0.id == invoiceToSave.id })
 
         // Optimistically update local state while Firestore write completes
         if let existingIndex = invoices.firstIndex(where: { $0.id == invoiceToSave.id }) {
@@ -188,9 +189,44 @@ class InvoiceViewModel: ObservableObject {
                 .document(uid)
                 .collection("invoices")
                 .document(invoiceToSave.id.uuidString)
-                .setData(from: invoiceToSave)
+                .setData(from: invoiceToSave) { [weak self] error in
+                    guard let self else { return }
+                    if let error {
+                        DispatchQueue.main.async {
+                            if let previousInvoice {
+                                if let index = self.invoices.firstIndex(where: { $0.id == previousInvoice.id }) {
+                                    self.invoices[index] = previousInvoice
+                                } else {
+                                    self.invoices.append(previousInvoice)
+                                }
+                            } else {
+                                self.invoices.removeAll { $0.id == invoiceToSave.id }
+                            }
+                            self.invoices = self.sortInvoices(self.invoices)
+                            self.logger.error("Failed to save invoice: \(error.localizedDescription)")
+                            completion?(error)
+                        }
+                    } else {
+                        DispatchQueue.main.async {
+                            completion?(nil)
+                        }
+                    }
+                }
         } catch {
             logger.error("Failed to save invoice: \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                if let previousInvoice {
+                    if let index = self.invoices.firstIndex(where: { $0.id == previousInvoice.id }) {
+                        self.invoices[index] = previousInvoice
+                    } else {
+                        self.invoices.append(previousInvoice)
+                    }
+                } else {
+                    self.invoices.removeAll { $0.id == invoiceToSave.id }
+                }
+                self.invoices = self.sortInvoices(self.invoices)
+                completion?(error)
+            }
         }
     }
 

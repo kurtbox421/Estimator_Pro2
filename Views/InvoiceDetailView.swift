@@ -19,6 +19,7 @@ struct InvoiceDetailView: View {
     @State private var isShowingShareSheet = false
     @State private var shareItems: [Any] = []
     @State private var shareError: String?
+    @State private var statusError: String?
     @State private var materialEditorMode: AddMaterialView.Mode?
     @State private var isShowingMaterialGenerator = false
 
@@ -47,7 +48,14 @@ struct InvoiceDetailView: View {
             } message: {
                 shareErrorMessage
             }
-            .sheet(isPresented: $isShowingShareSheet) { ShareSheet(activityItems: shareItems) }
+            .alert("Unable to update status", isPresented: statusErrorBinding) {
+                statusErrorActions
+            } message: {
+                statusErrorMessage
+            }
+            .sheet(isPresented: $isShowingShareSheet) {
+                ShareSheet(activityItems: shareItems, onComplete: handleShareCompletion)
+            }
             .sheet(isPresented: $isShowingClientPicker) { clientPickerSheet }
             .sheet(item: $materialEditorMode) { mode in
                 AddMaterialView(mode: mode, jobVM: jobVM, invoiceVM: invoiceVM)
@@ -117,6 +125,14 @@ struct InvoiceDetailView: View {
         Text(shareError ?? "Unknown error")
     }
 
+    private var statusErrorActions: some View {
+        Button("OK", role: .cancel) { statusError = nil }
+    }
+
+    private var statusErrorMessage: some View {
+        Text(statusError ?? "Unknown error")
+    }
+
     private var summarySection: some View {
         VStack(spacing: 12) {
             InvoiceSummaryCard(invoice: invoice, client: client)
@@ -180,6 +196,13 @@ struct InvoiceDetailView: View {
         Binding(
             get: { shareError != nil },
             set: { if !$0 { shareError = nil } }
+        )
+    }
+
+    private var statusErrorBinding: Binding<Bool> {
+        Binding(
+            get: { statusError != nil },
+            set: { if !$0 { statusError = nil } }
         )
     }
 
@@ -287,9 +310,26 @@ struct InvoiceDetailView: View {
         }
     }
 
-    private func markInvoiceAsSent() {
-        invoice.status = invoice.status == .sent ? .draft : .sent
-        invoiceVM.update(invoice)
+    private func handleShareCompletion(completed: Bool) {
+        guard completed else { return }
+        markInvoiceAsSent(onlyIfDraft: true)
+    }
+
+    private func markInvoiceAsSent(onlyIfDraft: Bool = false) {
+        let previousStatus = invoice.status
+
+        if onlyIfDraft {
+            guard invoice.status == .draft else { return }
+            invoice.status = .sent
+        } else {
+            invoice.status = invoice.status == .sent ? .draft : .sent
+        }
+
+        invoiceVM.update(invoice) { error in
+            guard let error else { return }
+            invoice.status = previousStatus
+            statusError = error.localizedDescription
+        }
     }
 
     private func callClient() {
