@@ -102,9 +102,9 @@ struct Invoice: Identifiable, Codable {
         self.id = decodedId
         self.invoiceNumber = decodedInvoiceNumber
             ?? InvoiceNumberManager.shared.generateInvoiceNumber()
-        self.title = try container.decode(String.self, forKey: .title)
+        self.title = try container.decodeIfPresent(String.self, forKey: .title) ?? "Invoice"
         self.clientID = try container.decodeIfPresent(UUID.self, forKey: .clientID)
-        self.clientName = try container.decode(String.self, forKey: .clientName)
+        self.clientName = try container.decodeIfPresent(String.self, forKey: .clientName) ?? ""
         self.materials = try container.decodeIfPresent([Material].self, forKey: .materials) ?? []
         if let decodedLaborLines = try container.decodeIfPresent([LaborLine].self, forKey: .laborLines) {
             self.laborLines = decodedLaborLines
@@ -115,7 +115,7 @@ struct Invoice: Identifiable, Codable {
         } else {
             self.laborLines = []
         }
-        self.status = try container.decode(InvoiceStatus.self, forKey: .status)
+        self.status = try container.decodeIfPresent(InvoiceStatus.self, forKey: .status) ?? .draft
         self.dueDate = try container.decodeIfPresent(Date.self, forKey: .dueDate)
         self.ownerID = try container.decodeIfPresent(String.self, forKey: .ownerID) ?? ""
     }
