@@ -62,10 +62,11 @@ final class SubscriptionManager: ObservableObject {
             let fetchedIDs = fetched.map(\.id)
             debugLog("[StoreKit] Retrieved product ids:", fetchedIDs)
             debugLog("[StoreKit] Returned product count:", fetched.count)
+            await logProductFetchDebug(requestedIDs: Self.productIDs, returnedIDs: fetchedIDs)
 
             guard !fetched.isEmpty else {
                 logEmptyProductsContext()
-                let message = "No products returned from the App Store. Check product IDs, bundle ID, and StoreKit configuration, then try again."
+                let message = "Products unavailable. Check network or product configuration."
                 lastError = message
                 setProductState(.failed(message))
                 products = []
@@ -230,14 +231,16 @@ final class SubscriptionManager: ObservableObject {
     }
 
     private func fetchProducts(within timeout: TimeInterval) async throws -> [Product] {
-        let ids = Set(Self.productIDs)
+        let requestedIDs = Self.productIDs
         let nanoseconds = UInt64(max(0, timeout) * 1_000_000_000)
         let logger = debugLog
 
         return try await withThrowingTaskGroup(of: [Product].self) { group in
             group.addTask {
-                logger("[StoreKit] Requesting products:", Array(ids))
-                return try await Product.products(for: ids)
+                logger("[StoreKit] Requesting products:", requestedIDs)
+                let products = try await Product.products(for: requestedIDs)
+                logger("[StoreKit] StoreKit 2 product ids:", products.map(\.id))
+                return products
             }
 
             group.addTask {
@@ -272,6 +275,16 @@ final class SubscriptionManager: ObservableObject {
         debugLog("[StoreKit] StoreKit config env:", storeKitEnvPath)
         debugLog("[StoreKit] Simulator device:", simulatorName)
         debugLog("[StoreKit] Xcode previews:", runningForPreviews)
+    }
+
+    private func logProductFetchDebug(requestedIDs: [String], returnedIDs: [String]) async {
+        let bundleID = Bundle.main.bundleIdentifier ?? "(missing bundle identifier)"
+        let entitlement = await activeSubscriptionEntitlement()
+
+        debugLog("[StoreKit] Debug Bundle ID:", bundleID)
+        debugLog("[StoreKit] Debug Requested IDs:", requestedIDs)
+        debugLog("[StoreKit] Debug Returned IDs:", returnedIDs)
+        debugLog("[StoreKit] Debug Active Entitlement:", entitlement?.productID ?? "none")
     }
 
     private func logEmptyProductsContext() {
