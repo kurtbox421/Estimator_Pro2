@@ -1,4 +1,5 @@
 import Foundation
+import FirebaseAuth
 import StoreKit
 import SwiftUI
 
@@ -27,11 +28,16 @@ final class SubscriptionManager: ObservableObject {
     @Published var statusMessage: String?
     @Published var shouldShowPaywall: Bool = false
     @Published var productState: ProductLoadState = .idle
+    @Published var accountLinkMessage: String?
     @Published private(set) var productStateChangeToken: Int = 0
+    @Published private(set) var hasActiveSubscriptionEntitlement = false
+    @Published private(set) var entitledUID: String?
 
     private let userDefaults: UserDefaults
     private let isProDefaultsKey = "SubscriptionManager.isPro"
+    private let entitlementUIDKey = "EntitledSubscriptionUID"
     private var updatesTask: Task<Void, Never>?
+    private var authHandle: AuthStateDidChangeListenerHandle?
 
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
@@ -43,10 +49,20 @@ final class SubscriptionManager: ObservableObject {
                 await self.handle(transactionResult: result)
             }
         }
+
+        authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
+            guard let self else { return }
+            if user == nil {
+                self.clearCachedProStatus()
+            }
+        }
     }
 
     deinit {
         updatesTask?.cancel()
+        if let authHandle {
+            Auth.auth().removeStateDidChangeListener(authHandle)
+        }
     }
 
     func loadProducts(timeout: TimeInterval = 10) async {
@@ -108,9 +124,12 @@ final class SubscriptionManager: ObservableObject {
             switch result {
             case .success(let verification):
                 await handle(transactionResult: verification)
-                if case .verified = verification, isPro {
-                    statusMessage = "Thanks for subscribing to Pro!"
-                    shouldShowPaywall = false
+                if case .verified = verification {
+                    await linkCurrentUserToEntitlement(showRestoreMessage: false)
+                    if isPro {
+                        statusMessage = "Thanks for subscribing to Pro!"
+                        shouldShowPaywall = false
+                    }
                 }
             case .userCancelled:
                 statusMessage = "Purchase cancelled."
@@ -146,19 +165,28 @@ final class SubscriptionManager: ObservableObject {
             statusMessage = message
         }
 
-        if let entitlement = await activeSubscriptionEntitlement() {
-            setIsPro(true)
-            statusMessage = "Restored Estimator Pro (\(entitlement.productID))."
+        await linkCurrentUserToEntitlement(showRestoreMessage: true)
+    }
+
+    func verifyEntitlements() async {
+        let entitlement = await activeSubscriptionEntitlement()
+        let entitlementActive = entitlement != nil
+        let currentUID = Auth.auth().currentUser?.uid
+        let storedUID = KeychainHelper.shared.string(forKey: entitlementUIDKey)
+
+        hasActiveSubscriptionEntitlement = entitlementActive
+        entitledUID = storedUID
+
+        let isProForCurrentUser = entitlementActive && storedUID == currentUID
+        setIsPro(isProForCurrentUser)
+
+        if entitlementActive && storedUID != currentUID {
+            accountLinkMessage = "This subscription is linked to a different account on this device. Tap Restore Purchases to link it."
         } else {
-            setIsPro(false)
-            statusMessage = "No purchases found to restore."
+            accountLinkMessage = nil
         }
     }
 
-    func refreshEntitlements() async {
-        let entitlement = await activeSubscriptionEntitlement()
-        setIsPro(entitlement != nil)
-    }
 
     private func activeSubscriptionEntitlement() async -> StoreKit.Transaction? {
         for await entitlement in StoreKit.Transaction.currentEntitlements {
@@ -197,6 +225,30 @@ final class SubscriptionManager: ObservableObject {
         userDefaults.set(newValue, forKey: isProDefaultsKey)
     }
 
+    private func clearCachedProStatus() {
+        setIsPro(false)
+        accountLinkMessage = nil
+    }
+
+    private func linkCurrentUserToEntitlement(showRestoreMessage: Bool) async {
+        await verifyEntitlements()
+
+        guard hasActiveSubscriptionEntitlement,
+              let currentUID = Auth.auth().currentUser?.uid else {
+            if showRestoreMessage, !hasActiveSubscriptionEntitlement {
+                statusMessage = "No purchases found to restore."
+            }
+            return
+        }
+
+        KeychainHelper.shared.setString(currentUID, forKey: entitlementUIDKey)
+        await verifyEntitlements()
+
+        if showRestoreMessage, let entitlement = await activeSubscriptionEntitlement() {
+            statusMessage = "Restored Estimator Pro (\(entitlement.productID))."
+        }
+    }
+
     func presentPaywall(after delay: TimeInterval = 0) {
         let nanoseconds = UInt64(max(0, delay) * 1_000_000_000)
 
@@ -224,7 +276,7 @@ final class SubscriptionManager: ObservableObject {
         switch transactionResult {
         case .verified(let transaction):
             await transaction.finish()
-            await refreshEntitlements()
+            await verifyEntitlements()
         case .unverified(_, let error):
             lastError = "Purchase verification failed: \(error.localizedDescription)"
         }

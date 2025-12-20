@@ -86,7 +86,7 @@ struct EstimatorProApp: App {
             .environmentObject(inventoryVM)
             .environmentObject(subscriptionManager)
             .task {
-                await subscriptionManager.refreshEntitlements()
+                await subscriptionManager.verifyEntitlements()
                 await subscriptionManager.loadProducts()
             }
         }
