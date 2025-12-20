@@ -6,6 +6,7 @@ struct PaywallView: View {
 
     @State private var selectedProductID: String?
     @State private var showingErrorAlert = false
+    @State private var showingPrivacyPolicy = false
 
     var body: some View {
         PaywallSideEffectView(
@@ -15,6 +16,10 @@ struct PaywallView: View {
             onProductStateChange: handleProductStateChange,
             onErrorChange: handleErrorChange
         )
+        .sheet(isPresented: $showingPrivacyPolicy) {
+            SafariView(url: privacyPolicyURL)
+                .ignoresSafeArea()
+        }
     }
 
     private var content: some View {
@@ -120,9 +125,13 @@ struct PaywallView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundColor(.white.opacity(0.75))
 
-                Link("Privacy Policy", destination: URL(string: "https://www.apple.com/legal/privacy/en-ww/")!)
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.white.opacity(0.75))
+                Button {
+                    showingPrivacyPolicy = true
+                } label: {
+                    Text("Privacy Policy")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.white.opacity(0.75))
+                }
             }
 
             if let message = subscriptionManager.statusMessage {
