@@ -400,7 +400,10 @@ private struct PaywallSideEffectView<Content: View>: View {
 
     var body: some View {
         content
-            .task { await subscriptionManager.loadProducts() }
+            .task {
+                await subscriptionManager.refreshEntitlements()
+                await subscriptionManager.loadProducts()
+            }
             .onChange(of: subscriptionManager.productStateChangeToken) { _, _ in
                 onProductStateChange(subscriptionManager.productState)
             }
