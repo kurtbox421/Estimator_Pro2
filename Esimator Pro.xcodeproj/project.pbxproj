@@ -16,7 +16,6 @@
 		3969FD152ECD3F410005C1AE /* AddMaterialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3969FD142ECD3F410005C1AE /* AddMaterialView.swift */; };
 		397D69672EDE36C7005E0657 /* InvoiceNumberManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 397D69662EDE36C7005E0657 /* InvoiceNumberManager.swift */; };
 		398814022EF4C1EE00665406 /* DeleteAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398814012EF4C1EE00665406 /* DeleteAccountView.swift */; };
-		398814042EF4C1FA00665406 /* PrivacyAndSecurityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398814032EF4C1FA00665406 /* PrivacyAndSecurityView.swift */; };
 		398814062EF4C20100665406 /* PrivacyPolicyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398814052EF4C20100665406 /* PrivacyPolicyView.swift */; };
 		398814082EF4C21F00665406 /* DeleteAccountViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398814072EF4C21F00665406 /* DeleteAccountViewModel.swift */; };
 		3988140A2EF4C22F00665406 /* PrivacyPolicyContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398814092EF4C22F00665406 /* PrivacyPolicyContent.swift */; };
@@ -29,6 +28,8 @@
 		398D93EC2ECFBAAE00A168FC /* ClientCardViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398D93EB2ECFBAAE00A168FC /* ClientCardViews.swift */; };
 		398D93EE2ECFC27900A168FC /* (null) in Sources */ = {isa = PBXBuildFile; };
 		398D94022ECFCEFE00A168FC /* InvoiceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398D94012ECFCEFE00A168FC /* InvoiceDetailView.swift */; };
+		3990BF442EF753D10029CE7B /* AccountSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3990BF432EF753D10029CE7B /* AccountSettingsView.swift */; };
+		3990BF462EF753ED0029CE7B /* SafariView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3990BF452EF753ED0029CE7B /* SafariView.swift */; };
 		39A3950B2ECD75B200D5E76D /* Rootview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39A3950A2ECD75B200D5E76D /* Rootview.swift */; };
 		39A3951D2ECD7EB500D5E76D /* SplashScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39A3951C2ECD7EB500D5E76D /* SplashScreenView.swift */; };
 		39A3951F2ECD7EC100D5E76D /* InvoiceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39A3951E2ECD7EC100D5E76D /* InvoiceViewModel.swift */; };
@@ -98,7 +99,6 @@
 		3969FD142ECD3F410005C1AE /* AddMaterialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddMaterialView.swift; sourceTree = "<group>"; };
 		397D69662EDE36C7005E0657 /* InvoiceNumberManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoiceNumberManager.swift; sourceTree = "<group>"; };
 		398814012EF4C1EE00665406 /* DeleteAccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeleteAccountView.swift; sourceTree = "<group>"; };
-		398814032EF4C1FA00665406 /* PrivacyAndSecurityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyAndSecurityView.swift; sourceTree = "<group>"; };
 		398814052EF4C20100665406 /* PrivacyPolicyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyPolicyView.swift; sourceTree = "<group>"; };
 		398814072EF4C21F00665406 /* DeleteAccountViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeleteAccountViewModel.swift; sourceTree = "<group>"; };
 		398814092EF4C22F00665406 /* PrivacyPolicyContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyPolicyContent.swift; sourceTree = "<group>"; };
@@ -110,6 +110,8 @@
 		398D93D52ECE902900A168FC /* Client.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Client.swift; sourceTree = "<group>"; };
 		398D93EB2ECFBAAE00A168FC /* ClientCardViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientCardViews.swift; sourceTree = "<group>"; };
 		398D94012ECFCEFE00A168FC /* InvoiceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoiceDetailView.swift; sourceTree = "<group>"; };
+		3990BF432EF753D10029CE7B /* AccountSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSettingsView.swift; sourceTree = "<group>"; };
+		3990BF452EF753ED0029CE7B /* SafariView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariView.swift; sourceTree = "<group>"; };
 		39A3950A2ECD75B200D5E76D /* Rootview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Rootview.swift; sourceTree = "<group>"; };
 		39A3951C2ECD7EB500D5E76D /* SplashScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreenView.swift; sourceTree = "<group>"; };
 		39A3951E2ECD7EC100D5E76D /* InvoiceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoiceViewModel.swift; sourceTree = "<group>"; };
@@ -249,8 +251,9 @@
 		3969FD052ECD36830005C1AE /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				3990BF452EF753ED0029CE7B /* SafariView.swift */,
+				3990BF432EF753D10029CE7B /* AccountSettingsView.swift */,
 				398814052EF4C20100665406 /* PrivacyPolicyView.swift */,
-				398814032EF4C1FA00665406 /* PrivacyAndSecurityView.swift */,
 				398814012EF4C1EE00665406 /* DeleteAccountView.swift */,
 				39F405A22EF1FD6C000337A7 /* SupplyDetailView.swift */,
 				39F405A02EF1FD66000337A7 /* InventoryView.swift */,
@@ -421,6 +424,7 @@
 				39F4059D2EF1FD44000337A7 /* SupplyItem.swift in Sources */,
 				398D93EC2ECFBAAE00A168FC /* ClientCardViews.swift in Sources */,
 				39B8DC812EDCD1B8005D0E08 /* NewClientForm.swift in Sources */,
+				3990BF462EF753ED0029CE7B /* SafariView.swift in Sources */,
 				397D69672EDE36C7005E0657 /* InvoiceNumberManager.swift in Sources */,
 				3969FD0F2ECD37F10005C1AE /* Material.swift in Sources */,
 				39A3950B2ECD75B200D5E76D /* Rootview.swift in Sources */,
@@ -428,11 +432,11 @@
 				39A3951F2ECD7EC100D5E76D /* InvoiceViewModel.swift in Sources */,
 				39B5C6172EEA570A00291220 /* MaterialComparisonBuilder.swift in Sources */,
 				AA0B0B0B0B0B0B0B0B0B0B0B /* EstimateViewModel.swift in Sources */,
+				3990BF442EF753D10029CE7B /* AccountSettingsView.swift in Sources */,
 				39B8DC8A2EDCDB7C005D0E08 /* SignUpView.swift in Sources */,
 				39B8DC8B2EDCDB7C005D0E08 /* SignInView.swift in Sources */,
 				AA02AA02AA02AA02AA02AA02 /* SettingsManager.swift in Sources */,
 				39B8DC732EDB6F4D005D0E08 /* MaterialSuggestionEngine.swift in Sources */,
-				398814042EF4C1FA00665406 /* PrivacyAndSecurityView.swift in Sources */,
 				3969FD0D2ECD372A0005C1AE /* JobDetailView.swift in Sources */,
 				3969FD022ECD36190005C1AE /* JobViewModel.swift in Sources */,
 				39B8DC712EDB6779005D0E08 /* Formatting.swift in Sources */,
