@@ -313,7 +313,8 @@ class InvoiceViewModel: ObservableObject {
         let logKey = "missing:\(documentPath)"
         guard !loggedDecodingFailures.contains(logKey) else { return }
         loggedDecodingFailures.insert(logKey)
-        logger.error("Missing fields in document \(documentPath): \(fields.joined(separator: \", \"))")
+        let fieldsString = fields.joined(separator: ", ")
+        logger.error("Missing fields in document \(documentPath): \(fieldsString)")
     }
 
     private func logDecodingError(_ error: Error, documentPath: String) {
