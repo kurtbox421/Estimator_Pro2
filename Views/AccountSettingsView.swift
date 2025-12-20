@@ -1,6 +1,7 @@
 import FirebaseAuth
 import StoreKit
 import SwiftUI
+import UIKit
 
 struct AccountSettingsView: View {
     @Environment(\.openURL) private var openURL
@@ -171,15 +172,22 @@ struct AccountSettingsView: View {
 
     private func openManageSubscriptions() async {
         if #available(iOS 15.0, *) {
-            do {
-                try await AppStore.showManageSubscriptions()
-                return
-            } catch {
+            if let windowScene = activeWindowScene() {
+                await AppStore.showManageSubscriptions(in: windowScene)
+            } else {
                 openURL(subscriptionsURL)
             }
         } else {
             openURL(subscriptionsURL)
         }
+    }
+
+    private func activeWindowScene() -> UIWindowScene? {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        if let activeScene = scenes.first(where: { $0.activationState == .foregroundActive }) {
+            return activeScene
+        }
+        return scenes.first
     }
 
     private func restorePurchases() async {
@@ -189,18 +197,11 @@ struct AccountSettingsView: View {
         defer { isRestoringPurchases = false }
 
         if #available(iOS 15.0, *) {
-            do {
-                try await AppStore.sync()
-                restoreAlert = AlertDetails(
-                    title: "Restore Complete",
-                    message: "Your purchases have been restored."
-                )
-            } catch {
-                restoreAlert = AlertDetails(
-                    title: "Restore Failed",
-                    message: error.localizedDescription
-                )
-            }
+            await AppStore.sync()
+            restoreAlert = AlertDetails(
+                title: "Restore Complete",
+                message: "Your purchases have been restored."
+            )
         } else {
             restoreAlert = AlertDetails(
                 title: "Restore Unavailable",

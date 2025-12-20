@@ -59,8 +59,7 @@ struct RootView: View {
     @State private var showingNewClient = false
     @State private var showingNewSupply = false
     @State private var showingMaterialGenerator = false
-    @State private var showingCompanyDetails = false
-    @State private var onboardingPreviewJobID: Job.ID?
+    @State private var navigationDestination: RootDestination?
 
     var body: some View {
         GeometryReader { geometry in
@@ -147,27 +146,18 @@ struct RootView: View {
             .presentationDetents([.medium])
             .presentationDragIndicator(.visible)
         }
-        .background(
-            NavigationLink(
-                "",
-                destination: CompanyDetailsView(),
-                isActive: $showingCompanyDetails
-            )
-            .opacity(0)
-        )
-        .background(
-            NavigationLink(
-                "",
-                destination: onboardingPreviewDestination,
-                isActive: Binding(
-                    get: { onboardingPreviewJobID != nil },
-                    set: { isActive in
-                        if !isActive { onboardingPreviewJobID = nil }
-                    }
-                )
-            )
-            .opacity(0)
-        )
+        .navigationDestination(item: $navigationDestination) { destination in
+            switch destination {
+            case .companyDetails:
+                CompanyDetailsView()
+            case .onboardingPreview(let jobID):
+                if let job = jobVM.job(for: jobID) {
+                    JobDetailView(estimateID: job.id)
+                } else {
+                    EmptyView()
+                }
+            }
+        }
         .onAppear(perform: refreshOnboardingProgress)
         .onChange(of: jobVM.jobs.count) { _, _ in refreshOnboardingProgress() }
         .onChange(of: clientVM.clients.count) { _, _ in refreshOnboardingProgress() }
@@ -433,7 +423,7 @@ struct RootView: View {
 
     private func goToCompanySettings() {
         selectedTab = .settings
-        showingCompanyDetails = true
+        navigationDestination = .companyDetails
     }
 
     private func goToAddClient() {
@@ -448,7 +438,9 @@ struct RootView: View {
 
     private func goToPreviewPDF() {
         selectedTab = .estimates
-        onboardingPreviewJobID = jobVM.jobs.first?.id
+        if let jobID = jobVM.jobs.first?.id {
+            navigationDestination = .onboardingPreview(jobID)
+        }
     }
 
     private func refreshOnboardingProgress() {
@@ -456,14 +448,18 @@ struct RootView: View {
         onboarding.hasAtLeastOneClient = !clientVM.clients.isEmpty
         onboarding.evaluateCompletion()
     }
+}
 
-    @ViewBuilder
-    private var onboardingPreviewDestination: some View {
-        if let jobID = onboardingPreviewJobID,
-           let job = jobVM.job(for: jobID) {
-            JobDetailView(estimateID: job.id)
-        } else {
-            EmptyView()
+private enum RootDestination: Hashable, Identifiable {
+    case companyDetails
+    case onboardingPreview(Job.ID)
+
+    var id: String {
+        switch self {
+        case .companyDetails:
+            return "companyDetails"
+        case .onboardingPreview(let jobID):
+            return "onboardingPreview-\(jobID)"
         }
     }
 }
