@@ -15,6 +15,7 @@ class InvoiceViewModel: ObservableObject {
     private let db: Firestore
     private var listener: ListenerRegistration?
     private var authHandle: AuthStateDidChangeListenerHandle?
+    private var loggedDecodingFailures: Set<String> = []
 
     init(database: Firestore = Firestore.firestore()) {
         self.db = database
@@ -152,12 +153,8 @@ class InvoiceViewModel: ObservableObject {
                 }
 
                 let decoded: [Invoice] = documents.compactMap { document in
-                    do {
-                        return try document.data(as: Invoice.self)
-                    } catch {
-                        self.logger.error("Failed to decode invoice \(document.documentID): \(error.localizedDescription)")
-                        return nil
-                    }
+                    guard document.exists else { return nil }
+                    return self.decodeInvoice(from: document)
                 }
 
                 DispatchQueue.main.async {
@@ -255,6 +252,79 @@ class InvoiceViewModel: ObservableObject {
             default:
                 return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
             }
+        }
+    }
+
+    private func decodeInvoice(from document: DocumentSnapshot) -> Invoice? {
+        let documentPath = document.reference.path
+        var data = document.data() ?? [:]
+        var patch: [String: Any] = [:]
+        var missingFields: [String] = []
+
+        if data["id"] == nil {
+            let fallbackId = UUID(uuidString: document.documentID)?.uuidString ?? UUID().uuidString
+            data["id"] = fallbackId
+            patch["id"] = fallbackId
+            missingFields.append("id")
+        }
+
+        if data["invoiceNumber"] == nil {
+            let fallbackNumber = InvoiceNumberManager.shared.generateInvoiceNumber()
+            data["invoiceNumber"] = fallbackNumber
+            patch["invoiceNumber"] = fallbackNumber
+            missingFields.append("invoiceNumber")
+        }
+
+        if data["title"] == nil {
+            data["title"] = "Invoice"
+            patch["title"] = "Invoice"
+            missingFields.append("title")
+        }
+
+        if data["clientName"] == nil {
+            data["clientName"] = ""
+            patch["clientName"] = ""
+            missingFields.append("clientName")
+        }
+
+        if data["status"] == nil {
+            data["status"] = Invoice.InvoiceStatus.draft.rawValue
+            patch["status"] = Invoice.InvoiceStatus.draft.rawValue
+            missingFields.append("status")
+        }
+
+        do {
+            let invoice = try Firestore.Decoder().decode(Invoice.self, from: data)
+            if !patch.isEmpty {
+                document.reference.setData(patch, merge: true)
+            }
+            if !missingFields.isEmpty {
+                logMissingFields(missingFields, documentPath: documentPath)
+            }
+            return invoice
+        } catch {
+            logDecodingError(error, documentPath: documentPath)
+            return nil
+        }
+    }
+
+    private func logMissingFields(_ fields: [String], documentPath: String) {
+        guard !fields.isEmpty else { return }
+        let logKey = "missing:\(documentPath)"
+        guard !loggedDecodingFailures.contains(logKey) else { return }
+        loggedDecodingFailures.insert(logKey)
+        logger.error("Missing fields in document \(documentPath): \(fields.joined(separator: \", \"))")
+    }
+
+    private func logDecodingError(_ error: Error, documentPath: String) {
+        let logKey = "decode:\(documentPath)"
+        guard !loggedDecodingFailures.contains(logKey) else { return }
+        loggedDecodingFailures.insert(logKey)
+
+        if case DecodingError.keyNotFound(let key, _) = error {
+            logger.error("Failed to decode document \(documentPath): missing field \(key.stringValue)")
+        } else {
+            logger.error("Failed to decode document \(documentPath): \(error.localizedDescription)")
         }
     }
 }

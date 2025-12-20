@@ -56,10 +56,10 @@ struct Job: Identifiable, Codable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
         ownerID = try container.decodeIfPresent(String.self, forKey: .ownerID) ?? ""
-        name = try container.decode(String.self, forKey: .name)
-        category = try container.decode(String.self, forKey: .category)
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Untitled Job"
+        category = try container.decodeIfPresent(String.self, forKey: .category) ?? "General"
         let decodedLaborLines = try container.decodeIfPresent([LaborLine].self, forKey: .laborLines) ?? []
         materials = try container.decodeIfPresent([Material].self, forKey: .materials) ?? []
         dateCreated = try container.decodeIfPresent(Date.self, forKey: .dateCreated) ?? Date()
@@ -87,4 +87,3 @@ struct Job: Identifiable, Codable {
         try container.encodeIfPresent(clientId, forKey: .clientId)
     }
 }
-
