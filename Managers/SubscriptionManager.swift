@@ -131,7 +131,15 @@ final class SubscriptionManager: ObservableObject {
         lastError = nil
         statusMessage = "Checking App Store purchases…"
 
-        await AppStore.sync()
+        do {
+            try await AppStore.sync()
+        } catch {
+            let message = error.localizedDescription.isEmpty
+                ? "Restore failed. Please try again."
+                : error.localizedDescription
+            lastError = message
+            statusMessage = message
+        }
 
         if let entitlement = await activeSubscriptionEntitlement() {
             setIsPro(true)
