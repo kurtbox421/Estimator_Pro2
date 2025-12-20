@@ -1229,9 +1229,9 @@ struct SettingsTabView: View {
                 .listRowSeparator(.hidden)
 
                 NavigationLink {
-                    PrivacyAndSecurityView()
+                    AccountSettingsView()
                 } label: {
-                    SettingRow(icon: "lock.fill", title: "Privacy & security")
+                    SettingRow(icon: "lock.fill", title: "Account Settings")
                 }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)

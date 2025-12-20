@@ -1,7 +1,10 @@
 import SwiftUI
 
-struct PrivacyAndSecurityView: View {
+struct AccountSettingsView: View {
     @State private var showingDeleteAccount = false
+    @State private var showingPrivacyPolicy = false
+
+    private let privacyPolicyURL = URL(string: "https://www.apple.com/legal/privacy/en-ww/")!
 
     var body: some View {
         ZStack {
@@ -9,8 +12,8 @@ struct PrivacyAndSecurityView: View {
                 VStack(spacing: 24) {
                     RoundedCard {
                         VStack(spacing: 0) {
-                            NavigationLink {
-                                PrivacyPolicyView()
+                            Button {
+                                showingPrivacyPolicy = true
                             } label: {
                                 SettingsRow(
                                     icon: "doc.plaintext",
@@ -71,7 +74,11 @@ struct PrivacyAndSecurityView: View {
             .spring(response: 0.35, dampingFraction: 0.82, blendDuration: 0.2),
             value: showingDeleteAccount
         )
-        .navigationTitle("Privacy & security")
+        .sheet(isPresented: $showingPrivacyPolicy) {
+            SafariView(url: privacyPolicyURL)
+                .ignoresSafeArea()
+        }
+        .navigationTitle("Account Settings")
     }
 }
 
@@ -105,6 +112,6 @@ private struct SettingsRow: View {
 
 #Preview {
     NavigationStack {
-        PrivacyAndSecurityView()
+        AccountSettingsView()
     }
 }
