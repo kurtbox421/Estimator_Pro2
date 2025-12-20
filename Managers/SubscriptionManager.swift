@@ -131,22 +131,14 @@ final class SubscriptionManager: ObservableObject {
         lastError = nil
         statusMessage = "Checking App Store purchases…"
 
-        do {
-            try await AppStore.sync()
+        await AppStore.sync()
 
-            if let entitlement = await activeSubscriptionEntitlement() {
-                setIsPro(true)
-                statusMessage = "Restored Estimator Pro (\(entitlement.productID))."
-            } else {
-                setIsPro(false)
-                statusMessage = "No purchases found to restore."
-            }
-        } catch {
-            let message = error.localizedDescription.isEmpty
-                ? "Restore failed. Please try again."
-                : error.localizedDescription
-            lastError = message
-            statusMessage = message
+        if let entitlement = await activeSubscriptionEntitlement() {
+            setIsPro(true)
+            statusMessage = "Restored Estimator Pro (\(entitlement.productID))."
+        } else {
+            setIsPro(false)
+            statusMessage = "No purchases found to restore."
         }
     }
 
