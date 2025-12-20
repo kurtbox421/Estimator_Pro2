@@ -57,12 +57,15 @@ final class SubscriptionManager: ObservableObject {
         statusMessage = nil
 
         do {
+            logStoreKitContext()
             let fetched = try await fetchProducts(within: timeout)
             let fetchedIDs = fetched.map(\.id)
             debugLog("[StoreKit] Retrieved product ids:", fetchedIDs)
+            debugLog("[StoreKit] Returned product count:", fetched.count)
 
             guard !fetched.isEmpty else {
-                let message = "No products returned from the App Store. Please try again."
+                logEmptyProductsContext()
+                let message = "No products returned from the App Store. Check product IDs, bundle ID, and StoreKit configuration, then try again."
                 lastError = message
                 setProductState(.failed(message))
                 products = []
@@ -84,6 +87,7 @@ final class SubscriptionManager: ObservableObject {
             lastError = message
             setProductState(.failed(message))
         } catch {
+            debugLog("[StoreKit] Product request failed:", error.localizedDescription)
             let message = error.localizedDescription.isEmpty
                 ? "Something went wrong. Please try again."
                 : error.localizedDescription
@@ -251,5 +255,30 @@ final class SubscriptionManager: ObservableObject {
         #if DEBUG
         print(items.map { String(describing: $0) }.joined(separator: " "))
         #endif
+    }
+
+    private func logStoreKitContext() {
+        let bundleID = Bundle.main.bundleIdentifier ?? "(missing bundle identifier)"
+        let storeKitResourcePath = Bundle.main.url(forResource: "EstimatorPro", withExtension: "storekit")?.path ?? "(no StoreKit config bundled)"
+        let storeKitEnvPath = ProcessInfo.processInfo.environment["SIMULATOR_MAIN_STOREKIT_CONFIG"] ??
+            ProcessInfo.processInfo.environment["STOREKIT_CONFIG"] ??
+            "(StoreKit config env not set)"
+        let simulatorName = ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"] ?? "(not running in simulator)"
+        let runningForPreviews = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] ?? "0"
+
+        debugLog("[StoreKit] Bundle ID:", bundleID)
+        debugLog("[StoreKit] Product IDs:", Self.productIDs)
+        debugLog("[StoreKit] StoreKit config resource:", storeKitResourcePath)
+        debugLog("[StoreKit] StoreKit config env:", storeKitEnvPath)
+        debugLog("[StoreKit] Simulator device:", simulatorName)
+        debugLog("[StoreKit] Xcode previews:", runningForPreviews)
+    }
+
+    private func logEmptyProductsContext() {
+        let environment = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+            ? "Xcode Previews"
+            : (ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"] == nil ? "Device" : "Simulator")
+        debugLog("[StoreKit] No products returned. Likely causes: incorrect product IDs, bundle ID mismatch, products not approved/cleared, StoreKit configuration not selected, or App Store Connect not reachable.")
+        debugLog("[StoreKit] Current environment:", environment)
     }
 }
