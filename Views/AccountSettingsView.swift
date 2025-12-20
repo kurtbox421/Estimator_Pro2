@@ -173,7 +173,11 @@ struct AccountSettingsView: View {
     private func openManageSubscriptions() async {
         if #available(iOS 15.0, *) {
             if let windowScene = activeWindowScene() {
-                await AppStore.showManageSubscriptions(in: windowScene)
+                do {
+                    try await AppStore.showManageSubscriptions(in: windowScene)
+                } catch {
+                    openURL(subscriptionsURL)
+                }
             } else {
                 openURL(subscriptionsURL)
             }
@@ -197,11 +201,18 @@ struct AccountSettingsView: View {
         defer { isRestoringPurchases = false }
 
         if #available(iOS 15.0, *) {
-            await AppStore.sync()
-            restoreAlert = AlertDetails(
-                title: "Restore Complete",
-                message: "Your purchases have been restored."
-            )
+            do {
+                try await AppStore.sync()
+                restoreAlert = AlertDetails(
+                    title: "Restore Complete",
+                    message: "Your purchases have been restored."
+                )
+            } catch {
+                restoreAlert = AlertDetails(
+                    title: "Restore Failed",
+                    message: error.localizedDescription
+                )
+            }
         } else {
             restoreAlert = AlertDetails(
                 title: "Restore Unavailable",
