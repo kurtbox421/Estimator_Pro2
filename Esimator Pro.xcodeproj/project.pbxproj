@@ -19,6 +19,7 @@
 		398814062EF4C20100665406 /* PrivacyPolicyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398814052EF4C20100665406 /* PrivacyPolicyView.swift */; };
 		398814082EF4C21F00665406 /* DeleteAccountViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398814072EF4C21F00665406 /* DeleteAccountViewModel.swift */; };
 		3988140A2EF4C22F00665406 /* PrivacyPolicyContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398814092EF4C22F00665406 /* PrivacyPolicyContent.swift */; };
+		7C1A2B3C4D5E6F708192A0B2 /* AppLinks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C1A2B3C4D5E6F708192A0B1 /* AppLinks.swift */; };
 		D00B00022FFF000500000001 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00B00012FFF000500000001 /* KeychainHelper.swift */; };
 		3988140C2EF4C24600665406 /* AccountDeletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3988140B2EF4C24600665406 /* AccountDeletionService.swift */; };
 		3988C3252EEDEB9300957F3B /* OnboardingChecklistCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3988C3242EEDEB9300957F3B /* OnboardingChecklistCard.swift */; };
@@ -103,6 +104,7 @@
 		398814052EF4C20100665406 /* PrivacyPolicyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyPolicyView.swift; sourceTree = "<group>"; };
 		398814072EF4C21F00665406 /* DeleteAccountViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeleteAccountViewModel.swift; sourceTree = "<group>"; };
 		398814092EF4C22F00665406 /* PrivacyPolicyContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyPolicyContent.swift; sourceTree = "<group>"; };
+		7C1A2B3C4D5E6F708192A0B1 /* AppLinks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLinks.swift; sourceTree = "<group>"; };
 		D00B00012FFF000500000001 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
 		3988140B2EF4C24600665406 /* AccountDeletionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDeletionService.swift; sourceTree = "<group>"; };
 		3988C3242EEDEB9300957F3B /* OnboardingChecklistCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingChecklistCard.swift; sourceTree = "<group>"; };
@@ -302,6 +304,7 @@
 		3969FD072ECD36970005C1AE /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				7C1A2B3C4D5E6F708192A0B1 /* AppLinks.swift */,
 				398814092EF4C22F00665406 /* PrivacyPolicyContent.swift */,
 				D00B00012FFF000500000001 /* KeychainHelper.swift */,
 				39E46E9E2EE240D80096D2A4 /* firestore.rules */,
@@ -428,6 +431,7 @@
 				398D93EC2ECFBAAE00A168FC /* ClientCardViews.swift in Sources */,
 				39B8DC812EDCD1B8005D0E08 /* NewClientForm.swift in Sources */,
 				3990BF462EF753ED0029CE7B /* SafariView.swift in Sources */,
+				7C1A2B3C4D5E6F708192A0B2 /* AppLinks.swift in Sources */,
 				397D69672EDE36C7005E0657 /* InvoiceNumberManager.swift in Sources */,
 				3969FD0F2ECD37F10005C1AE /* Material.swift in Sources */,
 				39A3950B2ECD75B200D5E76D /* Rootview.swift in Sources */,

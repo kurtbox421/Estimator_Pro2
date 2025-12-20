@@ -13,7 +13,6 @@ struct AccountSettingsView: View {
     @State private var isRestoringPurchases = false
     @State private var restoreAlert: AlertDetails?
 
-    private let privacyPolicyURL = URL(string: "https://www.apple.com/legal/privacy/en-ww/")!
     private let subscriptionsURL = URL(string: "https://apps.apple.com/account/subscriptions")!
 
     var body: some View {
