@@ -39,8 +39,26 @@ final class SubscriptionManager: ObservableObject {
     private var currentUID: String?
     nonisolated(unsafe) private var entitlementListener: ListenerRegistration?
 
-    private enum SubscriptionBindingError: LocalizedError {
+    private enum SubscriptionBindingError: LocalizedError, CustomNSError {
         case linkedToAnotherAccount
+
+        static var errorDomain: String {
+            "com.estimatorpro.subscriptionBinding"
+        }
+
+        var errorCode: Int {
+            switch self {
+            case .linkedToAnotherAccount:
+                return 1
+            }
+        }
+
+        var errorUserInfo: [String: Any] {
+            switch self {
+            case .linkedToAnotherAccount:
+                return [NSLocalizedDescriptionKey: "subscription linked to another account"]
+            }
+        }
 
         var errorDescription: String? {
             switch self {
@@ -195,7 +213,7 @@ final class SubscriptionManager: ObservableObject {
            let originalTransactionId {
             debugLog("[Subscription] Refresh for uid:", currentUID, "originalTransactionId:", originalTransactionId)
             do {
-                try await bindSubscriptionIfNeeded(
+                _ = try await bindSubscriptionIfNeeded(
                     uid: currentUID,
                     originalTransactionId: originalTransactionId,
                     productId: entitlement.productID,
@@ -454,10 +472,10 @@ final class SubscriptionManager: ObservableObject {
         originalTransactionId: String,
         productId: String,
         environment: String
-    ) async throws {
+    ) async throws -> Bool {
         let docRef = db.collection("subscriptionBindings").document(originalTransactionId)
 
-        try await withCheckedThrowingContinuation { continuation in
+        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Bool, Error>) in
             db.runTransaction({ transaction, errorPointer in
                 do {
                     let snapshot = try transaction.getDocument(docRef)
@@ -465,7 +483,8 @@ final class SubscriptionManager: ObservableObject {
                        let boundUID = data["uid"] as? String {
                         self.debugLog("[Firestore] Binding exists for transaction:", originalTransactionId, "bound uid:", boundUID)
                         if boundUID != uid {
-                            return ["error": "linkedToAnotherAccount"]
+                            errorPointer?.pointee = SubscriptionBindingError.linkedToAnotherAccount as NSError
+                            return nil
                         }
 
                         transaction.updateData([
@@ -473,7 +492,7 @@ final class SubscriptionManager: ObservableObject {
                             "environment": environment,
                             "updatedAt": FieldValue.serverTimestamp()
                         ], forDocument: docRef)
-                        return ["isEntitled": true]
+                        return true
                     }
 
                     self.debugLog("[Firestore] Creating binding for transaction:", originalTransactionId, "uid:", uid)
@@ -483,7 +502,7 @@ final class SubscriptionManager: ObservableObject {
                         "environment": environment,
                         "updatedAt": FieldValue.serverTimestamp()
                     ], forDocument: docRef, merge: false)
-                    return ["isEntitled": true]
+                    return true
                 } catch {
                     errorPointer?.pointee = error as NSError
                     return nil
@@ -495,13 +514,7 @@ final class SubscriptionManager: ObservableObject {
                     return
                 }
 
-                if let errorValue = (result as? [String: Any])?["error"] as? String,
-                   errorValue == "linkedToAnotherAccount" {
-                    continuation.resume(throwing: SubscriptionBindingError.linkedToAnotherAccount)
-                    return
-                }
-
-                continuation.resume(returning: ())
+                continuation.resume(returning: result as? Bool ?? false)
             })
         }
     }
