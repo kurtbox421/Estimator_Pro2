@@ -107,8 +107,7 @@ struct RootView: View {
                             subscriptionManager.shouldShowPaywall = false
                         }
 
-                    PaywallView()
-                        .environmentObject(subscriptionManager)
+                    PaywallView(subscriptionManager: subscriptionManager)
                         .frame(maxWidth: 520)
                         .transition(.scale.combined(with: .opacity))
                         .zIndex(1)
@@ -1453,8 +1452,7 @@ struct BrandingLogoView: View {
                         showPaywall = false
                     }
 
-                PaywallView()
-                    .environmentObject(subscriptionManager)
+                PaywallView(subscriptionManager: subscriptionManager)
                     .frame(maxWidth: 520)
                     .transition(.scale.combined(with: .opacity))
                     .zIndex(1)

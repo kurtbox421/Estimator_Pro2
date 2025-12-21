@@ -2,11 +2,15 @@ import SwiftUI
 import StoreKit
 
 struct PaywallView: View {
-    @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @StateObject private var subscriptionManager: SubscriptionManager
 
     @State private var selectedProductID: String?
     @State private var showingErrorAlert = false
     @State private var showingPrivacyPolicy = false
+
+    init(subscriptionManager: SubscriptionManager) {
+        _subscriptionManager = StateObject(wrappedValue: subscriptionManager)
+    }
 
     var body: some View {
         PaywallSideEffectView(
@@ -410,7 +414,7 @@ private struct PaywallSideEffectView<Content: View>: View {
     var body: some View {
         content
             .task {
-                await subscriptionManager.verifyEntitlements()
+                await subscriptionManager.refreshEntitlements()
                 await subscriptionManager.loadProducts()
             }
             .onChange(of: subscriptionManager.productStateChangeToken) { _, _ in
@@ -473,6 +477,5 @@ private struct ProductRow: View {
 }
 
 #Preview {
-    PaywallView()
-        .environmentObject(SubscriptionManager())
+    PaywallView(subscriptionManager: SubscriptionManager())
 }
