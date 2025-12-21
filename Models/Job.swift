@@ -55,26 +55,56 @@ struct Job: Identifiable, Codable {
     }
 
     init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decodeLossyUUIDIfPresent(forKey: .id) ?? UUID()
-        ownerID = try container.decodeIfPresent(String.self, forKey: .ownerID) ?? ""
-        name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Untitled Job"
-        category = try container.decodeIfPresent(String.self, forKey: .category) ?? "General"
-        let decodedLaborLines = try container.decodeIfPresent([LaborLine].self, forKey: .laborLines) ?? []
-        materials = try container.decodeIfPresent([Material].self, forKey: .materials) ?? []
-        dateCreated = try container.decodeLossyDateIfPresent(forKey: .dateCreated) ?? Date()
-        clientId = try container.decodeLossyUUIDIfPresent(forKey: .clientId)
+        do {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decodeLossyUUIDIfPresent(forKey: .id) ?? UUID()
+            ownerID = try container.decodeIfPresent(String.self, forKey: .ownerID) ?? ""
+            name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Untitled Job"
+            category = try container.decodeIfPresent(String.self, forKey: .category) ?? "General"
+            let decodedLaborLines = (try? container.decodeIfPresent([LaborLine].self, forKey: .laborLines)) ?? []
+            materials = (try? container.decodeIfPresent([Material].self, forKey: .materials)) ?? []
+            dateCreated = try container.decodeLossyDateIfPresent(forKey: .dateCreated) ?? Date()
+            clientId = try container.decodeLossyUUIDIfPresent(forKey: .clientId)
 
-        if decodedLaborLines.isEmpty {
-            let hours = try container.decodeLossyDoubleIfPresent(forKey: .laborHours) ?? 0
-            let rate = try container.decodeLossyDoubleIfPresent(forKey: .laborRate) ?? 0
-            if hours > 0 || rate > 0 {
-                laborLines = [LaborLine(title: "Labor", hours: hours, rate: rate)]
+            if decodedLaborLines.isEmpty {
+                let hours = try container.decodeLossyDoubleIfPresent(forKey: .laborHours) ?? 0
+                let rate = try container.decodeLossyDoubleIfPresent(forKey: .laborRate) ?? 0
+                if hours > 0 || rate > 0 {
+                    laborLines = [LaborLine(title: "Labor", hours: hours, rate: rate)]
+                } else {
+                    laborLines = []
+                }
             } else {
-                laborLines = []
+                laborLines = decodedLaborLines
             }
-        } else {
-            laborLines = decodedLaborLines
+        } catch {
+            Self.logDecodingError(error)
+            throw error
+        }
+    }
+
+    private static func logDecodingError(_ error: Error) {
+        guard let decodingError = error as? DecodingError else {
+            print("Decoding error: \(error)")
+            return
+        }
+
+        func formatPath(_ path: [CodingKey]) -> String {
+            path.map { $0.stringValue }.joined(separator: ".")
+        }
+
+        switch decodingError {
+        case let .dataCorrupted(context):
+            print("DecodingError.dataCorrupted at \(formatPath(context.codingPath)): \(context.debugDescription)")
+        case let .keyNotFound(key, context):
+            let path = formatPath(context.codingPath + [key])
+            print("DecodingError.keyNotFound at \(path): \(context.debugDescription)")
+        case let .typeMismatch(_, context):
+            print("DecodingError.typeMismatch at \(formatPath(context.codingPath)): \(context.debugDescription)")
+        case let .valueNotFound(_, context):
+            print("DecodingError.valueNotFound at \(formatPath(context.codingPath)): \(context.debugDescription)")
+        @unknown default:
+            print("DecodingError.unknown: \(decodingError)")
         }
     }
 
