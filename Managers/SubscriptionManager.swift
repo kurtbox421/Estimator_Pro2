@@ -386,16 +386,17 @@ final class SubscriptionManager: ObservableObject {
     }
 
     private func environmentString(for transaction: StoreKit.Transaction) -> String {
-        switch transaction.environment {
-        case .xcode:
+        let environment = transaction.environment
+        if environment == .xcode {
             return "xcode"
-        case .sandbox:
-            return "sandbox"
-        case .production:
-            return "production"
-        @unknown default:
-            return "unknown"
         }
+        if environment == .sandbox {
+            return "sandbox"
+        }
+        if environment == .production {
+            return "production"
+        }
+        return "unknown"
     }
 
     private func handleAuthStateChange(_ user: User?) {
