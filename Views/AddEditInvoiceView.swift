@@ -1,5 +1,4 @@
 import SwiftUI
-import FirebaseAuth
 
 struct AddEditInvoiceView: View {
     enum Mode {
@@ -11,6 +10,7 @@ struct AddEditInvoiceView: View {
     @EnvironmentObject private var invoiceVM: InvoiceViewModel
     @EnvironmentObject private var clientVM: ClientViewModel
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @EnvironmentObject private var session: SessionManager
 
     let mode: Mode
 
@@ -332,8 +332,8 @@ struct AddEditInvoiceView: View {
                 return
             }
             let invoice = Invoice(
-                ownerID: Auth.auth().currentUser?.uid ?? "",
-                invoiceNumber: InvoiceNumberManager.shared.generateInvoiceNumber(),
+                ownerID: session.uid ?? "",
+                invoiceNumber: InvoiceNumberManager.generateInvoiceNumber(uid: session.uid),
                 title: trimmedTitle,
                 clientID: selectedClientId,
                 clientName: trimmedClient,
@@ -346,7 +346,7 @@ struct AddEditInvoiceView: View {
 
         case .edit(let existing):
             var updated = existing
-            updated.ownerID = existing.ownerID.isEmpty ? (Auth.auth().currentUser?.uid ?? "") : existing.ownerID
+            updated.ownerID = existing.ownerID.isEmpty ? (session.uid ?? "") : existing.ownerID
             updated.title = trimmedTitle
             updated.clientID = selectedClientId
             updated.clientName = trimmedClient
@@ -400,7 +400,7 @@ struct AddEditInvoiceView: View {
 
         let material = Material(
             id: editingMaterialIndex.flatMap { materials[$0].id } ?? UUID(),
-            ownerID: Auth.auth().currentUser?.uid ?? "",
+            ownerID: session.uid ?? "",
             name: trimmedName,
             quantity: quantity,
             unitCost: unitCost,

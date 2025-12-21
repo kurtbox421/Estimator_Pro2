@@ -2,7 +2,7 @@ import SwiftUI
 
 struct DeleteAccountModalView: View {
     @Binding var isPresented: Bool
-    @EnvironmentObject private var session: SessionViewModel
+    @EnvironmentObject private var session: SessionManager
     @StateObject private var viewModel = DeleteAccountViewModel()
 
     @State private var showConfirmation = false
@@ -116,8 +116,9 @@ struct DeleteAccountModalView: View {
 }
 
 #Preview {
-    NavigationStack {
+    let session = SessionManager()
+    return NavigationStack {
         DeleteAccountModalView(isPresented: .constant(true))
-            .environmentObject(SessionViewModel())
+            .environmentObject(session)
     }
 }

@@ -1,5 +1,4 @@
 import Combine
-import FirebaseAuth
 import Foundation
 
 private enum EmailTemplateStorage {
@@ -64,23 +63,34 @@ final class EmailTemplateSettingsStore: ObservableObject {
     @Published var defaultEmailMessage: String
 
     private let persistence: PersistenceService
-    private let auth: Auth
+    private let session: SessionManager
     private var cancellables: Set<AnyCancellable> = []
-    private var authHandle: AuthStateDidChangeListenerHandle?
+    private var resetToken: UUID?
     private var currentUserID: String?
     private var isApplyingRemoteUpdate = false
 
-    init(persistence: PersistenceService = .shared, auth: Auth = Auth.auth()) {
+    init(persistence: PersistenceService = .shared, session: SessionManager) {
         self.persistence = persistence
-        self.auth = auth
+        self.session = session
         self.defaultEmailMessage = EmailTemplateSettings.standard.defaultEmailMessage
 
-        configureAuthListener()
+        resetToken = session.registerResetHandler { [weak self] in
+            self?.clear()
+        }
+        session.$uid
+            .receive(on: RunLoop.main)
+            .sink { [weak self] uid in
+                self?.setUser(uid)
+            }
+            .store(in: &cancellables)
+        setUser(session.uid)
         bindPersistence()
     }
 
     deinit {
-        if let authHandle { auth.removeStateDidChangeListener(authHandle) }
+        if let resetToken {
+            session.unregisterResetHandler(resetToken)
+        }
     }
 
     func resetToDefaults() {
@@ -105,12 +115,13 @@ final class EmailTemplateSettingsStore: ObservableObject {
             .store(in: &cancellables)
     }
 
-    private func loadSettings(for user: User?) {
-        currentUserID = user?.uid
+    private func setUser(_ uid: String?) {
+        currentUserID = uid
         apply(settings: .standard)
 
-        guard let uid = user?.uid else { return }
+        guard let uid else { return }
 
+        print("[Data] EmailTemplateSettingsStore uid=\(uid) path=local:\(EmailTemplateStorage.fileName(for: uid)) action=load")
         if let stored: EmailTemplateSettings = persistence.load(
             EmailTemplateSettings.self,
             from: EmailTemplateStorage.fileName(for: uid)
@@ -122,6 +133,7 @@ final class EmailTemplateSettingsStore: ObservableObject {
     private func persistCurrentSettings() {
         guard let uid = currentUserID, !isApplyingRemoteUpdate else { return }
 
+        print("[Data] EmailTemplateSettingsStore uid=\(uid) path=local:\(EmailTemplateStorage.fileName(for: uid)) action=save")
         let settings = EmailTemplateSettings(defaultEmailMessage: defaultEmailMessage)
         persistence.save(settings, to: EmailTemplateStorage.fileName(for: uid))
     }
@@ -130,5 +142,10 @@ final class EmailTemplateSettingsStore: ObservableObject {
         isApplyingRemoteUpdate = true
         defaultEmailMessage = settings.defaultEmailMessage
         isApplyingRemoteUpdate = false
+    }
+
+    func clear() {
+        currentUserID = nil
+        apply(settings: .standard)
     }
 }

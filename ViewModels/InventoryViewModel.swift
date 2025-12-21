@@ -1,5 +1,5 @@
 import Foundation
-import FirebaseAuth
+import Combine
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 
@@ -10,41 +10,47 @@ final class InventoryViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private let db: Firestore
-    private let auth: Auth
     private var listener: ListenerRegistration?
-    private var authHandle: AuthStateDidChangeListenerHandle?
+    private let session: SessionManager
+    private var cancellables: Set<AnyCancellable> = []
+    private var currentUserID: String?
+    private var resetToken: UUID?
 
-    init(database: Firestore = Firestore.firestore(), auth: Auth = Auth.auth()) {
+    init(database: Firestore = Firestore.firestore(), session: SessionManager) {
         self.db = database
-        self.auth = auth
-        configureAuthListener()
+        self.session = session
+        resetToken = session.registerResetHandler { [weak self] in
+            self?.clear()
+        }
+        session.$uid
+            .receive(on: RunLoop.main)
+            .sink { [weak self] uid in
+                self?.setUser(uid)
+            }
+            .store(in: &cancellables)
+        setUser(session.uid)
     }
 
     deinit {
         listener?.remove()
-        if let authHandle { auth.removeStateDidChangeListener(authHandle) }
+        if let resetToken {
+            session.unregisterResetHandler(resetToken)
+        }
     }
 
     // MARK: - Auth
 
-    private func configureAuthListener() {
-        authHandle = auth.addStateDidChangeListener { [weak self] _, user in
-            guard let self else { return }
-            Task { @MainActor in
-                self.attachSupplyListener(for: user)
-            }
-        }
-
-        Task { @MainActor in
-            attachSupplyListener(for: auth.currentUser)
-        }
-    }
-
-    private func attachSupplyListener(for user: User?) {
+    private func setUser(_ uid: String?) {
         listener?.remove()
+        currentUserID = uid
         supplies = []
+        transactionsBySupply = [:]
+        errorMessage = nil
 
-        guard let uid = user?.uid else { return }
+        guard let uid else { return }
+
+        let path = "users/\(uid)/supplies"
+        print("[Data] InventoryViewModel uid=\(uid) path=\(path) action=listen")
 
         listener = db.collection("users")
             .document(uid)
@@ -71,12 +77,14 @@ final class InventoryViewModel: ObservableObject {
                     self.supplies = decoded
                 }
             }
+
+        session.track(listener)
     }
 
     // MARK: - CRUD
 
     func upsertSupply(_ supply: SupplyItem) {
-        guard let uid = auth.currentUser?.uid else { return }
+        guard let uid = currentUserID else { return }
 
         var supplyToSave = supply
         supplyToSave.ownerUserId = uid
@@ -85,6 +93,8 @@ final class InventoryViewModel: ObservableObject {
         if supplyToSave.createdAt > supplyToSave.updatedAt { supplyToSave.createdAt = Date() }
 
         do {
+            let path = "users/\(uid)/supplies/\(supplyToSave.id ?? "")"
+            print("[Data] InventoryViewModel uid=\(uid) path=\(path) action=write")
             try db.collection("users")
                 .document(uid)
                 .collection("supplies")
@@ -96,7 +106,10 @@ final class InventoryViewModel: ObservableObject {
     }
 
     func fetchTransactions(for supplyId: String, limit: Int = 50) {
-        guard let uid = auth.currentUser?.uid else { return }
+        guard let uid = currentUserID else { return }
+
+        let path = "users/\(uid)/supplies/\(supplyId)/transactions"
+        print("[Data] InventoryViewModel uid=\(uid) path=\(path) action=fetch")
 
         db.collection("users")
             .document(uid)
@@ -163,8 +176,11 @@ final class InventoryViewModel: ObservableObject {
         type: InventoryTransaction.TransactionType,
         note: String?
     ) async throws {
-        guard let uid = auth.currentUser?.uid else { throw InventoryError.unauthenticated }
+        guard let uid = currentUserID else { throw InventoryError.unauthenticated }
         guard let supplyId = supply.id else { throw InventoryError.missingSupply }
+
+        let path = "users/\(uid)/supplies/\(supplyId)"
+        print("[Data] InventoryViewModel uid=\(uid) path=\(path) action=transaction")
 
         let supplyRef = db.collection("users")
             .document(uid)
@@ -221,5 +237,14 @@ final class InventoryViewModel: ObservableObject {
 
             return nil
         }
+    }
+
+    func clear() {
+        listener?.remove()
+        listener = nil
+        currentUserID = nil
+        supplies = []
+        transactionsBySupply = [:]
+        errorMessage = nil
     }
 }

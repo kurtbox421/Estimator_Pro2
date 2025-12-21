@@ -7,7 +7,6 @@
 
 import SwiftUI
 import UIKit
-import FirebaseAuth
 
 struct JobDetailView: View {
     @EnvironmentObject private var vm: JobViewModel
@@ -16,6 +15,7 @@ struct JobDetailView: View {
     @EnvironmentObject private var clientVM: ClientViewModel
     @EnvironmentObject private var companySettings: CompanySettingsStore
     @EnvironmentObject private var emailTemplateSettings: EmailTemplateSettingsStore
+    @EnvironmentObject private var session: SessionManager
     @Environment(\.dismiss) private var dismiss
 
     let estimateID: Job.ID
@@ -539,8 +539,8 @@ struct JobDetailView: View {
 
         let invoice = Invoice(
             id: UUID(),
-            ownerID: Auth.auth().currentUser?.uid ?? "",
-            invoiceNumber: InvoiceNumberManager.shared.generateInvoiceNumber(),
+            ownerID: session.uid ?? "",
+            invoiceNumber: InvoiceNumberManager.generateInvoiceNumber(uid: session.uid),
             title: estimateToConvert.name,
             clientID: estimateToConvert.clientId,
             clientName: clientName,
@@ -1253,4 +1253,3 @@ struct MaterialsSection: View {
         }
     }
 }
-

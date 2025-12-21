@@ -40,7 +40,7 @@ struct Invoice: Identifiable, Codable {
     init(
         id: UUID = UUID(),
         ownerID: String = "",
-        invoiceNumber: String = InvoiceNumberManager.shared.generateInvoiceNumber(),
+        invoiceNumber: String = InvoiceNumberManager.generateInvoiceNumber(),
         title: String,
         clientID: UUID? = nil,
         clientName: String,
@@ -101,7 +101,7 @@ struct Invoice: Identifiable, Codable {
 
         self.id = decodedId
         self.invoiceNumber = decodedInvoiceNumber
-            ?? InvoiceNumberManager.shared.generateInvoiceNumber()
+            ?? InvoiceNumberManager.generateInvoiceNumber()
         self.title = try container.decodeIfPresent(String.self, forKey: .title) ?? "Invoice"
         self.clientID = try container.decodeLossyUUIDIfPresent(forKey: .clientID)
         self.clientName = try container.decodeIfPresent(String.self, forKey: .clientName) ?? ""

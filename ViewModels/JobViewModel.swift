@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import FirebaseAuth
+import Combine
 import FirebaseFirestore
 
 private enum JobStorage {
@@ -20,23 +20,35 @@ class JobViewModel: ObservableObject {
 
     private let persistence: PersistenceService
     private let db: Firestore
-    private let auth: Auth
-    private var authHandle: AuthStateDidChangeListenerHandle?
+    private let session: SessionManager
+    private var cancellables: Set<AnyCancellable> = []
+    private var resetToken: UUID?
     private var currentUserID: String?
 
     init(
         persistence: PersistenceService = .shared,
         database: Firestore = Firestore.firestore(),
-        auth: Auth = Auth.auth()
+        session: SessionManager
     ) {
         self.persistence = persistence
         self.db = database
-        self.auth = auth
-        configureAuthListener()
+        self.session = session
+        resetToken = session.registerResetHandler { [weak self] in
+            self?.clear()
+        }
+        session.$uid
+            .receive(on: RunLoop.main)
+            .sink { [weak self] uid in
+                self?.setUser(uid)
+            }
+            .store(in: &cancellables)
+        setUser(session.uid)
     }
 
     deinit {
-        if let authHandle { auth.removeStateDidChangeListener(authHandle) }
+        if let resetToken {
+            session.unregisterResetHandler(resetToken)
+        }
     }
     
     // MARK: - CRUD
@@ -81,7 +93,7 @@ class JobViewModel: ObservableObject {
     }
 
     func assignClient(jobID: Job.ID, to clientID: Client.ID) {
-        guard let uid = Auth.auth().currentUser?.uid else { return }
+        guard let uid = currentUserID else { return }
 
         guard let jobIndex = jobs.firstIndex(where: { $0.id == jobID }) else { return }
 
@@ -89,6 +101,9 @@ class JobViewModel: ObservableObject {
         updatedJob.clientId = clientID
         jobs[jobIndex] = updatedJob
         sortJobs()
+
+        let path = "users/\(uid)/jobs/\(jobID.uuidString)"
+        print("[Data] JobViewModel uid=\(uid) path=\(path) action=write")
 
         db.collection("users")
             .document(uid)
@@ -178,7 +193,7 @@ class JobViewModel: ObservableObject {
               !generated.isEmpty,
               let index = jobs.firstIndex(where: { $0.id == job.id }) else { return }
 
-        let ownerID = Auth.auth().currentUser?.uid ?? ""
+        let ownerID = currentUserID ?? ""
 
         let newMaterials: [Material] = generated.map { gm in
             Material(
@@ -202,10 +217,12 @@ class JobViewModel: ObservableObject {
     
     private func saveJobs() {
         guard let uid = currentUserID else { return }
+        print("[Data] JobViewModel uid=\(uid) path=local:\(JobStorage.fileName(for: uid)) action=save")
         persistence.save(jobs, to: JobStorage.fileName(for: uid))
     }
 
     private func loadJobs(for uid: String) {
+        print("[Data] JobViewModel uid=\(uid) path=local:\(JobStorage.fileName(for: uid)) action=load")
         if let stored: [Job] = persistence.load([Job].self, from: JobStorage.fileName(for: uid)) {
             jobs = stored
             sortJobs()
@@ -215,19 +232,11 @@ class JobViewModel: ObservableObject {
         jobs = []
     }
 
-    private func configureAuthListener() {
-        authHandle = auth.addStateDidChangeListener { [weak self] _, user in
-            self?.handleUserChange(user)
-        }
-
-        handleUserChange(auth.currentUser)
-    }
-
-    private func handleUserChange(_ user: User?) {
-        currentUserID = user?.uid
+    private func setUser(_ uid: String?) {
+        currentUserID = uid
         jobs = []
 
-        guard let uid = user?.uid else { return }
+        guard let uid else { return }
 
         loadJobs(for: uid)
     }
@@ -247,5 +256,10 @@ class JobViewModel: ObservableObject {
     /// Currently they are computed properties, so there's nothing to assign.
     private func recalculateTotals(for job: inout Job) {
         // no-op
+    }
+
+    func clear() {
+        currentUserID = nil
+        jobs = []
     }
 }

@@ -1,8 +1,8 @@
 import Foundation
-import FirebaseAuth
 import FirebaseFirestore
 import StoreKit
 import SwiftUI
+import Combine
 
 @MainActor
 final class SubscriptionManager: ObservableObject {
@@ -34,37 +34,43 @@ final class SubscriptionManager: ObservableObject {
     @Published private(set) var productStateChangeToken: Int = 0
 
     private let db: Firestore
-    private let auth: Auth
+    private let session: SessionManager
     nonisolated(unsafe) private var updatesTask: Task<Void, Never>?
-    private var authHandle: AuthStateDidChangeListenerHandle?
+    private var cancellables: Set<AnyCancellable> = []
+    private var resetToken: UUID?
     private var currentUID: String?
     nonisolated(unsafe) private var subscriptionListener: ListenerRegistration?
 
     private var hasActiveStoreKitEntitlement = false
     private var hasSubscriptionBinding = false
 
-    init(database: Firestore = Firestore.firestore(), auth: Auth = Auth.auth()) {
+    init(
+        database: Firestore = Firestore.firestore(),
+        session: SessionManager
+    ) {
         self.db = database
-        self.auth = auth
+        self.session = session
         self.isPro = false
         self.activeProductID = nil
         self.environment = nil
 
-        authHandle = auth.addStateDidChangeListener { [weak self] _, user in
-            guard let self else { return }
-            Task { @MainActor in
-                self.handleAuthStateChange(user)
-            }
+        resetToken = session.registerResetHandler { [weak self] in
+            self?.clear()
         }
-
-        handleAuthStateChange(auth.currentUser)
+        session.$uid
+            .receive(on: RunLoop.main)
+            .sink { [weak self] uid in
+                self?.setUser(uid)
+            }
+            .store(in: &cancellables)
+        setUser(session.uid)
     }
 
     deinit {
         stopEntitlementListeners()
         stopSubscriptionListener()
-        if let authHandle {
-            auth.removeStateDidChangeListener(authHandle)
+        if let resetToken {
+            session.unregisterResetHandler(resetToken)
         }
     }
 
@@ -118,7 +124,7 @@ final class SubscriptionManager: ObservableObject {
 
     func purchase(_ product: Product) async {
         guard !isLoading else { return }
-        guard let uid = auth.currentUser?.uid else {
+        guard let uid = session.uid else {
             lastError = "Please sign in first."
             statusMessage = lastError
             debugLog("[Purchase] Blocked purchase: no signed-in user.")
@@ -176,7 +182,7 @@ final class SubscriptionManager: ObservableObject {
 
     func restorePurchases() async {
         guard !isLoading else { return }
-        guard let uid = auth.currentUser?.uid else {
+        guard let uid = session.uid else {
             lastError = "Sign in to restore."
             statusMessage = lastError
             debugLog("[Restore] Blocked restore: no signed-in user.")
@@ -225,7 +231,7 @@ final class SubscriptionManager: ObservableObject {
         hasActiveStoreKitEntitlement = entitlement != nil
         activeProductID = entitlement?.productID
         environment = entitlement.map { environmentString(for: $0) }
-        debugLog("[Entitlements] StoreKit active:", hasActiveStoreKitEntitlement, "uid:", auth.currentUser?.uid ?? "nil")
+        debugLog("[Entitlements] StoreKit active:", hasActiveStoreKitEntitlement, "uid:", session.uid ?? "nil")
         updateProStatus()
         return isPro
     }
@@ -306,7 +312,7 @@ final class SubscriptionManager: ObservableObject {
 
     private func handleVerifiedTransactionUpdate(_ transaction: StoreKit.Transaction) async {
         await refreshEntitlements()
-        guard let uid = auth.currentUser?.uid else {
+        guard let uid = session.uid else {
             debugLog("[StoreKit] Skipping binding update: no signed-in user.")
             return
         }
@@ -361,6 +367,7 @@ final class SubscriptionManager: ObservableObject {
         ]
 
         debugLog("[Firestore] Writing subscription binding for uid:", uid, "transaction:", transaction.id)
+        print("[Data] SubscriptionManager uid=\(uid) path=users/\(uid)/entitlements/subscription action=write")
         let docRef = subscriptionDocRef(uid: uid)
         do {
             try await docRef.setData(data, merge: true)
@@ -440,6 +447,7 @@ final class SubscriptionManager: ObservableObject {
     private func startSubscriptionBindingListener(uid: String) {
         stopSubscriptionListener()
         let docRef = subscriptionDocRef(uid: uid)
+        print("[Data] SubscriptionManager uid=\(uid) path=users/\(uid)/entitlements/subscription action=listen")
 
         subscriptionListener = docRef.addSnapshotListener { [weak self] snapshot, error in
             guard let self else { return }
@@ -454,18 +462,19 @@ final class SubscriptionManager: ObservableObject {
                 self.setSubscriptionBindingExists(exists)
             }
         }
+
+        session.track(subscriptionListener)
     }
 
-    private func handleAuthStateChange(_ user: User?) {
+    private func setUser(_ uid: String?) {
         clearAuthState()
-        let newUID = user?.uid
-        if newUID != currentUID {
+        if uid != currentUID {
             stopEntitlementListeners()
             stopSubscriptionListener()
-            currentUID = newUID
+            currentUID = uid
         }
 
-        guard let uid = newUID else {
+        guard let uid else {
             return
         }
 
@@ -520,5 +529,12 @@ final class SubscriptionManager: ObservableObject {
         if let firestoreCode = FirestoreErrorCode.Code(rawValue: nsError.code), firestoreCode == .permissionDenied {
             debugLog("[Firestore] Permission denied for \(context) uid:", uid ?? "nil")
         }
+    }
+
+    func clear() {
+        stopEntitlementListeners()
+        stopSubscriptionListener()
+        clearAuthState()
+        currentUID = nil
     }
 }

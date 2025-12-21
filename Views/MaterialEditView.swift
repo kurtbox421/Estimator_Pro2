@@ -1,9 +1,9 @@
 import SwiftUI
-import FirebaseAuth
 
 struct MaterialEditView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var settingsManager: SettingsManager
+    @EnvironmentObject private var session: SessionManager
 
     let material: Material?
     let onSave: (Material) -> Void
@@ -82,7 +82,7 @@ struct MaterialEditView: View {
 
         let updatedMaterial = Material(
             id: material?.id ?? UUID(),
-            ownerID: material?.ownerID ?? (Auth.auth().currentUser?.uid ?? ""),
+            ownerID: material?.ownerID ?? (session.uid ?? ""),
             name: trimmedName,
             quantity: quantity,
             unitCost: unitCost,

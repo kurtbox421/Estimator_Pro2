@@ -5,7 +5,7 @@ import UIKit
 
 struct AccountSettingsView: View {
     @Environment(\.openURL) private var openURL
-    @EnvironmentObject private var session: SessionViewModel
+    @EnvironmentObject private var session: SessionManager
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
 
     @State private var showingDeleteAccount = false
@@ -295,9 +295,10 @@ private struct AlertDetails: Identifiable {
 }
 
 #Preview {
-    NavigationStack {
+    let session = SessionManager()
+    return NavigationStack {
         AccountSettingsView()
-            .environmentObject(SessionViewModel())
-            .environmentObject(SubscriptionManager())
+            .environmentObject(session)
+            .environmentObject(SubscriptionManager(session: session))
     }
 }

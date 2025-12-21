@@ -39,6 +39,7 @@ struct AuthContainerView: View {
 }
 
 #Preview {
-    AuthContainerView()
-        .environmentObject(SessionViewModel())
+    let session = SessionManager()
+    return AuthContainerView()
+        .environmentObject(session)
 }

@@ -1,11 +1,11 @@
 import SwiftUI
-import FirebaseAuth
 
 struct MaterialGeneratorView: View {
     @EnvironmentObject private var jobVM: JobViewModel
     @EnvironmentObject private var settingsManager: SettingsManager
     @EnvironmentObject private var materialsStore: MaterialsCatalogStore
     @EnvironmentObject private var materialInsights: MaterialIntelligenceStore
+    @EnvironmentObject private var session: SessionManager
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedGroupIDs: Set<String> = []
@@ -381,7 +381,7 @@ struct MaterialGeneratorView: View {
         MaterialResolutionHelper.material(
             from: rec,
             catalog: materialsStore,
-            ownerID: Auth.auth().currentUser?.uid ?? "",
+            ownerID: session.uid ?? "",
             fallbackUnitCost: settingsManager.commonMaterialPrice(for: rec.name)
         )
     }

@@ -6,10 +6,10 @@
 //
 
 import SwiftUI
-import FirebaseAuth
 
 struct AddMaterialView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var session: SessionManager
 
     var onSave: (Material) -> Void
 
@@ -61,7 +61,7 @@ struct AddMaterialView: View {
         let safeUnitCost = debugCheckNaN(u, label: "material unit cost")
 
         let material = Material(
-            ownerID: Auth.auth().currentUser?.uid ?? "",
+            ownerID: session.uid ?? "",
             name: name.trimmingCharacters(in: .whitespaces),
             quantity: safeQuantity,
             unitCost: safeUnitCost
@@ -71,4 +71,3 @@ struct AddMaterialView: View {
         dismiss()
     }
 }
-

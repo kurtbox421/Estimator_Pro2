@@ -1170,7 +1170,7 @@ private struct ClientSummaryRow: View {
 // MARK: - Settings tab
 
 struct SettingsTabView: View {
-    @EnvironmentObject private var session: SessionViewModel
+    @EnvironmentObject private var session: SessionManager
 
     var body: some View {
         NavigationStack {

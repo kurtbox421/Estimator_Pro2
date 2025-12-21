@@ -11,19 +11,7 @@ import FirebaseCore
 @main
 struct EstimatorProApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var jobVM = JobViewModel()
-    @StateObject private var invoiceVM = InvoiceViewModel()
-    @StateObject private var estimateVM = EstimateViewModel()
-    @StateObject private var clientVM = ClientViewModel()
-    @StateObject private var inventoryVM = InventoryViewModel()
-    @StateObject private var companySettings = CompanySettingsStore()
-    @StateObject private var emailTemplateSettings = EmailTemplateSettingsStore()
-    @StateObject private var settingsManager = SettingsManager()
-    @StateObject private var session = SessionViewModel()
-    @StateObject private var materialsStore = MaterialsCatalogStore()
-    @StateObject private var materialIntelligence = MaterialIntelligenceStore()
-    @StateObject private var onboarding = OnboardingProgressStore()
-    @StateObject private var subscriptionManager = SubscriptionManager()
+    @StateObject private var session = SessionManager()
 
     @State private var showingSplash = true
 
@@ -51,20 +39,11 @@ struct EstimatorProApp: App {
                     SplashScreenView()
                         .transition(.opacity)
                         .zIndex(1)
-                } else if session.user == nil {
-                    AuthScreenView()
+                } else if session.isSignedIn, let uid = session.uid {
+                    SessionScopedRoot(uid: uid, session: session)
+                        .id(uid)
                 } else {
-                    NavigationStack {
-                        RootView()
-                    }
-                    .environmentObject(jobVM)
-                    .environmentObject(invoiceVM)
-                    .environmentObject(estimateVM)
-                    .environmentObject(clientVM)
-                    .environmentObject(inventoryVM)
-                    .environmentObject(companySettings)
-                    .environmentObject(emailTemplateSettings)
-                    .environmentObject(settingsManager)
+                    AuthScreenView()
                 }
 
                 if showingSplash && !session.isLoading {
@@ -75,22 +54,6 @@ struct EstimatorProApp: App {
             }
             .onAppear(perform: dismissSplashAfterDelay)
             .environmentObject(session)
-            .environmentObject(jobVM)
-            .environmentObject(invoiceVM)
-            .environmentObject(estimateVM)
-            .environmentObject(clientVM)
-            .environmentObject(companySettings)
-            .environmentObject(emailTemplateSettings)
-            .environmentObject(settingsManager)
-            .environmentObject(materialsStore)
-            .environmentObject(materialIntelligence)
-            .environmentObject(onboarding)
-            .environmentObject(inventoryVM)
-            .environmentObject(subscriptionManager)
-            .task {
-                await subscriptionManager.refreshEntitlements()
-                await subscriptionManager.loadProducts()
-            }
         }
     }
 
@@ -102,6 +65,63 @@ struct EstimatorProApp: App {
             withAnimation(.easeInOut(duration: 1.0)) {
                 showingSplash = false
             }
+        }
+    }
+}
+
+private struct SessionScopedRoot: View {
+    let uid: String
+    let session: SessionManager
+
+    @StateObject private var jobVM: JobViewModel
+    @StateObject private var invoiceVM: InvoiceViewModel
+    @StateObject private var estimateVM: EstimateViewModel
+    @StateObject private var clientVM: ClientViewModel
+    @StateObject private var inventoryVM: InventoryViewModel
+    @StateObject private var companySettings: CompanySettingsStore
+    @StateObject private var emailTemplateSettings: EmailTemplateSettingsStore
+    @StateObject private var settingsManager: SettingsManager
+    @StateObject private var materialsStore: MaterialsCatalogStore
+    @StateObject private var materialIntelligence: MaterialIntelligenceStore
+    @StateObject private var onboarding: OnboardingProgressStore
+    @StateObject private var subscriptionManager: SubscriptionManager
+
+    init(uid: String, session: SessionManager) {
+        self.uid = uid
+        self.session = session
+        _jobVM = StateObject(wrappedValue: JobViewModel(session: session))
+        _invoiceVM = StateObject(wrappedValue: InvoiceViewModel(session: session))
+        _estimateVM = StateObject(wrappedValue: EstimateViewModel())
+        _clientVM = StateObject(wrappedValue: ClientViewModel(session: session))
+        _inventoryVM = StateObject(wrappedValue: InventoryViewModel(session: session))
+        _companySettings = StateObject(wrappedValue: CompanySettingsStore(session: session))
+        _emailTemplateSettings = StateObject(wrappedValue: EmailTemplateSettingsStore(session: session))
+        _settingsManager = StateObject(wrappedValue: SettingsManager(session: session))
+        _materialsStore = StateObject(wrappedValue: MaterialsCatalogStore(session: session))
+        _materialIntelligence = StateObject(wrappedValue: MaterialIntelligenceStore(session: session))
+        _onboarding = StateObject(wrappedValue: OnboardingProgressStore(session: session))
+        _subscriptionManager = StateObject(wrappedValue: SubscriptionManager(session: session))
+    }
+
+    var body: some View {
+        NavigationStack {
+            RootView()
+        }
+        .environmentObject(jobVM)
+        .environmentObject(invoiceVM)
+        .environmentObject(estimateVM)
+        .environmentObject(clientVM)
+        .environmentObject(inventoryVM)
+        .environmentObject(companySettings)
+        .environmentObject(emailTemplateSettings)
+        .environmentObject(settingsManager)
+        .environmentObject(materialsStore)
+        .environmentObject(materialIntelligence)
+        .environmentObject(onboarding)
+        .environmentObject(subscriptionManager)
+        .task {
+            await subscriptionManager.refreshEntitlements()
+            await subscriptionManager.loadProducts()
         }
     }
 }

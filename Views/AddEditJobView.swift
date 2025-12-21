@@ -5,7 +5,6 @@
 //  Created by Curtis Bollinger on 11/18/25.
 //
 import SwiftUI
-import FirebaseAuth
 
 struct AddEditJobView: View {
     enum Mode {
@@ -24,6 +23,7 @@ struct AddEditJobView: View {
     @EnvironmentObject private var clientVM: ClientViewModel
     @EnvironmentObject private var settingsManager: SettingsManager
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @EnvironmentObject private var session: SessionManager
 
     let mode: Mode
 
@@ -303,7 +303,7 @@ struct AddEditJobView: View {
 
             return Material(
                 id: UUID(),
-                ownerID: Auth.auth().currentUser?.uid ?? "",
+                ownerID: session.uid ?? "",
                 name: trimmedName,
                 quantity: qty,
                 unitCost: cost,
