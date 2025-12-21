@@ -65,10 +65,6 @@ struct EstimatorProApp: App {
                     .environmentObject(companySettings)
                     .environmentObject(emailTemplateSettings)
                     .environmentObject(settingsManager)
-                    .environmentObject(materialsStore)
-                    .environmentObject(materialIntelligence)
-                    .environmentObject(onboarding)
-                    .environmentObject(subscriptionManager)
                 }
 
                 if showingSplash && !session.isLoading {
@@ -79,13 +75,20 @@ struct EstimatorProApp: App {
             }
             .onAppear(perform: dismissSplashAfterDelay)
             .environmentObject(session)
+            .environmentObject(jobVM)
+            .environmentObject(invoiceVM)
+            .environmentObject(estimateVM)
+            .environmentObject(clientVM)
+            .environmentObject(companySettings)
+            .environmentObject(emailTemplateSettings)
+            .environmentObject(settingsManager)
             .environmentObject(materialsStore)
             .environmentObject(materialIntelligence)
             .environmentObject(onboarding)
             .environmentObject(inventoryVM)
             .environmentObject(subscriptionManager)
             .task {
-                await subscriptionManager.verifyEntitlements()
+                await subscriptionManager.refreshEntitlements()
                 await subscriptionManager.loadProducts()
             }
         }
