@@ -3,12 +3,17 @@ import Foundation
 struct MaterialsCatalogSnapshot {
     let materials: [MaterialItem]
     let materialsByTag: [MaterialJobTag: [MaterialItem]]
+    let materialsByGroupID: [String: [MaterialItem]]
     let pricesByID: [String: Double]
     let productURLsByID: [String: URL?]
     let customMaterialIDs: [String]
 
     func materials(for jobTag: MaterialJobTag) -> [MaterialItem] {
         materialsByTag[jobTag] ?? []
+    }
+
+    func items(inGroupID groupID: String) -> [MaterialItem] {
+        materialsByGroupID[groupID] ?? []
     }
 
     func price(for material: MaterialItem) -> Double {
