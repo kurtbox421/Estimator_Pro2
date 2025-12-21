@@ -11,14 +11,14 @@ final class PDFActivityItemSource: NSObject, UIActivityItemSource {
     }
 
     func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
-        url as NSURL
+        url
     }
 
     func activityViewController(
         _ activityViewController: UIActivityViewController,
         itemForActivityType activityType: UIActivity.ActivityType?
-    ) -> Any {
-        url as NSURL
+    ) -> Any? {
+        url
     }
 
     func activityViewController(

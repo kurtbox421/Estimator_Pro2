@@ -189,7 +189,7 @@ final class MaterialIntelligenceStore: ObservableObject {
         let coOccurrence: [String: [String: Int]]
     }
 
-    private static func buildStats(jobs: [Job], invoices: [Invoice]) -> StatsBuildResult {
+    private nonisolated static func buildStats(jobs: [Job], invoices: [Invoice]) -> StatsBuildResult {
         var statsMap: [String: MaterialStatsBuilder] = [:]
         var coUse: [String: [String: Int]] = [:]
 
