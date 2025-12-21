@@ -1465,7 +1465,12 @@ struct BrandingLogoView: View {
             value: showPaywall
         )
         .navigationTitle("Branding & logo")
-        .onAppear(perform: loadStoredLogo)
+        .onAppear {
+            loadStoredLogo()
+            Task {
+                await companySettings.fetchBrandingLogo()
+            }
+        }
         .onReceive(companySettings.$logoImage) { newLogo in
             logoImage = newLogo
         }
@@ -1588,7 +1593,7 @@ struct BrandingLogoView: View {
             }
 
             guard let image = UIImage(data: data),
-                  let jpegData = image.jpegData(compressionQuality: 0.8) else {
+                  let jpegData = image.jpegData(compressionQuality: 0.75) else {
                 throw NSError(domain: "BrandingLogo", code: 2, userInfo: [
                     NSLocalizedDescriptionKey: "We couldn’t convert that image. Please try again."
                 ])
