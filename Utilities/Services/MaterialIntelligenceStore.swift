@@ -344,7 +344,7 @@ final class MaterialIntelligenceStore: ObservableObject {
         }
     }
 
-    private static func accumulate(_ material: Material, jobType: String, date: Date?, into map: inout [String: MaterialStatsBuilder]) {
+    nonisolated private static func accumulate(_ material: Material, jobType: String, date: Date?, into map: inout [String: MaterialStatsBuilder]) {
         let key = normalize(material.name)
         let builder = map[key, default: MaterialStatsBuilder(key: key, name: material.name)]
         map[key] = builder.add(
@@ -356,7 +356,7 @@ final class MaterialIntelligenceStore: ObservableObject {
         )
     }
 
-    private static func trackCoOccurrence(_ names: Set<String>, store: inout [String: [String: Int]]) {
+    nonisolated private static func trackCoOccurrence(_ names: Set<String>, store: inout [String: [String: Int]]) {
         for primary in names {
             for secondary in names where secondary != primary {
                 var inner = store[primary, default: [:]]
@@ -366,11 +366,11 @@ final class MaterialIntelligenceStore: ObservableObject {
         }
     }
 
-    private static func normalize(_ name: String) -> String {
+    nonisolated private static func normalize(_ name: String) -> String {
         name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
-    private static func sortByUsage(lhs: MaterialUsageStats, rhs: MaterialUsageStats) -> Bool {
+    nonisolated private static func sortByUsage(lhs: MaterialUsageStats, rhs: MaterialUsageStats) -> Bool {
         if lhs.totalUsageCount == rhs.totalUsageCount {
             return (lhs.lastUsedAt ?? .distantPast) > (rhs.lastUsedAt ?? .distantPast)
         }
