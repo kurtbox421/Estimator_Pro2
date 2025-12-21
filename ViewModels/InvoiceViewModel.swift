@@ -158,7 +158,7 @@ class InvoiceViewModel: ObservableObject {
                 guard let self else { return }
                 Task { @MainActor in
                     if let error {
-                        logger.error("Failed to fetch invoices: \(error.localizedDescription)")
+                        self.logger.error("Failed to fetch invoices: \(error.localizedDescription)")
                         return
                     }
 
