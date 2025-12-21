@@ -150,18 +150,12 @@ final class SubscriptionManager: ObservableObject {
                 switch verification {
                 case .verified(let transaction):
                     debugLog("[Purchase] Verified transaction:", transaction.id, "uid:", uid)
-                    do {
-                        try await persistSubscriptionBinding(uid: uid, transaction: transaction)
-                        setSubscriptionBindingExists(true)
-                        await transaction.finish()
-                        _ = await refreshEntitlements()
-                        statusMessage = "Thanks for subscribing to Pro!"
-                        shouldShowPaywall = false
-                    } catch {
-                        logFirestoreError(error, context: "subscription binding write", uid: uid)
-                        lastError = "Unable to verify subscription binding. Please try again."
-                        statusMessage = lastError
-                    }
+                    await persistSubscriptionBinding(uid: uid, transaction: transaction)
+                    setSubscriptionBindingExists(true)
+                    await transaction.finish()
+                    _ = await refreshEntitlements()
+                    statusMessage = "Thanks for subscribing to Pro!"
+                    shouldShowPaywall = false
                 case .unverified(_, let error):
                     debugLog("[Purchase] Verification failed:", error.localizedDescription, "uid:", uid)
                     lastError = "Purchase verification failed: \(error.localizedDescription)"
@@ -215,16 +209,10 @@ final class SubscriptionManager: ObservableObject {
         let entitlement = await activeSubscriptionEntitlement()
         if let entitlement {
             debugLog("[Restore] Found entitlement:", entitlement.productID, "uid:", uid)
-            do {
-                try await persistSubscriptionBinding(uid: uid, transaction: entitlement)
-                setSubscriptionBindingExists(true)
-                _ = await refreshEntitlements()
-                statusMessage = "Restored Estimator Pro (\(entitlement.productID))."
-            } catch {
-                logFirestoreError(error, context: "subscription binding write", uid: uid)
-                lastError = "Unable to verify subscription binding. Please try again."
-                statusMessage = lastError
-            }
+            await persistSubscriptionBinding(uid: uid, transaction: entitlement)
+            setSubscriptionBindingExists(true)
+            _ = await refreshEntitlements()
+            statusMessage = "Restored Estimator Pro (\(entitlement.productID))."
         } else {
             _ = await refreshEntitlements()
             statusMessage = "No purchases found to restore."
@@ -328,12 +316,8 @@ final class SubscriptionManager: ObservableObject {
             return
         }
 
-        do {
-            try await persistSubscriptionBinding(uid: uid, transaction: transaction)
-            await transaction.finish()
-        } catch {
-            logFirestoreError(error, context: "subscription binding update", uid: uid)
-        }
+        await persistSubscriptionBinding(uid: uid, transaction: transaction)
+        await transaction.finish()
     }
 
     private func fetchProducts(within timeout: TimeInterval) async throws -> [Product] {
@@ -360,7 +344,7 @@ final class SubscriptionManager: ObservableObject {
         }
     }
 
-    private func persistSubscriptionBinding(uid: String, transaction: StoreKit.Transaction) async throws {
+    private func persistSubscriptionBinding(uid: String, transaction: StoreKit.Transaction) async {
         let environmentValue = environmentString(for: transaction)
         let data: [String: Any] = [
             "productId": transaction.productID,
@@ -375,11 +359,7 @@ final class SubscriptionManager: ObservableObject {
         debugLog("[Firestore] Writing subscription binding for uid:", uid, "transaction:", transaction.id)
         print("[Data] SubscriptionManager uid=\(uid) path=users/\(uid)/entitlements/subscription action=write")
         let docRef = subscriptionDocRef(uid: uid)
-        do {
-            try await docRef.setData(data, merge: true)
-        } catch {
-            throw error
-        }
+        await docRef.setData(data, merge: true)
     }
 
     private func subscriptionDocRef(uid: String) -> DocumentReference {
