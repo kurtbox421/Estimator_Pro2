@@ -34,8 +34,9 @@ final class SubscriptionManager: ObservableObject {
     @Published private(set) var productStateChangeToken: Int = 0
 
     private let db: Firestore
-    private var updatesTask: Task<Void, Never>?
+    nonisolated(unsafe) private var updatesTask: Task<Void, Never>?
     private var authHandle: AuthStateDidChangeListenerHandle?
+    private var currentUID: String?
 
     init(database: Firestore = Firestore.firestore()) {
         self.db = database
@@ -45,7 +46,9 @@ final class SubscriptionManager: ObservableObject {
 
         authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             guard let self else { return }
-            self.handleAuthStateChange(user)
+            Task { @MainActor in
+                self.handleAuthStateChange(user)
+            }
         }
 
         handleAuthStateChange(Auth.auth().currentUser)
@@ -406,17 +409,16 @@ final class SubscriptionManager: ObservableObject {
     }
 
     private func environmentString(for transaction: StoreKit.Transaction) -> String {
-        let environment = transaction.environment
-        if environment == .xcode {
+        switch transaction.environment {
+        case .xcode:
             return "xcode"
-        }
-        if environment == .sandbox {
+        case .sandbox:
             return "sandbox"
-        }
-        if environment == .production {
+        case .production:
             return "production"
+        @unknown default:
+            return "unknown"
         }
-        return "unknown"
     }
 
     private func bindSubscriptionIfNeeded(
@@ -479,22 +481,38 @@ final class SubscriptionManager: ObservableObject {
         }
     }
 
-    private func stopEntitlementListeners() {
+    nonisolated private func stopEntitlementListeners() {
         updatesTask?.cancel()
         updatesTask = nil
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            isLoading = false
+            products = []
+            lastError = nil
+            statusMessage = nil
+            setProductState(.idle)
+            isPro = false
+            activeProductID = nil
+            environment = nil
+            shouldShowPaywall = false
+        }
     }
 
     private func handleAuthStateChange(_ user: User?) {
         // Tie entitlement state to the auth user and clear it on logout to prevent cross-account bleed.
-        if user == nil {
+        let newUID = user?.uid
+        if newUID != currentUID {
             stopEntitlementListeners()
-            clearCachedProStatus()
-        } else {
-            resetEntitlementState()
-            startEntitlementListeners()
-            Task {
-                await refreshEntitlements()
-            }
+            currentUID = newUID
+        }
+
+        guard newUID != nil else {
+            return
+        }
+
+        startEntitlementListeners()
+        Task {
+            await refreshEntitlements()
         }
     }
 }
