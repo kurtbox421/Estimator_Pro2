@@ -3,6 +3,7 @@ import Combine
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 
+@MainActor
 final class SettingsManager: ObservableObject {
     @Published var commonMaterials: [SavedMaterial] = []
 
@@ -29,9 +30,12 @@ final class SettingsManager: ObservableObject {
     }
 
     deinit {
-        listener?.remove()
-        if let resetToken {
-            session.unregisterResetHandler(resetToken)
+        Task { @MainActor in
+            listener?.remove()
+            cancellables.removeAll()
+            if let resetToken {
+                session.unregisterResetHandler(resetToken)
+            }
         }
     }
 

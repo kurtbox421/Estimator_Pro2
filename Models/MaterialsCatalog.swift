@@ -303,6 +303,7 @@ struct MaterialsCatalog: Codable {
     let materials: [MaterialItem]
 }
 
+@MainActor
 final class MaterialsCatalogStore: ObservableObject {
     @Published private(set) var materials: [MaterialItem] = []
     @Published private(set) var materialGroups: [MaterialGroup] = []
@@ -358,10 +359,13 @@ final class MaterialsCatalogStore: ObservableObject {
     }
 
     deinit {
-        customMaterialsListener?.remove()
-        preferencesListener?.remove()
-        if let resetToken {
-            session.unregisterResetHandler(resetToken)
+        Task { @MainActor in
+            customMaterialsListener?.remove()
+            preferencesListener?.remove()
+            cancellables.removeAll()
+            if let resetToken {
+                session.unregisterResetHandler(resetToken)
+            }
         }
     }
 

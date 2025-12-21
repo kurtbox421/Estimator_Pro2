@@ -30,6 +30,7 @@ struct CompanySettings: Codable {
     static let empty = CompanySettings(ownerID: nil, companyName: "", companyAddress: "", companyPhone: "", companyEmail: "", logoPath: nil)
 }
 
+@MainActor
 final class CompanySettingsStore: ObservableObject {
     @Published var companyName: String = ""
     @Published var companyAddress: String = ""
@@ -105,10 +106,13 @@ final class CompanySettingsStore: ObservableObject {
     }
 
     deinit {
-        listener?.remove()
-        userListener?.remove()
-        if let resetToken {
-            session.unregisterResetHandler(resetToken)
+        Task { @MainActor in
+            listener?.remove()
+            userListener?.remove()
+            cancellables.removeAll()
+            if let resetToken {
+                session.unregisterResetHandler(resetToken)
+            }
         }
     }
 

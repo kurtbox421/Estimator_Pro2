@@ -64,8 +64,11 @@ final class OnboardingProgressStore: ObservableObject {
     }
 
     deinit {
-        if let resetToken {
-            session.unregisterResetHandler(resetToken)
+        Task { @MainActor in
+            cancellables.removeAll()
+            if let resetToken {
+                session.unregisterResetHandler(resetToken)
+            }
         }
     }
 
