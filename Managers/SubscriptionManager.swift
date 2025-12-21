@@ -37,6 +37,18 @@ final class SubscriptionManager: ObservableObject {
     nonisolated(unsafe) private var updatesTask: Task<Void, Never>?
     private var authHandle: AuthStateDidChangeListenerHandle?
     private var currentUID: String?
+    private var entitlementListener: ListenerRegistration?
+
+    private enum SubscriptionBindingError: LocalizedError {
+        case linkedToAnotherAccount
+
+        var errorDescription: String? {
+            switch self {
+            case .linkedToAnotherAccount:
+                return "subscription linked to another account"
+            }
+        }
+    }
 
     init(database: Firestore = Firestore.firestore()) {
         self.db = database
@@ -56,6 +68,7 @@ final class SubscriptionManager: ObservableObject {
 
     deinit {
         stopEntitlementListeners()
+        stopEntitlementListener()
         if let authHandle {
             Auth.auth().removeStateDidChangeListener(authHandle)
         }
@@ -121,8 +134,8 @@ final class SubscriptionManager: ObservableObject {
             case .success(let verification):
                 await handle(transactionResult: verification)
                 if case .verified = verification {
-                    await refreshEntitlements()
-                    if isPro {
+                    let isEntitled = await refreshEntitlements()
+                    if isEntitled {
                         statusMessage = "Thanks for subscribing to Pro!"
                         shouldShowPaywall = false
                     }
@@ -164,13 +177,11 @@ final class SubscriptionManager: ObservableObject {
         await refreshEntitlements(showRestoreMessage: true)
     }
 
-    func refreshEntitlements(showRestoreMessage: Bool = false) async {
+    @discardableResult
+    func refreshEntitlements(showRestoreMessage: Bool = false) async -> Bool {
         guard let currentUID = Auth.auth().currentUser?.uid else {
-            clearCachedProStatus()
-            return
+            return false
         }
-
-        resetEntitlementState()
 
         let entitlement = await activeSubscriptionEntitlement()
         let entitlementActive = entitlement != nil
@@ -179,40 +190,54 @@ final class SubscriptionManager: ObservableObject {
         let originalTransactionId = entitlement.map { String($0.originalID) }
 
         var isEntitled = false
-        var bindingDenied = false
 
         if let entitlement,
            let originalTransactionId {
             do {
-                isEntitled = try await bindSubscriptionIfNeeded(
+                try await bindSubscriptionIfNeeded(
                     uid: currentUID,
                     originalTransactionId: originalTransactionId,
                     productId: entitlement.productID,
                     environment: environmentValue
                 )
-                bindingDenied = !isEntitled
+                isEntitled = true
+                await updateUserEntitlement(
+                    uid: currentUID,
+                    isPro: true,
+                    activeProductID: activeProductID,
+                    environment: environmentValue,
+                    originalTransactionId: originalTransactionId
+                )
+            } catch let error as SubscriptionBindingError {
+                if case .linkedToAnotherAccount = error {
+                    lastError = error.localizedDescription
+                    statusMessage = lastError
+                } else {
+                    debugLog("[Firestore] Failed to bind subscription:", error.localizedDescription)
+                    lastError = "Unable to verify subscription binding. Please try again."
+                    statusMessage = lastError
+                }
+                await updateUserEntitlement(
+                    uid: currentUID,
+                    isPro: false,
+                    activeProductID: nil,
+                    environment: nil,
+                    originalTransactionId: nil
+                )
             } catch {
                 debugLog("[Firestore] Failed to bind subscription:", error.localizedDescription)
                 lastError = "Unable to verify subscription binding. Please try again."
                 statusMessage = lastError
             }
+        } else {
+            await updateUserEntitlement(
+                uid: currentUID,
+                isPro: false,
+                activeProductID: nil,
+                environment: nil,
+                originalTransactionId: nil
+            )
         }
-
-        if entitlementActive, bindingDenied {
-            lastError = "subscription linked to another account"
-            statusMessage = lastError
-        }
-
-        setIsPro(entitlementActive && isEntitled)
-        setActiveProductID(activeProductID)
-        setEnvironment(environmentValue)
-        await updateUserEntitlement(
-            uid: currentUID,
-            isPro: entitlementActive && isEntitled,
-            activeProductID: activeProductID,
-            environment: environmentValue,
-            originalTransactionId: originalTransactionId
-        )
 
         if showRestoreMessage {
             if entitlementActive, let entitlement {
@@ -223,6 +248,8 @@ final class SubscriptionManager: ObservableObject {
                 statusMessage = "No purchases found to restore."
             }
         }
+
+        return entitlementActive && isEntitled
     }
 
 
@@ -268,19 +295,6 @@ final class SubscriptionManager: ObservableObject {
 
     private func setEnvironment(_ newValue: String?) {
         environment = newValue
-    }
-
-    private func clearCachedProStatus() {
-        setIsPro(false)
-        setActiveProductID(nil)
-        setEnvironment(nil)
-        statusMessage = nil
-    }
-
-    private func resetEntitlementState() {
-        setIsPro(false)
-        setActiveProductID(nil)
-        setEnvironment(nil)
     }
 
     func presentPaywall(after delay: TimeInterval = 0) {
@@ -385,13 +399,13 @@ final class SubscriptionManager: ObservableObject {
         uid: String,
         isPro: Bool,
         activeProductID: String?,
-        environment: String,
+        environment: String?,
         originalTransactionId: String?
     ) async {
         let data: [String: Any] = [
             "isPro": isPro,
             "updatedAt": FieldValue.serverTimestamp(),
-            "environment": environment,
+            "environment": environment ?? NSNull(),
             "activeProductID": activeProductID ?? NSNull(),
             "originalTransactionId": originalTransactionId ?? NSNull()
         ]
@@ -439,17 +453,17 @@ final class SubscriptionManager: ObservableObject {
         originalTransactionId: String,
         productId: String,
         environment: String
-    ) async throws -> Bool {
+    ) async throws {
         let docRef = db.collection("subscriptionBindings").document(originalTransactionId)
 
-        return try await withCheckedThrowingContinuation { continuation in
+        try await withCheckedThrowingContinuation { continuation in
             db.runTransaction({ transaction, errorPointer in
                 do {
                     let snapshot = try transaction.getDocument(docRef)
                     if let data = snapshot.data(),
                        let boundUID = data["uid"] as? String {
                         if boundUID != uid {
-                            return ["isEntitled": false]
+                            return ["error": "linkedToAnotherAccount"]
                         }
 
                         transaction.updateData([
@@ -478,8 +492,13 @@ final class SubscriptionManager: ObservableObject {
                     return
                 }
 
-                let isEntitled = (result as? [String: Any])?["isEntitled"] as? Bool ?? false
-                continuation.resume(returning: isEntitled)
+                if let errorValue = (result as? [String: Any])?["error"] as? String,
+                   errorValue == "linkedToAnotherAccount" {
+                    continuation.resume(throwing: SubscriptionBindingError.linkedToAnotherAccount)
+                    return
+                }
+
+                continuation.resume(returning: ())
             })
         }
     }
@@ -511,21 +530,67 @@ final class SubscriptionManager: ObservableObject {
         }
     }
 
+    private func stopEntitlementListener() {
+        entitlementListener?.remove()
+        entitlementListener = nil
+    }
+
+    private func clearAuthState() {
+        setIsPro(false)
+        setActiveProductID(nil)
+        setEnvironment(nil)
+        statusMessage = nil
+        lastError = nil
+    }
+
+    private func startEntitlementListener(uid: String) {
+        stopEntitlementListener()
+        let docRef = db.collection("users")
+            .document(uid)
+            .collection("entitlements")
+            .document("pro")
+
+        entitlementListener = docRef.addSnapshotListener { [weak self] snapshot, error in
+            guard let self else { return }
+            Task { @MainActor in
+                if let error {
+                    self.lastError = error.localizedDescription
+                    return
+                }
+
+                guard let data = snapshot?.data() else {
+                    self.setIsPro(false)
+                    self.setActiveProductID(nil)
+                    self.setEnvironment(nil)
+                    return
+                }
+
+                let isProValue = data["isPro"] as? Bool ?? false
+                let activeProductID = data["activeProductID"] as? String
+                let environment = data["environment"] as? String
+
+                self.setIsPro(isProValue)
+                self.setActiveProductID(activeProductID)
+                self.setEnvironment(environment)
+            }
+        }
+    }
+
     private func handleAuthStateChange(_ user: User?) {
         // Tie entitlement state to the auth user and clear it on logout to prevent cross-account bleed.
+        clearAuthState()
         let newUID = user?.uid
         if newUID != currentUID {
             stopEntitlementListeners()
+            stopEntitlementListener()
             currentUID = newUID
         }
 
-        guard newUID != nil else {
+        guard let uid = newUID else {
             return
         }
 
         startEntitlementListeners()
-        Task {
-            await refreshEntitlements()
-        }
+        startEntitlementListener(uid: uid)
     }
 }
