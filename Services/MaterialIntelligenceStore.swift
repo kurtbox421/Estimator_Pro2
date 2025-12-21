@@ -27,7 +27,7 @@ final class MaterialIntelligenceStore: ObservableObject {
     private var invoicesListener: ListenerRegistration?
     private var cachedJobs: [Job] = []
     private var cachedInvoices: [Invoice] = []
-    private var invalidJobDocumentIDs: Set<String> = []
+    private var invalidJobDocumentPaths: Set<String> = []
     private var coOccurrence: [String: [String: Int]] = [:]
 
     init(database: Firestore = Firestore.firestore()) {
@@ -87,7 +87,7 @@ final class MaterialIntelligenceStore: ObservableObject {
         invoicesListener?.remove()
         materialStats = []
         coOccurrence = [:]
-        invalidJobDocumentIDs = []
+        invalidJobDocumentPaths = []
 
         guard let uid = user?.uid else { return }
 
@@ -107,17 +107,20 @@ final class MaterialIntelligenceStore: ObservableObject {
                 }
 
                 let jobs: [Job] = snapshot.documents.compactMap { document in
-                    if self.invalidJobDocumentIDs.contains(document.documentID) {
+                    let documentPath = document.reference.path
+                    if self.invalidJobDocumentPaths.contains(documentPath) {
                         return nil
                     }
 
                     do {
                         return try document.data(as: Job.self)
+                    } catch let decodingError as DecodingError {
+                        self.logJobDecodingError(decodingError, documentPath: documentPath)
+                        self.invalidJobDocumentPaths.insert(documentPath)
+                        return nil
                     } catch {
-                        #if DEBUG
-                        self.logger.error("Failed to decode job \(document.documentID): \(error.localizedDescription)")
-                        #endif
-                        self.invalidJobDocumentIDs.insert(document.documentID)
+                        self.logger.error("Failed to decode job document \(documentPath): \(error.localizedDescription)")
+                        self.invalidJobDocumentPaths.insert(documentPath)
                         return nil
                     }
                 }
@@ -197,6 +200,59 @@ final class MaterialIntelligenceStore: ObservableObject {
                 self?.coOccurrence = coUse
             }
         }
+    }
+
+    private func logJobDecodingError(_ error: DecodingError, documentPath: String) {
+        let details = describeDecodingError(error)
+        let expected = details.expectedType.map { " expectedType=\($0)." } ?? ""
+        let actual = details.actualType.map { " actualType=\($0)." } ?? ""
+        let codingPath = details.codingPath.isEmpty ? " codingPath=<root>." : " codingPath=\(details.codingPath)."
+        logger.error("Failed to decode job document \(documentPath). decodingError=\(details.caseName).\(codingPath)\(expected)\(actual)")
+    }
+
+    private func describeDecodingError(_ error: DecodingError) -> (caseName: String, codingPath: String, expectedType: String?, actualType: String?) {
+        switch error {
+        case .typeMismatch(let type, let context):
+            return (
+                caseName: "typeMismatch",
+                codingPath: codingPathString(context.codingPath),
+                expectedType: String(describing: type),
+                actualType: context.debugDescription
+            )
+        case .valueNotFound(let type, let context):
+            return (
+                caseName: "valueNotFound",
+                codingPath: codingPathString(context.codingPath),
+                expectedType: String(describing: type),
+                actualType: context.debugDescription
+            )
+        case .keyNotFound(let key, let context):
+            let path = (context.codingPath + [key]).map { $0.stringValue }.joined(separator: ".")
+            return (
+                caseName: "keyNotFound",
+                codingPath: path,
+                expectedType: key.stringValue,
+                actualType: context.debugDescription
+            )
+        case .dataCorrupted(let context):
+            return (
+                caseName: "dataCorrupted",
+                codingPath: codingPathString(context.codingPath),
+                expectedType: nil,
+                actualType: context.debugDescription
+            )
+        @unknown default:
+            return (
+                caseName: "unknown",
+                codingPath: "",
+                expectedType: nil,
+                actualType: nil
+            )
+        }
+    }
+
+    private func codingPathString(_ codingPath: [CodingKey]) -> String {
+        codingPath.map { $0.stringValue }.joined(separator: ".")
     }
 
     nonisolated private func accumulate(_ material: Material, jobType: String, date: Date?, into map: inout [String: MaterialStatsBuilder]) {

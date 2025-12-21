@@ -62,12 +62,12 @@ struct Job: Identifiable, Codable {
         category = try container.decodeIfPresent(String.self, forKey: .category) ?? "General"
         let decodedLaborLines = try container.decodeIfPresent([LaborLine].self, forKey: .laborLines) ?? []
         materials = try container.decodeIfPresent([Material].self, forKey: .materials) ?? []
-        dateCreated = try container.decodeIfPresent(Date.self, forKey: .dateCreated) ?? Date()
+        dateCreated = try container.decodeLossyDateIfPresent(forKey: .dateCreated) ?? Date()
         clientId = try container.decodeIfPresent(UUID.self, forKey: .clientId)
 
         if decodedLaborLines.isEmpty,
-           let hours = try container.decodeIfPresent(Double.self, forKey: .laborHours),
-           let rate = try container.decodeIfPresent(Double.self, forKey: .laborRate),
+           let hours = try container.decodeLossyDoubleIfPresent(forKey: .laborHours),
+           let rate = try container.decodeLossyDoubleIfPresent(forKey: .laborRate),
            hours > 0 || rate > 0 {
             laborLines = [LaborLine(id: UUID(), title: "Labor", hours: hours, rate: rate)]
         } else {
