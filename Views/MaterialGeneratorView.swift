@@ -338,7 +338,9 @@ struct MaterialGeneratorView: View {
             return
         }
 
-        guard selectedGroups.allSatisfy({ !materialsStore.items(inGroupID: $0.id).isEmpty }) else {
+        let catalogSnapshot = materialsStore.snapshot()
+
+        guard selectedGroups.allSatisfy({ !catalogSnapshot.items(inGroupID: $0.id).isEmpty }) else {
             validationMessage = "Add materials in Material Pricing to create job types."
             generated = []
             suggestedMaterials = []
@@ -346,7 +348,6 @@ struct MaterialGeneratorView: View {
         }
 
         validationMessage = nil
-        let catalogSnapshot = await MainActor.run { materialsStore.snapshot() }
 
         let recommendations = selectedGroups.flatMap { group in
             let context = JobContext(
@@ -363,7 +364,7 @@ struct MaterialGeneratorView: View {
                 notes: nil
             )
 
-            return MaterialsRecommender(catalog: materialsStore)
+            return MaterialsRecommender(catalog: catalogSnapshot)
                 .recommendMaterials(for: group, context: context)
         }
         let mergedRecommendations = mergeRecommendations(recommendations)

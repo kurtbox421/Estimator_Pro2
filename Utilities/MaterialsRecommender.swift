@@ -124,7 +124,7 @@ enum GeneratorMaterialKey: String {
 
 struct MaterialsRecommender {
 
-    let catalog: MaterialsCatalogStore
+    let catalog: MaterialsCatalogSnapshot
     private let quantityEngine = MaterialQuantityEngine()
 
     func recommendMaterials(for group: MaterialGroup, context: JobContext) -> [MaterialRecommendation] {

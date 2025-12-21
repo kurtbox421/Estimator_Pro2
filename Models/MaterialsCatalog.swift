@@ -760,6 +760,8 @@ final class MaterialsCatalogStore: ObservableObject {
                 (tag, materials(for: tag))
             }
         )
+        let materialsByGroupID = Dictionary(grouping: materials, by: \.groupID)
+            .mapValues { $0.sorted { $0.name < $1.name } }
         let pricesByID = Dictionary(
             uniqueKeysWithValues: materials.map { material in
                 (material.id, price(for: material))
@@ -773,6 +775,7 @@ final class MaterialsCatalogStore: ObservableObject {
         return MaterialsCatalogSnapshot(
             materials: materials,
             materialsByTag: materialsByTag,
+            materialsByGroupID: materialsByGroupID,
             pricesByID: pricesByID,
             productURLsByID: productURLsByID,
             customMaterialIDs: customMaterialIDs
