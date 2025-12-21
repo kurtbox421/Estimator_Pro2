@@ -56,14 +56,14 @@ struct Job: Identifiable, Codable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        id = try container.decodeLossyUUIDIfPresent(forKey: .id) ?? UUID()
         ownerID = try container.decodeIfPresent(String.self, forKey: .ownerID) ?? ""
         name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Untitled Job"
         category = try container.decodeIfPresent(String.self, forKey: .category) ?? "General"
         let decodedLaborLines = try container.decodeIfPresent([LaborLine].self, forKey: .laborLines) ?? []
         materials = try container.decodeIfPresent([Material].self, forKey: .materials) ?? []
         dateCreated = try container.decodeLossyDateIfPresent(forKey: .dateCreated) ?? Date()
-        clientId = try container.decodeIfPresent(UUID.self, forKey: .clientId)
+        clientId = try container.decodeLossyUUIDIfPresent(forKey: .clientId)
 
         if decodedLaborLines.isEmpty {
             let hours = try container.decodeLossyDoubleIfPresent(forKey: .laborHours) ?? 0

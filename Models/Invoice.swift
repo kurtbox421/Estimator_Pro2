@@ -96,14 +96,14 @@ struct Invoice: Identifiable, Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        let decodedId = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        let decodedId = try container.decodeLossyUUIDIfPresent(forKey: .id) ?? UUID()
         let decodedInvoiceNumber = try container.decodeIfPresent(String.self, forKey: .invoiceNumber)
 
         self.id = decodedId
         self.invoiceNumber = decodedInvoiceNumber
             ?? InvoiceNumberManager.shared.generateInvoiceNumber()
         self.title = try container.decodeIfPresent(String.self, forKey: .title) ?? "Invoice"
-        self.clientID = try container.decodeIfPresent(UUID.self, forKey: .clientID)
+        self.clientID = try container.decodeLossyUUIDIfPresent(forKey: .clientID)
         self.clientName = try container.decodeIfPresent(String.self, forKey: .clientName) ?? ""
         self.materials = try container.decodeIfPresent([Material].self, forKey: .materials) ?? []
         if let decodedLaborLines = try container.decodeIfPresent([LaborLine].self, forKey: .laborLines) {

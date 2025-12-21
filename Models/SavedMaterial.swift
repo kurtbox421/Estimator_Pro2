@@ -17,7 +17,7 @@ struct SavedMaterial: Identifiable, Codable, Equatable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
+        id = try container.decodeLossyUUIDIfPresent(forKey: .id) ?? UUID()
         ownerID = try container.decodeIfPresent(String.self, forKey: .ownerID) ?? ""
         isDefault = try container.decodeIfPresent(Bool.self, forKey: .isDefault) ?? false
         name = try container.decode(String.self, forKey: .name)

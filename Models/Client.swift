@@ -43,7 +43,7 @@ struct Client: Identifiable, Codable, Equatable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        id = try container.decodeLossyUUIDIfPresent(forKey: .id) ?? UUID()
         ownerID = try container.decodeIfPresent(String.self, forKey: .ownerID) ?? ""
         name = try container.decodeIfPresent(String.self, forKey: .name) ?? ""
         company = try container.decodeIfPresent(String.self, forKey: .company) ?? ""

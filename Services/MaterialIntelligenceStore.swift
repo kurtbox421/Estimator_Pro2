@@ -204,49 +204,42 @@ final class MaterialIntelligenceStore: ObservableObject {
 
     private func logJobDecodingError(_ error: DecodingError, documentPath: String) {
         let details = describeDecodingError(error)
-        let expected = details.expectedType.map { " expectedType=\($0)." } ?? ""
-        let actual = details.actualType.map { " actualType=\($0)." } ?? ""
-        let codingPath = details.codingPath.isEmpty ? " codingPath=<root>." : " codingPath=\(details.codingPath)."
-        logger.error("Failed to decode job document \(documentPath). decodingError=\(details.caseName).\(codingPath)\(expected)\(actual)")
+        let codingPath = details.codingPath.isEmpty ? "<root>" : details.codingPath
+        logger.error("Failed to decode document \(documentPath): case=\(details.caseName) codingPath=\(codingPath) debugDescription=\(details.debugDescription)")
     }
 
-    private func describeDecodingError(_ error: DecodingError) -> (caseName: String, codingPath: String, expectedType: String?, actualType: String?) {
+    private func describeDecodingError(_ error: DecodingError) -> (caseName: String, codingPath: String, debugDescription: String) {
         switch error {
         case .typeMismatch(let type, let context):
             return (
                 caseName: "typeMismatch",
                 codingPath: codingPathString(context.codingPath),
-                expectedType: String(describing: type),
-                actualType: context.debugDescription
+                debugDescription: "Expected \(String(describing: type)). \(context.debugDescription)"
             )
         case .valueNotFound(let type, let context):
             return (
                 caseName: "valueNotFound",
                 codingPath: codingPathString(context.codingPath),
-                expectedType: String(describing: type),
-                actualType: context.debugDescription
+                debugDescription: "Missing \(String(describing: type)). \(context.debugDescription)"
             )
         case .keyNotFound(let key, let context):
             let path = (context.codingPath + [key]).map { $0.stringValue }.joined(separator: ".")
             return (
                 caseName: "keyNotFound",
                 codingPath: path,
-                expectedType: key.stringValue,
-                actualType: context.debugDescription
+                debugDescription: context.debugDescription
             )
         case .dataCorrupted(let context):
             return (
                 caseName: "dataCorrupted",
                 codingPath: codingPathString(context.codingPath),
-                expectedType: nil,
-                actualType: context.debugDescription
+                debugDescription: context.debugDescription
             )
         @unknown default:
             return (
                 caseName: "unknown",
                 codingPath: "",
-                expectedType: nil,
-                actualType: nil
+                debugDescription: "Unknown decoding error."
             )
         }
     }

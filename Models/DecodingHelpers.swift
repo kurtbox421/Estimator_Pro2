@@ -41,4 +41,20 @@ extension KeyedDecodingContainer {
         }
         return nil
     }
+
+    func decodeLossyUUIDIfPresent(forKey key: Key) throws -> UUID? {
+        if let uuidValue = try? decodeIfPresent(UUID.self, forKey: key) {
+            if let uuidValue {
+                return uuidValue
+            }
+        }
+
+        if let uuidString = try? decodeIfPresent(String.self, forKey: key) {
+            if let uuidString {
+                return UUID(uuidString: uuidString.trimmingCharacters(in: .whitespacesAndNewlines))
+            }
+        }
+
+        return nil
+    }
 }
