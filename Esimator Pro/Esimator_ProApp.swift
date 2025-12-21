@@ -10,6 +10,7 @@ import FirebaseCore
 
 @main
 struct EstimatorProApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var jobVM = JobViewModel()
     @StateObject private var invoiceVM = InvoiceViewModel()
     @StateObject private var estimateVM = EstimateViewModel()
@@ -27,8 +28,6 @@ struct EstimatorProApp: App {
     @State private var showingSplash = true
 
     init() {
-        FirebaseApp.configure()
-
 #if DEBUG
         let bundleID = Bundle.main.bundleIdentifier ?? "(missing bundle identifier)"
         let schemeName = ProcessInfo.processInfo.environment["XCODE_SCHEME"] ?? "(unknown scheme)"
