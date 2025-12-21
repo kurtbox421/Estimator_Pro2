@@ -517,7 +517,7 @@ final class SubscriptionManager: ObservableObject {
     private func logFirestoreError(_ error: Error, context: String, uid: String?) {
         let nsError = error as NSError
         debugLog("[Firestore] \(context) failed:", nsError.localizedDescription, "uid:", uid ?? "nil", "code:", nsError.code, "domain:", nsError.domain)
-        if let firestoreCode = FirestoreErrorCode(rawValue: nsError.code), firestoreCode == .permissionDenied {
+        if let firestoreCode = FirestoreErrorCode.Code(rawValue: nsError.code), firestoreCode == .permissionDenied {
             debugLog("[Firestore] Permission denied for \(context) uid:", uid ?? "nil")
         }
     }
