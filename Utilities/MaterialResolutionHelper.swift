@@ -3,7 +3,7 @@ import Foundation
 struct MaterialResolutionHelper {
     static func material(
         from recommendation: MaterialRecommendation,
-        catalog: MaterialsCatalogStore,
+        catalog: MaterialsCatalogSnapshot,
         ownerID: String,
         fallbackUnitCost: Double? = nil
     ) -> Material {
