@@ -112,14 +112,6 @@ struct PaywallView: View {
                     .padding(.top, 2)
             }
 
-            if let linkMessage = subscriptionManager.accountLinkMessage {
-                Text(linkMessage)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundColor(.yellow)
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 6)
-            }
-
             HStack(spacing: 14) {
                 Link("Terms of Use", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
                     .font(.caption.weight(.semibold))
