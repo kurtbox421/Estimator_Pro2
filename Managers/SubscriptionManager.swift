@@ -402,12 +402,12 @@ final class SubscriptionManager: ObservableObject {
             .document("pro")
 
         do {
-            try await withCheckedThrowingContinuation { continuation in
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                 docRef.setData(data, merge: true) { error in
                     if let error {
                         continuation.resume(throwing: error)
                     } else {
-                        continuation.resume()
+                        continuation.resume(returning: ())
                     }
                 }
             }
