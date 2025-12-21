@@ -19,16 +19,31 @@ extension KeyedDecodingContainer {
     }
 
     func decodeLossyDateIfPresent(forKey key: Key) throws -> Date? {
-        if let dateValue = try decodeIfPresent(Date.self, forKey: key) {
+        if let dateValue = (try? decodeIfPresent(Date.self, forKey: key)) ?? nil {
             return dateValue
         }
-        if let timestampValue = try decodeIfPresent(Timestamp.self, forKey: key) {
+        if let timestampValue = (try? decodeIfPresent(Timestamp.self, forKey: key)) ?? nil {
             return timestampValue.dateValue()
         }
-        if let doubleValue = try decodeLossyDoubleIfPresent(forKey: key) {
+        if let timestampDictionary = (try? decodeIfPresent([String: NSNumber].self, forKey: key)) ?? nil {
+            if let dateValue = Self.date(fromTimestampDictionary: timestampDictionary) {
+                return dateValue
+            }
+        }
+        if let timestampDictionary = (try? decodeIfPresent([String: Double].self, forKey: key)) ?? nil {
+            if let dateValue = Self.date(fromTimestampDictionary: timestampDictionary) {
+                return dateValue
+            }
+        }
+        if let timestampDictionary = (try? decodeIfPresent([String: Int].self, forKey: key)) ?? nil {
+            if let dateValue = Self.date(fromTimestampDictionary: timestampDictionary) {
+                return dateValue
+            }
+        }
+        if let doubleValue = (try? decodeLossyDoubleIfPresent(forKey: key)) ?? nil {
             return Date(timeIntervalSince1970: doubleValue)
         }
-        if let stringValue = try decodeIfPresent(String.self, forKey: key) {
+        if let stringValue = (try? decodeIfPresent(String.self, forKey: key)) ?? nil {
             let trimmed = stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
             let formatterWithFractional = ISO8601DateFormatter()
             formatterWithFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -40,6 +55,30 @@ extension KeyedDecodingContainer {
             return formatterWithoutFractional.date(from: trimmed)
         }
         return nil
+    }
+
+    private static func date(fromTimestampDictionary dictionary: [String: NSNumber]) -> Date? {
+        guard let seconds = dictionary["seconds"]?.doubleValue else {
+            return nil
+        }
+        let nanos = dictionary["nanoseconds"]?.doubleValue ?? 0
+        return Date(timeIntervalSince1970: seconds + nanos / 1_000_000_000)
+    }
+
+    private static func date(fromTimestampDictionary dictionary: [String: Double]) -> Date? {
+        guard let seconds = dictionary["seconds"] else {
+            return nil
+        }
+        let nanos = dictionary["nanoseconds"] ?? 0
+        return Date(timeIntervalSince1970: seconds + nanos / 1_000_000_000)
+    }
+
+    private static func date(fromTimestampDictionary dictionary: [String: Int]) -> Date? {
+        guard let seconds = dictionary["seconds"] else {
+            return nil
+        }
+        let nanos = dictionary["nanoseconds"] ?? 0
+        return Date(timeIntervalSince1970: Double(seconds) + Double(nanos) / 1_000_000_000)
     }
 
     func decodeLossyUUIDIfPresent(forKey key: Key) throws -> UUID? {

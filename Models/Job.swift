@@ -63,7 +63,7 @@ struct Job: Identifiable, Codable {
             category = try container.decodeIfPresent(String.self, forKey: .category) ?? "General"
             let decodedLaborLines = (try? container.decodeIfPresent([LaborLine].self, forKey: .laborLines)) ?? []
             materials = (try? container.decodeIfPresent([Material].self, forKey: .materials)) ?? []
-            dateCreated = try container.decodeLossyDateIfPresent(forKey: .dateCreated) ?? Date()
+            dateCreated = (try? container.decodeLossyDateIfPresent(forKey: .dateCreated)) ?? Date()
             clientId = try container.decodeLossyUUIDIfPresent(forKey: .clientId)
 
             if decodedLaborLines.isEmpty {
