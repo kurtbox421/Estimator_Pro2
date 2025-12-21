@@ -33,6 +33,18 @@ struct LaborLine: Identifiable, Codable, Equatable {
         case rate
     }
 
+    init(
+        id: UUID = UUID(),
+        title: String = "Labor",
+        hours: Double = 0,
+        rate: Double = 0
+    ) {
+        self.id = id
+        self.title = title
+        self.hours = hours
+        self.rate = rate
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
