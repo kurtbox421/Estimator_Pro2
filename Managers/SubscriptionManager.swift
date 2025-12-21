@@ -1,5 +1,6 @@
 import Foundation
 import FirebaseAuth
+import FirebaseFirestore
 import StoreKit
 import SwiftUI
 
@@ -28,20 +29,15 @@ final class SubscriptionManager: ObservableObject {
     @Published var statusMessage: String?
     @Published var shouldShowPaywall: Bool = false
     @Published var productState: ProductLoadState = .idle
-    @Published var accountLinkMessage: String?
     @Published private(set) var productStateChangeToken: Int = 0
-    @Published private(set) var hasActiveSubscriptionEntitlement = false
-    @Published private(set) var entitledUID: String?
 
-    private let userDefaults: UserDefaults
-    private let isProDefaultsKey = "SubscriptionManager.isPro"
-    private let entitlementUIDKey = "EntitledSubscriptionUID"
+    private let db: Firestore
     private var updatesTask: Task<Void, Never>?
     private var authHandle: AuthStateDidChangeListenerHandle?
 
-    init(userDefaults: UserDefaults = .standard) {
-        self.userDefaults = userDefaults
-        self.isPro = userDefaults.bool(forKey: isProDefaultsKey)
+    init(database: Firestore = Firestore.firestore()) {
+        self.db = database
+        self.isPro = false
 
         updatesTask = Task { [weak self] in
             guard let self else { return }
@@ -54,6 +50,10 @@ final class SubscriptionManager: ObservableObject {
             guard let self else { return }
             if user == nil {
                 self.clearCachedProStatus()
+            } else {
+                Task {
+                    await self.refreshEntitlements()
+                }
             }
         }
     }
@@ -125,7 +125,7 @@ final class SubscriptionManager: ObservableObject {
             case .success(let verification):
                 await handle(transactionResult: verification)
                 if case .verified = verification {
-                    await linkCurrentUserToEntitlement(showRestoreMessage: false)
+                    await refreshEntitlements()
                     if isPro {
                         statusMessage = "Thanks for subscribing to Pro!"
                         shouldShowPaywall = false
@@ -165,25 +165,34 @@ final class SubscriptionManager: ObservableObject {
             statusMessage = message
         }
 
-        await linkCurrentUserToEntitlement(showRestoreMessage: true)
+        await refreshEntitlements(showRestoreMessage: true)
     }
 
-    func verifyEntitlements() async {
+    func refreshEntitlements(showRestoreMessage: Bool = false) async {
+        guard let currentUID = Auth.auth().currentUser?.uid else {
+            clearCachedProStatus()
+            return
+        }
+
         let entitlement = await activeSubscriptionEntitlement()
         let entitlementActive = entitlement != nil
-        let currentUID = Auth.auth().currentUser?.uid
-        let storedUID = KeychainHelper.shared.string(forKey: entitlementUIDKey)
+        let activeProductID = entitlement?.productID
+        let environment = entitlement.map(environmentString(for:))
 
-        hasActiveSubscriptionEntitlement = entitlementActive
-        entitledUID = storedUID
+        setIsPro(entitlementActive)
+        await updateUserEntitlement(
+            uid: currentUID,
+            isPro: entitlementActive,
+            activeProductID: activeProductID,
+            environment: environment
+        )
 
-        let isProForCurrentUser = entitlementActive && storedUID == currentUID
-        setIsPro(isProForCurrentUser)
-
-        if entitlementActive && storedUID != currentUID {
-            accountLinkMessage = "This subscription is linked to a different account on this device. Tap Restore Purchases to link it."
-        } else {
-            accountLinkMessage = nil
+        if showRestoreMessage {
+            if entitlementActive, let entitlement {
+                statusMessage = "Restored Estimator Pro (\(entitlement.productID))."
+            } else {
+                statusMessage = "No purchases found to restore."
+            }
         }
     }
 
@@ -222,31 +231,11 @@ final class SubscriptionManager: ObservableObject {
 
     private func setIsPro(_ newValue: Bool) {
         isPro = newValue
-        userDefaults.set(newValue, forKey: isProDefaultsKey)
     }
 
     private func clearCachedProStatus() {
         setIsPro(false)
-        accountLinkMessage = nil
-    }
-
-    private func linkCurrentUserToEntitlement(showRestoreMessage: Bool) async {
-        await verifyEntitlements()
-
-        guard hasActiveSubscriptionEntitlement,
-              let currentUID = Auth.auth().currentUser?.uid else {
-            if showRestoreMessage, !hasActiveSubscriptionEntitlement {
-                statusMessage = "No purchases found to restore."
-            }
-            return
-        }
-
-        KeychainHelper.shared.setString(currentUID, forKey: entitlementUIDKey)
-        await verifyEntitlements()
-
-        if showRestoreMessage, let entitlement = await activeSubscriptionEntitlement() {
-            statusMessage = "Restored Estimator Pro (\(entitlement.productID))."
-        }
+        statusMessage = nil
     }
 
     func presentPaywall(after delay: TimeInterval = 0) {
@@ -276,7 +265,7 @@ final class SubscriptionManager: ObservableObject {
         switch transactionResult {
         case .verified(let transaction):
             await transaction.finish()
-            await verifyEntitlements()
+            await refreshEntitlements()
         case .unverified(_, let error):
             lastError = "Purchase verification failed: \(error.localizedDescription)"
         }
@@ -345,5 +334,50 @@ final class SubscriptionManager: ObservableObject {
             : (ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"] == nil ? "Device" : "Simulator")
         debugLog("[StoreKit] No products returned. Likely causes: incorrect product IDs, bundle ID mismatch, products not approved/cleared, StoreKit configuration not selected, or App Store Connect not reachable.")
         debugLog("[StoreKit] Current environment:", environment)
+    }
+
+    private func updateUserEntitlement(
+        uid: String,
+        isPro: Bool,
+        activeProductID: String?,
+        environment: String?
+    ) async {
+        var data: [String: Any] = [
+            "isPro": isPro,
+            "lastCheckedAt": FieldValue.serverTimestamp()
+        ]
+
+        if let activeProductID {
+            data["activeProductId"] = activeProductID
+        } else {
+            data["activeProductId"] = FieldValue.delete()
+        }
+
+        if let environment {
+            data["environment"] = environment
+        } else {
+            data["environment"] = FieldValue.delete()
+        }
+
+        do {
+            try await db.collection("users")
+                .document(uid)
+                .collection("entitlements")
+                .document("pro")
+                .setData(data, merge: true)
+        } catch {
+            debugLog("[Firestore] Failed to update entitlement:", error.localizedDescription)
+        }
+    }
+
+    private func environmentString(for transaction: StoreKit.Transaction) -> String? {
+        switch transaction.environment {
+        case .sandbox:
+            return "sandbox"
+        case .production:
+            return "production"
+        @unknown default:
+            return nil
+        }
     }
 }
