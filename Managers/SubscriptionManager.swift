@@ -241,7 +241,7 @@ final class SubscriptionManager: ObservableObject {
         }
 
         for productID in Self.productIDs {
-            guard let latest = try? await StoreKit.Transaction.latest(for: productID) else { continue }
+            guard let latest = await StoreKit.Transaction.latest(for: productID) else { continue }
 
             if case .verified(let transaction) = latest, isTransactionActive(transaction) {
                 return transaction
@@ -359,7 +359,11 @@ final class SubscriptionManager: ObservableObject {
         debugLog("[Firestore] Writing subscription binding for uid:", uid, "transaction:", transaction.id)
         print("[Data] SubscriptionManager uid=\(uid) path=users/\(uid)/entitlements/subscription action=write")
         let docRef = subscriptionDocRef(uid: uid)
-        await docRef.setData(data, merge: true)
+        do {
+            try await docRef.setData(data, merge: true)
+        } catch {
+            logFirestoreError(error, context: "subscription binding write", uid: uid)
+        }
     }
 
     private func subscriptionDocRef(uid: String) -> DocumentReference {
