@@ -24,6 +24,8 @@ final class SubscriptionManager: ObservableObject {
 
     @Published var products: [Product] = []
     @Published var isPro: Bool
+    @Published var activeProductID: String?
+    @Published var environment: String?
     @Published var isLoading: Bool = false
     @Published var lastError: String?
     @Published var statusMessage: String?
@@ -38,6 +40,8 @@ final class SubscriptionManager: ObservableObject {
     init(database: Firestore = Firestore.firestore()) {
         self.db = database
         self.isPro = false
+        self.activeProductID = nil
+        self.environment = nil
 
         updatesTask = Task { [weak self] in
             guard let self else { return }
@@ -48,14 +52,10 @@ final class SubscriptionManager: ObservableObject {
 
         authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             guard let self else { return }
-            if user == nil {
-                self.clearCachedProStatus()
-            } else {
-                Task {
-                    await self.refreshEntitlements()
-                }
-            }
+            self.handleAuthStateChange(user)
         }
+
+        handleAuthStateChange(Auth.auth().currentUser)
     }
 
     deinit {
@@ -177,14 +177,19 @@ final class SubscriptionManager: ObservableObject {
         let entitlement = await activeSubscriptionEntitlement()
         let entitlementActive = entitlement != nil
         let activeProductID = entitlement?.productID
-        let environment = entitlement.map { environmentString(for: $0) }
+        let environmentValue = entitlement.map { environmentString(for: $0) } ?? "unknown"
+        let originalTransactionId = entitlement.map { String($0.originalID) }
 
+        // Reset local state on each auth-bound refresh to avoid cross-account bleed.
         setIsPro(entitlementActive)
+        setActiveProductID(activeProductID)
+        setEnvironment(environmentValue)
         await updateUserEntitlement(
             uid: currentUID,
             isPro: entitlementActive,
             activeProductID: activeProductID,
-            environment: environment
+            environment: environmentValue,
+            originalTransactionId: originalTransactionId
         )
 
         if showRestoreMessage {
@@ -233,9 +238,20 @@ final class SubscriptionManager: ObservableObject {
         isPro = newValue
     }
 
+    private func setActiveProductID(_ newValue: String?) {
+        activeProductID = newValue
+    }
+
+    private func setEnvironment(_ newValue: String?) {
+        environment = newValue
+    }
+
     private func clearCachedProStatus() {
         setIsPro(false)
+        setActiveProductID(nil)
+        setEnvironment(nil)
         statusMessage = nil
+        UserDefaults.standard.removeObject(forKey: "isPro")
     }
 
     func presentPaywall(after delay: TimeInterval = 0) {
@@ -340,19 +356,21 @@ final class SubscriptionManager: ObservableObject {
         uid: String,
         isPro: Bool,
         activeProductID: String?,
-        environment: String?
+        environment: String,
+        originalTransactionId: String?
     ) async {
         var data: [String: Any] = [
             "isPro": isPro,
-            "lastCheckedAt": FieldValue.serverTimestamp()
+            "updatedAt": FieldValue.serverTimestamp(),
+            "environment": environment
         ]
 
         if let activeProductID {
-            data["activeProductId"] = activeProductID
+            data["activeProductID"] = activeProductID
         }
 
-        if let environment {
-            data["environment"] = environment
+        if let originalTransactionId {
+            data["originalTransactionId"] = originalTransactionId
         }
 
         do {
@@ -368,12 +386,25 @@ final class SubscriptionManager: ObservableObject {
 
     private func environmentString(for transaction: StoreKit.Transaction) -> String {
         switch transaction.environment {
+        case .xcode:
+            return "xcode"
         case .sandbox:
             return "sandbox"
         case .production:
             return "production"
         @unknown default:
             return "unknown"
+        }
+    }
+
+    private func handleAuthStateChange(_ user: User?) {
+        // Tie entitlement state to the auth user and clear it on logout to prevent cross-account bleed.
+        if user == nil {
+            clearCachedProStatus()
+        } else {
+            Task {
+                await refreshEntitlements()
+            }
         }
     }
 }
