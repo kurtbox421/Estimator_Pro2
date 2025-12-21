@@ -49,7 +49,7 @@ struct LaborLine: Identifiable, Codable, Equatable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
         title = try container.decodeIfPresent(String.self, forKey: .title) ?? "Labor"
-        hours = try container.decodeLossyDouble(forKey: .hours)
-        rate = try container.decodeLossyDouble(forKey: .rate)
+        hours = try container.decodeLossyDoubleIfPresent(forKey: .hours) ?? 0
+        rate = try container.decodeLossyDoubleIfPresent(forKey: .rate) ?? 0
     }
 }
