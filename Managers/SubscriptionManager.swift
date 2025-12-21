@@ -34,61 +34,37 @@ final class SubscriptionManager: ObservableObject {
     @Published private(set) var productStateChangeToken: Int = 0
 
     private let db: Firestore
+    private let auth: Auth
     nonisolated(unsafe) private var updatesTask: Task<Void, Never>?
     private var authHandle: AuthStateDidChangeListenerHandle?
     private var currentUID: String?
-    nonisolated(unsafe) private var entitlementListener: ListenerRegistration?
+    nonisolated(unsafe) private var subscriptionListener: ListenerRegistration?
 
-    private enum SubscriptionBindingError: LocalizedError, CustomNSError {
-        case linkedToAnotherAccount
+    private var hasActiveStoreKitEntitlement = false
+    private var hasSubscriptionBinding = false
 
-        static var errorDomain: String {
-            "com.estimatorpro.subscriptionBinding"
-        }
-
-        var errorCode: Int {
-            switch self {
-            case .linkedToAnotherAccount:
-                return 1
-            }
-        }
-
-        var errorUserInfo: [String: Any] {
-            switch self {
-            case .linkedToAnotherAccount:
-                return [NSLocalizedDescriptionKey: "subscription linked to another account"]
-            }
-        }
-
-        var errorDescription: String? {
-            switch self {
-            case .linkedToAnotherAccount:
-                return "subscription linked to another account"
-            }
-        }
-    }
-
-    init(database: Firestore = Firestore.firestore()) {
+    init(database: Firestore = Firestore.firestore(), auth: Auth = Auth.auth()) {
         self.db = database
+        self.auth = auth
         self.isPro = false
         self.activeProductID = nil
         self.environment = nil
 
-        authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
+        authHandle = auth.addStateDidChangeListener { [weak self] _, user in
             guard let self else { return }
             Task { @MainActor in
                 self.handleAuthStateChange(user)
             }
         }
 
-        handleAuthStateChange(Auth.auth().currentUser)
+        handleAuthStateChange(auth.currentUser)
     }
 
     deinit {
         stopEntitlementListeners()
-        stopEntitlementListener()
+        stopSubscriptionListener()
         if let authHandle {
-            Auth.auth().removeStateDidChangeListener(authHandle)
+            auth.removeStateDidChangeListener(authHandle)
         }
     }
 
@@ -141,6 +117,14 @@ final class SubscriptionManager: ObservableObject {
     }
 
     func purchase(_ product: Product) async {
+        guard !isLoading else { return }
+        guard let uid = auth.currentUser?.uid else {
+            lastError = "Please sign in first."
+            statusMessage = lastError
+            debugLog("[Purchase] Blocked purchase: no signed-in user.")
+            return
+        }
+
         isLoading = true
         defer { isLoading = false }
         lastError = nil
@@ -148,15 +132,28 @@ final class SubscriptionManager: ObservableObject {
 
         do {
             let result = try await product.purchase()
+            debugLog("[Purchase] Result:", result)
             switch result {
             case .success(let verification):
-                await handle(transactionResult: verification)
-                if case .verified = verification {
-                    let isEntitled = await refreshEntitlements()
-                    if isEntitled {
+                switch verification {
+                case .verified(let transaction):
+                    debugLog("[Purchase] Verified transaction:", transaction.id, "uid:", uid)
+                    do {
+                        try await persistSubscriptionBinding(uid: uid, transaction: transaction)
+                        setSubscriptionBindingExists(true)
+                        await transaction.finish()
+                        _ = await refreshEntitlements()
                         statusMessage = "Thanks for subscribing to Pro!"
                         shouldShowPaywall = false
+                    } catch {
+                        logFirestoreError(error, context: "subscription binding write", uid: uid)
+                        lastError = "Unable to verify subscription binding. Please try again."
+                        statusMessage = lastError
                     }
+                case .unverified(_, let error):
+                    debugLog("[Purchase] Verification failed:", error.localizedDescription, "uid:", uid)
+                    lastError = "Purchase verification failed: \(error.localizedDescription)"
+                    statusMessage = lastError
                 }
             case .userCancelled:
                 statusMessage = "Purchase cancelled."
@@ -173,10 +170,19 @@ final class SubscriptionManager: ObservableObject {
                 : error.localizedDescription
             lastError = message
             statusMessage = message
+            debugLog("[Purchase] Failed:", error.localizedDescription, "uid:", uid)
         }
     }
 
     func restorePurchases() async {
+        guard !isLoading else { return }
+        guard let uid = auth.currentUser?.uid else {
+            lastError = "Sign in to restore."
+            statusMessage = lastError
+            debugLog("[Restore] Blocked restore: no signed-in user.")
+            return
+        }
+
         isLoading = true
         defer { isLoading = false }
         lastError = nil
@@ -190,94 +196,39 @@ final class SubscriptionManager: ObservableObject {
                 : error.localizedDescription
             lastError = message
             statusMessage = message
-        }
-
-        await refreshEntitlements(showRestoreMessage: true)
-    }
-
-    @discardableResult
-    func refreshEntitlements(showRestoreMessage: Bool = false) async -> Bool {
-        guard let currentUID = Auth.auth().currentUser?.uid else {
-            return false
+            debugLog("[Restore] AppStore.sync failed:", error.localizedDescription, "uid:", uid)
+            return
         }
 
         let entitlement = await activeSubscriptionEntitlement()
-        let entitlementActive = entitlement != nil
-        let activeProductID = entitlement?.productID
-        let environmentValue = entitlement.map { environmentString(for: $0) } ?? "unknown"
-        let originalTransactionId = entitlement.map { String($0.originalID) }
-
-        var isEntitled = false
-
-        if let entitlement,
-           let originalTransactionId {
-            debugLog("[Subscription] Refresh for uid:", currentUID, "originalTransactionId:", originalTransactionId)
+        if let entitlement {
+            debugLog("[Restore] Found entitlement:", entitlement.productID, "uid:", uid)
             do {
-                _ = try await bindSubscriptionIfNeeded(
-                    uid: currentUID,
-                    originalTransactionId: originalTransactionId,
-                    productId: entitlement.productID,
-                    environment: environmentValue
-                )
-                isEntitled = true
-                await updateUserEntitlement(
-                    uid: currentUID,
-                    isPro: true,
-                    activeProductID: activeProductID,
-                    environment: environmentValue,
-                    originalTransactionId: originalTransactionId
-                )
-            } catch let error as SubscriptionBindingError {
-                if case .linkedToAnotherAccount = error {
-                    lastError = error.localizedDescription
-                    statusMessage = lastError
-                } else {
-                    debugLog("[Firestore] Failed to bind subscription:", error.localizedDescription)
-                    lastError = "Unable to verify subscription binding. Please try again."
-                    statusMessage = lastError
-                }
-                await updateUserEntitlement(
-                    uid: currentUID,
-                    isPro: false,
-                    activeProductID: nil,
-                    environment: nil,
-                    originalTransactionId: nil
-                )
+                try await persistSubscriptionBinding(uid: uid, transaction: entitlement)
+                setSubscriptionBindingExists(true)
+                _ = await refreshEntitlements()
+                statusMessage = "Restored Estimator Pro (\(entitlement.productID))."
             } catch {
-                debugLog("[Firestore] Failed to bind subscription:", error.localizedDescription)
+                logFirestoreError(error, context: "subscription binding write", uid: uid)
                 lastError = "Unable to verify subscription binding. Please try again."
                 statusMessage = lastError
-                await updateUserEntitlement(
-                    uid: currentUID,
-                    isPro: false,
-                    activeProductID: nil,
-                    environment: nil,
-                    originalTransactionId: nil
-                )
             }
         } else {
-            await updateUserEntitlement(
-                uid: currentUID,
-                isPro: false,
-                activeProductID: nil,
-                environment: nil,
-                originalTransactionId: nil
-            )
+            _ = await refreshEntitlements()
+            statusMessage = "No purchases found to restore."
         }
-
-        if showRestoreMessage {
-            if entitlementActive, let entitlement {
-                statusMessage = isEntitled
-                    ? "Restored Estimator Pro (\(entitlement.productID))."
-                    : "subscription linked to another account"
-            } else {
-                statusMessage = "No purchases found to restore."
-            }
-        }
-
-        return entitlementActive && isEntitled
     }
 
+    @discardableResult
+    func refreshEntitlements() async -> Bool {
+        let entitlement = await activeSubscriptionEntitlement()
+        hasActiveStoreKitEntitlement = entitlement != nil
+        activeProductID = entitlement?.productID
+        environment = entitlement.map { environmentString(for: $0) }
+        debugLog("[Entitlements] StoreKit active:", hasActiveStoreKitEntitlement, "uid:", auth.currentUser?.uid ?? "nil")
+        updateProStatus()
+        return isPro
+    }
 
     private func activeSubscriptionEntitlement() async -> StoreKit.Transaction? {
         for await entitlement in StoreKit.Transaction.currentEntitlements {
@@ -311,16 +262,13 @@ final class SubscriptionManager: ObservableObject {
         return true
     }
 
-    private func setIsPro(_ newValue: Bool) {
-        isPro = newValue
+    private func updateProStatus() {
+        isPro = hasActiveStoreKitEntitlement && hasSubscriptionBinding
     }
 
-    private func setActiveProductID(_ newValue: String?) {
-        activeProductID = newValue
-    }
-
-    private func setEnvironment(_ newValue: String?) {
-        environment = newValue
+    private func setSubscriptionBindingExists(_ newValue: Bool) {
+        hasSubscriptionBinding = newValue
+        updateProStatus()
     }
 
     func presentPaywall(after delay: TimeInterval = 0) {
@@ -349,10 +297,30 @@ final class SubscriptionManager: ObservableObject {
     private func handle(transactionResult: VerificationResult<StoreKit.Transaction>) async {
         switch transactionResult {
         case .verified(let transaction):
-            await transaction.finish()
-            await refreshEntitlements()
+            debugLog("[StoreKit] Transaction update verified:", transaction.id)
+            await handleVerifiedTransactionUpdate(transaction)
         case .unverified(_, let error):
-            lastError = "Purchase verification failed: \(error.localizedDescription)"
+            debugLog("[StoreKit] Transaction update verification failed:", error.localizedDescription)
+        }
+    }
+
+    private func handleVerifiedTransactionUpdate(_ transaction: StoreKit.Transaction) async {
+        await refreshEntitlements()
+        guard let uid = auth.currentUser?.uid else {
+            debugLog("[StoreKit] Skipping binding update: no signed-in user.")
+            return
+        }
+
+        guard hasSubscriptionBinding else {
+            debugLog("[StoreKit] Skipping binding update: no binding for uid:", uid)
+            return
+        }
+
+        do {
+            try await persistSubscriptionBinding(uid: uid, transaction: transaction)
+            await transaction.finish()
+        } catch {
+            logFirestoreError(error, context: "subscription binding update", uid: uid)
         }
     }
 
@@ -378,6 +346,131 @@ final class SubscriptionManager: ObservableObject {
             group.cancelAll()
             return result
         }
+    }
+
+    private func persistSubscriptionBinding(uid: String, transaction: StoreKit.Transaction) async throws {
+        let environmentValue = environmentString(for: transaction)
+        let data: [String: Any] = [
+            "productId": transaction.productID,
+            "originalTransactionId": String(transaction.originalID),
+            "transactionId": String(transaction.id),
+            "purchaseDate": Timestamp(date: transaction.purchaseDate),
+            "expirationDate": transaction.expirationDate.map { Timestamp(date: $0) } ?? NSNull(),
+            "environment": environmentValue,
+            "lastVerifiedAt": FieldValue.serverTimestamp()
+        ]
+
+        debugLog("[Firestore] Writing subscription binding for uid:", uid, "transaction:", transaction.id)
+        let docRef = subscriptionDocRef(uid: uid)
+        do {
+            try await docRef.setData(data, merge: true)
+        } catch {
+            throw error
+        }
+    }
+
+    private func subscriptionDocRef(uid: String) -> DocumentReference {
+        db.collection("users")
+            .document(uid)
+            .collection("entitlements")
+            .document("subscription")
+    }
+
+    private func environmentString(for transaction: StoreKit.Transaction) -> String {
+        if #available(iOS 17.0, *) {
+            let environmentValue = String(describing: transaction.environment).lowercased()
+            if environmentValue.contains("xcode") {
+                return "xcode"
+            }
+            if environmentValue.contains("sandbox") {
+                return "sandbox"
+            }
+            if environmentValue.contains("production") {
+                return "production"
+            }
+            return "unknown"
+        }
+
+        return "unknown"
+    }
+
+    private func startEntitlementListeners() {
+        guard updatesTask == nil else { return }
+        updatesTask = Task { [weak self] in
+            guard let self else { return }
+            for await result in StoreKit.Transaction.updates {
+                await self.handle(transactionResult: result)
+            }
+        }
+    }
+
+    nonisolated private func stopEntitlementListeners() {
+        updatesTask?.cancel()
+        updatesTask = nil
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            isLoading = false
+            products = []
+            lastError = nil
+            statusMessage = nil
+            setProductState(.idle)
+            isPro = false
+            activeProductID = nil
+            environment = nil
+            shouldShowPaywall = false
+            hasActiveStoreKitEntitlement = false
+            hasSubscriptionBinding = false
+        }
+    }
+
+    nonisolated private func stopSubscriptionListener() {
+        subscriptionListener?.remove()
+        subscriptionListener = nil
+    }
+
+    private func clearAuthState() {
+        hasActiveStoreKitEntitlement = false
+        setSubscriptionBindingExists(false)
+        activeProductID = nil
+        environment = nil
+        statusMessage = nil
+        lastError = nil
+    }
+
+    private func startSubscriptionBindingListener(uid: String) {
+        stopSubscriptionListener()
+        let docRef = subscriptionDocRef(uid: uid)
+
+        subscriptionListener = docRef.addSnapshotListener { [weak self] snapshot, error in
+            guard let self else { return }
+            Task { @MainActor in
+                if let error {
+                    self.logFirestoreError(error, context: "subscription binding listener", uid: uid)
+                    return
+                }
+
+                let exists = snapshot?.exists ?? false
+                self.debugLog("[Firestore] Binding snapshot for uid:", uid, "exists:", exists)
+                self.setSubscriptionBindingExists(exists)
+            }
+        }
+    }
+
+    private func handleAuthStateChange(_ user: User?) {
+        clearAuthState()
+        let newUID = user?.uid
+        if newUID != currentUID {
+            stopEntitlementListeners()
+            stopSubscriptionListener()
+            currentUID = newUID
+        }
+
+        guard let uid = newUID else {
+            return
+        }
+
+        startEntitlementListeners()
+        startSubscriptionBindingListener(uid: uid)
     }
 
     nonisolated private func debugLog(_ items: Any...) {
@@ -421,193 +514,11 @@ final class SubscriptionManager: ObservableObject {
         debugLog("[StoreKit] Current environment:", environment)
     }
 
-    private func updateUserEntitlement(
-        uid: String,
-        isPro: Bool,
-        activeProductID: String?,
-        environment: String?,
-        originalTransactionId: String?
-    ) async {
-        debugLog("[Firestore] Updating entitlement for uid:", uid, "isPro:", isPro, "originalTransactionId:", originalTransactionId ?? "nil")
-        let data: [String: Any] = [
-            "isPro": isPro,
-            "updatedAt": FieldValue.serverTimestamp(),
-            "environment": environment ?? NSNull(),
-            "activeProductID": activeProductID ?? NSNull(),
-            "originalTransactionId": originalTransactionId ?? NSNull()
-        ]
-
-        let docRef = db.collection("users")
-            .document(uid)
-            .collection("entitlements")
-            .document("pro")
-
-        do {
-            try await docRef.setData(data, merge: true)
-        } catch {
-            self.debugLog("[Firestore] Failed to update entitlement:", error.localizedDescription)
+    private func logFirestoreError(_ error: Error, context: String, uid: String?) {
+        let nsError = error as NSError
+        debugLog("[Firestore] \(context) failed:", nsError.localizedDescription, "uid:", uid ?? "nil", "code:", nsError.code, "domain:", nsError.domain)
+        if let firestoreCode = FirestoreErrorCode(rawValue: nsError.code), firestoreCode == .permissionDenied {
+            debugLog("[Firestore] Permission denied for \(context) uid:", uid ?? "nil")
         }
-    }
-
-    private func environmentString(for transaction: StoreKit.Transaction) -> String {
-        if #available(iOS 17.0, *) {
-            let environmentValue = String(describing: transaction.environment).lowercased()
-            if environmentValue.contains("xcode") {
-                return "xcode"
-            }
-            if environmentValue.contains("sandbox") {
-                return "sandbox"
-            }
-            if environmentValue.contains("production") {
-                return "production"
-            }
-            return "unknown"
-        }
-
-        return "unknown"
-    }
-
-    private func bindSubscriptionIfNeeded(
-        uid: String,
-        originalTransactionId: String,
-        productId: String,
-        environment: String
-    ) async throws -> Bool {
-        let docRef = db.collection("subscriptionBindings").document(originalTransactionId)
-
-        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Bool, Error>) in
-            db.runTransaction({ transaction, errorPointer in
-                do {
-                    let snapshot = try transaction.getDocument(docRef)
-                    if let data = snapshot.data(),
-                       let boundUID = data["uid"] as? String {
-                        self.debugLog("[Firestore] Binding exists for transaction:", originalTransactionId, "bound uid:", boundUID)
-                        if boundUID != uid {
-                            errorPointer?.pointee = SubscriptionBindingError.linkedToAnotherAccount as NSError
-                            return nil
-                        }
-
-                        transaction.updateData([
-                            "productId": productId,
-                            "environment": environment,
-                            "updatedAt": FieldValue.serverTimestamp()
-                        ], forDocument: docRef)
-                        return true
-                    }
-
-                    self.debugLog("[Firestore] Creating binding for transaction:", originalTransactionId, "uid:", uid)
-                    transaction.setData([
-                        "uid": uid,
-                        "productId": productId,
-                        "environment": environment,
-                        "updatedAt": FieldValue.serverTimestamp()
-                    ], forDocument: docRef, merge: false)
-                    return true
-                } catch {
-                    errorPointer?.pointee = error as NSError
-                    return nil
-                }
-            }, completion: { result, error in
-                if let error {
-                    self.debugLog("[Firestore] Binding transaction failed for uid:", uid, "transaction:", originalTransactionId, "error:", error.localizedDescription)
-                    continuation.resume(throwing: error)
-                    return
-                }
-
-                continuation.resume(returning: result as? Bool ?? false)
-            })
-        }
-    }
-
-    private func startEntitlementListeners() {
-        guard updatesTask == nil else { return }
-        updatesTask = Task { [weak self] in
-            guard let self else { return }
-            for await result in StoreKit.Transaction.updates {
-                await self.handle(transactionResult: result)
-            }
-        }
-    }
-
-    nonisolated private func stopEntitlementListeners() {
-        updatesTask?.cancel()
-        updatesTask = nil
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            isLoading = false
-            products = []
-            lastError = nil
-            statusMessage = nil
-            setProductState(.idle)
-            isPro = false
-            activeProductID = nil
-            environment = nil
-            shouldShowPaywall = false
-        }
-    }
-
-    nonisolated private func stopEntitlementListener() {
-        entitlementListener?.remove()
-        entitlementListener = nil
-    }
-
-    private func clearAuthState() {
-        setIsPro(false)
-        setActiveProductID(nil)
-        setEnvironment(nil)
-        statusMessage = nil
-        lastError = nil
-    }
-
-    private func startEntitlementListener(uid: String) {
-        stopEntitlementListener()
-        let docRef = db.collection("users")
-            .document(uid)
-            .collection("entitlements")
-            .document("pro")
-
-        entitlementListener = docRef.addSnapshotListener { [weak self] snapshot, error in
-            guard let self else { return }
-            Task { @MainActor in
-                if let error {
-                    self.debugLog("[Firestore] Entitlement listener error for uid:", uid, "error:", error.localizedDescription)
-                    self.lastError = error.localizedDescription
-                    return
-                }
-
-                guard let data = snapshot?.data() else {
-                    self.setIsPro(false)
-                    self.setActiveProductID(nil)
-                    self.setEnvironment(nil)
-                    return
-                }
-
-                let isProValue = data["isPro"] as? Bool ?? false
-                let activeProductID = data["activeProductID"] as? String
-                let environment = data["environment"] as? String
-
-                self.setIsPro(isProValue)
-                self.setActiveProductID(activeProductID)
-                self.setEnvironment(environment)
-            }
-        }
-    }
-
-    private func handleAuthStateChange(_ user: User?) {
-        // Tie entitlement state to the auth user and clear it on logout to prevent cross-account bleed.
-        clearAuthState()
-        let newUID = user?.uid
-        if newUID != currentUID {
-            stopEntitlementListeners()
-            stopEntitlementListener()
-            currentUID = newUID
-        }
-
-        guard let uid = newUID else {
-            return
-        }
-
-        startEntitlementListeners()
-        startEntitlementListener(uid: uid)
     }
 }

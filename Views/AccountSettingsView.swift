@@ -6,6 +6,7 @@ import UIKit
 struct AccountSettingsView: View {
     @Environment(\.openURL) private var openURL
     @EnvironmentObject private var session: SessionViewModel
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
 
     @State private var showingDeleteAccount = false
     @State private var showingPrivacyPolicy = false
@@ -200,16 +201,18 @@ struct AccountSettingsView: View {
         defer { isRestoringPurchases = false }
 
         if #available(iOS 15.0, *) {
-            do {
-                try await AppStore.sync()
-                restoreAlert = AlertDetails(
-                    title: "Restore Complete",
-                    message: "Your purchases have been restored."
-                )
-            } catch {
+            await subscriptionManager.restorePurchases()
+
+            if let error = subscriptionManager.lastError {
                 restoreAlert = AlertDetails(
                     title: "Restore Failed",
-                    message: error.localizedDescription
+                    message: error
+                )
+            } else {
+                let message = subscriptionManager.statusMessage ?? "Your purchases have been restored."
+                restoreAlert = AlertDetails(
+                    title: "Restore Complete",
+                    message: message
                 )
             }
         } else {
@@ -295,5 +298,6 @@ private struct AlertDetails: Identifiable {
     NavigationStack {
         AccountSettingsView()
             .environmentObject(SessionViewModel())
+            .environmentObject(SubscriptionManager())
     }
 }
