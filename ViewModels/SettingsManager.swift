@@ -30,10 +30,11 @@ final class SettingsManager: ObservableObject {
     }
 
     deinit {
-        Task { @MainActor in
-            listener?.remove()
-            cancellables.removeAll()
-            if let resetToken {
+        listener?.remove()
+        cancellables.removeAll()
+        if let resetToken {
+            let session = session
+            Task { @MainActor in
                 session.unregisterResetHandler(resetToken)
             }
         }

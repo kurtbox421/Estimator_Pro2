@@ -32,10 +32,11 @@ final class InventoryViewModel: ObservableObject {
     }
 
     deinit {
-        Task { @MainActor in
-            listener?.remove()
-            cancellables.removeAll()
-            if let resetToken {
+        listener?.remove()
+        cancellables.removeAll()
+        if let resetToken {
+            let session = session
+            Task { @MainActor in
                 session.unregisterResetHandler(resetToken)
             }
         }
@@ -63,7 +64,9 @@ final class InventoryViewModel: ObservableObject {
                 guard let self else { return }
 
                 if let error {
-                    self.errorMessage = "Failed to load supplies: \(error.localizedDescription)"
+                    Task { @MainActor in
+                        self.errorMessage = "Failed to load supplies: \(error.localizedDescription)"
+                    }
                     return
                 }
 

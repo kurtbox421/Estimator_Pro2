@@ -48,11 +48,12 @@ final class MaterialIntelligenceStore: ObservableObject {
     }
 
     deinit {
-        Task { @MainActor in
-            jobsListener?.remove()
-            invoicesListener?.remove()
-            cancellables.removeAll()
-            if let resetToken {
+        jobsListener?.remove()
+        invoicesListener?.remove()
+        cancellables.removeAll()
+        if let resetToken {
+            let session = session
+            Task { @MainActor in
                 session.unregisterResetHandler(resetToken)
             }
         }
@@ -111,40 +112,42 @@ final class MaterialIntelligenceStore: ObservableObject {
             .collection("jobs")
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self else { return }
-                if let error {
-                    self.logger.error("Failed to fetch jobs: \(error.localizedDescription)")
-                    return
-                }
-
-                guard let snapshot else {
-                    self.logger.error("Failed to fetch jobs: missing snapshot")
-                    return
-                }
-
-                let decoder = Firestore.Decoder()
-                let jobs: [Job] = snapshot.documents.compactMap { document in
-                    let documentPath = document.reference.path
-                    if self.invalidJobDocumentPaths.contains(documentPath) {
-                        return nil
+                Task { @MainActor in
+                    if let error {
+                        self.logger.error("Failed to fetch jobs: \(error.localizedDescription)")
+                        return
                     }
 
-                    do {
-                        var data = document.data()
-                        data["documentID"] = document.documentID
-                        return try decoder.decode(Job.self, from: data)
-                    } catch let decodingError as DecodingError {
-                        self.logJobDecodingError(decodingError, documentPath: documentPath)
-                        self.invalidJobDocumentPaths.insert(documentPath)
-                        return nil
-                    } catch {
-                        self.logger.error("Failed to decode job document \(documentPath): \(error.localizedDescription)")
-                        self.invalidJobDocumentPaths.insert(documentPath)
-                        return nil
+                    guard let snapshot else {
+                        self.logger.error("Failed to fetch jobs: missing snapshot")
+                        return
                     }
-                }
 
-                self.cachedJobs = jobs
-                self.rebuildStats()
+                    let decoder = Firestore.Decoder()
+                    let jobs: [Job] = snapshot.documents.compactMap { document in
+                        let documentPath = document.reference.path
+                        if self.invalidJobDocumentPaths.contains(documentPath) {
+                            return nil
+                        }
+
+                        do {
+                            var data = document.data()
+                            data["documentID"] = document.documentID
+                            return try decoder.decode(Job.self, from: data)
+                        } catch let decodingError as DecodingError {
+                            self.logJobDecodingError(decodingError, documentPath: documentPath)
+                            self.invalidJobDocumentPaths.insert(documentPath)
+                            return nil
+                        } catch {
+                            self.logger.error("Failed to decode job document \(documentPath): \(error.localizedDescription)")
+                            self.invalidJobDocumentPaths.insert(documentPath)
+                            return nil
+                        }
+                    }
+
+                    self.cachedJobs = jobs
+                    self.rebuildStats()
+                }
             }
 
         session.track(jobsListener)
@@ -157,27 +160,29 @@ final class MaterialIntelligenceStore: ObservableObject {
             .collection("invoices")
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self else { return }
-                if let error {
-                    self.logger.error("Failed to fetch invoices: \(error.localizedDescription)")
-                    return
-                }
-
-                guard let snapshot else {
-                    self.logger.error("Failed to fetch invoices: missing snapshot")
-                    return
-                }
-
-                let invoices: [Invoice] = snapshot.documents.compactMap { document in
-                    do {
-                        return try document.data(as: Invoice.self)
-                    } catch {
-                        self.logger.error("Failed to decode invoice \(document.documentID): \(error.localizedDescription)")
-                        return nil
+                Task { @MainActor in
+                    if let error {
+                        self.logger.error("Failed to fetch invoices: \(error.localizedDescription)")
+                        return
                     }
-                }
 
-                self.cachedInvoices = invoices
-                self.rebuildStats()
+                    guard let snapshot else {
+                        self.logger.error("Failed to fetch invoices: missing snapshot")
+                        return
+                    }
+
+                    let invoices: [Invoice] = snapshot.documents.compactMap { document in
+                        do {
+                            return try document.data(as: Invoice.self)
+                        } catch {
+                            self.logger.error("Failed to decode invoice \(document.documentID): \(error.localizedDescription)")
+                            return nil
+                        }
+                    }
+
+                    self.cachedInvoices = invoices
+                    self.rebuildStats()
+                }
             }
 
         session.track(invoicesListener)

@@ -106,11 +106,12 @@ final class CompanySettingsStore: ObservableObject {
     }
 
     deinit {
-        Task { @MainActor in
-            listener?.remove()
-            userListener?.remove()
-            cancellables.removeAll()
-            if let resetToken {
+        listener?.remove()
+        userListener?.remove()
+        cancellables.removeAll()
+        if let resetToken {
+            let session = session
+            Task { @MainActor in
                 session.unregisterResetHandler(resetToken)
             }
         }
