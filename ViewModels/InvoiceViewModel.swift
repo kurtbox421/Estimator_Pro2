@@ -5,6 +5,7 @@ import FirebaseFirestore
 import FirebaseFirestoreSwift
 import Combine
 
+@MainActor
 class InvoiceViewModel: ObservableObject {
     @Published var invoices: [Invoice] = []
     @Published var previewURL: URL?
@@ -36,9 +37,12 @@ class InvoiceViewModel: ObservableObject {
     }
 
     deinit {
-        listener?.remove()
-        if let resetToken {
-            session.unregisterResetHandler(resetToken)
+        Task { @MainActor in
+            listener?.remove()
+            cancellables.removeAll()
+            if let resetToken {
+                session.unregisterResetHandler(resetToken)
+            }
         }
     }
 

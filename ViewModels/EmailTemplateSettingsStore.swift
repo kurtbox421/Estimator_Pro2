@@ -59,6 +59,7 @@ Thanks!
     }
 }
 
+@MainActor
 final class EmailTemplateSettingsStore: ObservableObject {
     @Published var defaultEmailMessage: String
 
@@ -88,8 +89,11 @@ final class EmailTemplateSettingsStore: ObservableObject {
     }
 
     deinit {
-        if let resetToken {
-            session.unregisterResetHandler(resetToken)
+        Task { @MainActor in
+            cancellables.removeAll()
+            if let resetToken {
+                session.unregisterResetHandler(resetToken)
+            }
         }
     }
 

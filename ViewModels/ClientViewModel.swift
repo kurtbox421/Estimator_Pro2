@@ -30,9 +30,12 @@ final class ClientViewModel: ObservableObject {
     }
 
     deinit {
-        listener?.remove()
-        if let resetToken {
-            session.unregisterResetHandler(resetToken)
+        Task { @MainActor in
+            listener?.remove()
+            cancellables.removeAll()
+            if let resetToken {
+                session.unregisterResetHandler(resetToken)
+            }
         }
     }
 

@@ -19,6 +19,7 @@ struct MaterialUsageStats: Identifiable, Hashable {
 
 // MARK: - Store
 
+@MainActor
 final class MaterialIntelligenceStore: ObservableObject {
     @Published private(set) var materialStats: [MaterialUsageStats] = []
 
@@ -50,10 +51,13 @@ final class MaterialIntelligenceStore: ObservableObject {
     }
 
     deinit {
-        jobsListener?.remove()
-        invoicesListener?.remove()
-        if let resetToken {
-            session.unregisterResetHandler(resetToken)
+        Task { @MainActor in
+            jobsListener?.remove()
+            invoicesListener?.remove()
+            cancellables.removeAll()
+            if let resetToken {
+                session.unregisterResetHandler(resetToken)
+            }
         }
     }
 

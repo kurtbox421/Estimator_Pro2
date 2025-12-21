@@ -13,6 +13,7 @@ private enum JobStorage {
     static func fileName(for uid: String) -> String { "jobs_\(uid).json" }
 }
 
+@MainActor
 class JobViewModel: ObservableObject {
     @Published var jobs: [Job] = [] {
         didSet { saveJobs() }
@@ -46,8 +47,11 @@ class JobViewModel: ObservableObject {
     }
 
     deinit {
-        if let resetToken {
-            session.unregisterResetHandler(resetToken)
+        Task { @MainActor in
+            cancellables.removeAll()
+            if let resetToken {
+                session.unregisterResetHandler(resetToken)
+            }
         }
     }
     
