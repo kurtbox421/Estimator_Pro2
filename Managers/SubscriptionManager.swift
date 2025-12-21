@@ -402,28 +402,36 @@ final class SubscriptionManager: ObservableObject {
             .document("pro")
 
         do {
-            try await docRef.setData(data, merge: true)
+            try await withCheckedThrowingContinuation { continuation in
+                docRef.setData(data, merge: true) { error in
+                    if let error {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume()
+                    }
+                }
+            }
         } catch {
             self.debugLog("[Firestore] Failed to update entitlement:", error.localizedDescription)
         }
     }
 
     private func environmentString(for transaction: StoreKit.Transaction) -> String {
-        guard #available(iOS 17.0, *) else {
+        if #available(iOS 17.0, *) {
+            let environmentValue = String(describing: transaction.environment).lowercased()
+            if environmentValue.contains("xcode") {
+                return "xcode"
+            }
+            if environmentValue.contains("sandbox") {
+                return "sandbox"
+            }
+            if environmentValue.contains("production") {
+                return "production"
+            }
             return "unknown"
         }
 
-        let environment = transaction.environment
-        switch environment {
-        case .xcode:
-            return "xcode"
-        case .sandbox:
-            return "sandbox"
-        case .production:
-            return "production"
-        @unknown default:
-            return "unknown"
-        }
+        return "unknown"
     }
 
     private func bindSubscriptionIfNeeded(
