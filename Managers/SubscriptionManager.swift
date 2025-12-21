@@ -177,7 +177,7 @@ final class SubscriptionManager: ObservableObject {
         let entitlement = await activeSubscriptionEntitlement()
         let entitlementActive = entitlement != nil
         let activeProductID = entitlement?.productID
-        let environment = entitlement.flatMap { environmentString(for: $0) }
+        let environment = entitlement.map { environmentString(for: $0) }
 
         setIsPro(entitlementActive)
         await updateUserEntitlement(
@@ -366,14 +366,14 @@ final class SubscriptionManager: ObservableObject {
         }
     }
 
-    private func environmentString(for transaction: StoreKit.Transaction) -> String? {
+    private func environmentString(for transaction: StoreKit.Transaction) -> String {
         switch transaction.environment {
         case .sandbox:
             return "sandbox"
         case .production:
             return "production"
         @unknown default:
-            return nil
+            return "unknown"
         }
     }
 }
