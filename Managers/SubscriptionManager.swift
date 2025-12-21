@@ -386,11 +386,7 @@ final class SubscriptionManager: ObservableObject {
     }
 
     private func environmentString(for transaction: StoreKit.Transaction) -> String {
-        guard let env = transaction.environment else {
-            return "unknown"
-        }
-
-        switch env {
+        switch transaction.environment {
         case .xcode:
             return "xcode"
         case .sandbox:
