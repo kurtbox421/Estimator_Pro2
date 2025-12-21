@@ -765,9 +765,16 @@ final class MaterialsCatalogStore: ObservableObject {
                 (material.id, price(for: material))
             }
         )
+        let productURLsByID = Dictionary(
+            uniqueKeysWithValues: materials.map { material in
+                (material.id, productURL(for: material))
+            }
+        )
         return MaterialsCatalogSnapshot(
+            materials: materials,
             materialsByTag: materialsByTag,
             pricesByID: pricesByID,
+            productURLsByID: productURLsByID,
             customMaterialIDs: customMaterialIDs
         )
     }

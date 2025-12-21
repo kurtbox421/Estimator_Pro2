@@ -85,7 +85,9 @@ struct MaterialGeneratorView: View {
             }
 
             Button("Generate Materials") {
-                generateMaterials()
+                Task {
+                    await generateMaterials()
+                }
             }
             .disabled(selectedGroupIDs.isEmpty)
 
@@ -317,7 +319,8 @@ struct MaterialGeneratorView: View {
         }
     }
 
-    private func generateMaterials() {
+    @MainActor
+    private func generateMaterials() async {
         let length = parseDouble(lengthText)
         let secondary = parseDouble(secondaryText)
 
@@ -343,6 +346,7 @@ struct MaterialGeneratorView: View {
         }
 
         validationMessage = nil
+        let catalogSnapshot = await MainActor.run { materialsStore.snapshot() }
 
         let recommendations = selectedGroups.flatMap { group in
             let context = JobContext(
@@ -365,7 +369,7 @@ struct MaterialGeneratorView: View {
         let mergedRecommendations = mergeRecommendations(recommendations)
         suggestedMaterials = mergedRecommendations
         debugGuardForGroupConsistency(mergedRecommendations, selectedGroupIDs: selectedGroupIDs)
-        generated = mergedRecommendations.map(materialFromRecommendation)
+        generated = mergedRecommendations.map { materialFromRecommendation($0, catalog: catalogSnapshot) }
         selectedMaterialName = mergedRecommendations.first?.name
     }
 
@@ -374,22 +378,35 @@ struct MaterialGeneratorView: View {
             validationMessage = nil
             return
         }
-        generateMaterials()
+        Task {
+            await generateMaterials()
+        }
     }
 
-    private func materialFromRecommendation(_ rec: MaterialRecommendation) -> Material {
+    private func materialFromRecommendation(
+        _ rec: MaterialRecommendation,
+        catalog: MaterialsCatalogSnapshot
+    ) -> Material {
         MaterialResolutionHelper.material(
             from: rec,
-            catalog: materialsStore,
+            catalog: catalog,
             ownerID: session.uid ?? "",
             fallbackUnitCost: settingsManager.commonMaterialPrice(for: rec.name)
         )
     }
 
     private func applySuggestion(from stats: MaterialUsageStats) {
+        Task {
+            await applySuggestionAsync(from: stats)
+        }
+    }
+
+    @MainActor
+    private func applySuggestionAsync(from stats: MaterialUsageStats) async {
         let recommendation = recommendation(from: stats)
         suggestedMaterials.append(recommendation)
-        generated = makeEstimateMaterials(from: suggestedMaterials)
+        let catalogSnapshot = await MainActor.run { materialsStore.snapshot() }
+        generated = makeEstimateMaterials(from: suggestedMaterials, catalog: catalogSnapshot)
         selectedMaterialName = stats.name
     }
 
@@ -409,8 +426,11 @@ struct MaterialGeneratorView: View {
         )
     }
 
-    private func makeEstimateMaterials(from recs: [MaterialRecommendation]) -> [Material] {
-        recs.map(materialFromRecommendation)
+    private func makeEstimateMaterials(
+        from recs: [MaterialRecommendation],
+        catalog: MaterialsCatalogSnapshot
+    ) -> [Material] {
+        recs.map { materialFromRecommendation($0, catalog: catalog) }
     }
 
     private func mergeRecommendations(_ recs: [MaterialRecommendation]) -> [MaterialRecommendation] {
@@ -475,14 +495,30 @@ struct MaterialGeneratorView: View {
     }
 
     private func createNewEstimateFromSuggestedMaterials() {
-        let materials = makeEstimateMaterials(from: suggestedMaterials)
+        Task {
+            await createNewEstimateFromSuggestedMaterialsAsync()
+        }
+    }
+
+    @MainActor
+    private func createNewEstimateFromSuggestedMaterialsAsync() async {
+        let catalogSnapshot = await MainActor.run { materialsStore.snapshot() }
+        let materials = makeEstimateMaterials(from: suggestedMaterials, catalog: catalogSnapshot)
         let jobType = primarySelectedGroup?.templateType.jobType ?? selectedTemplate.jobType
         _ = jobVM.createEstimate(from: materials, jobType: jobType)
         dismiss()
     }
 
     private func addSuggestedMaterials(to job: Job) {
-        let materials = makeEstimateMaterials(from: suggestedMaterials)
+        Task {
+            await addSuggestedMaterialsAsync(to: job)
+        }
+    }
+
+    @MainActor
+    private func addSuggestedMaterialsAsync(to job: Job) async {
+        let catalogSnapshot = await MainActor.run { materialsStore.snapshot() }
+        let materials = makeEstimateMaterials(from: suggestedMaterials, catalog: catalogSnapshot)
         jobVM.appendMaterials(materials, to: job.id)
     }
 
