@@ -193,6 +193,7 @@ final class SubscriptionManager: ObservableObject {
 
         if let entitlement,
            let originalTransactionId {
+            debugLog("[Subscription] Refresh for uid:", currentUID, "originalTransactionId:", originalTransactionId)
             do {
                 try await bindSubscriptionIfNeeded(
                     uid: currentUID,
@@ -228,6 +229,13 @@ final class SubscriptionManager: ObservableObject {
                 debugLog("[Firestore] Failed to bind subscription:", error.localizedDescription)
                 lastError = "Unable to verify subscription binding. Please try again."
                 statusMessage = lastError
+                await updateUserEntitlement(
+                    uid: currentUID,
+                    isPro: false,
+                    activeProductID: nil,
+                    environment: nil,
+                    originalTransactionId: nil
+                )
             }
         } else {
             await updateUserEntitlement(
@@ -402,6 +410,7 @@ final class SubscriptionManager: ObservableObject {
         environment: String?,
         originalTransactionId: String?
     ) async {
+        debugLog("[Firestore] Updating entitlement for uid:", uid, "isPro:", isPro, "originalTransactionId:", originalTransactionId ?? "nil")
         let data: [String: Any] = [
             "isPro": isPro,
             "updatedAt": FieldValue.serverTimestamp(),
@@ -416,15 +425,7 @@ final class SubscriptionManager: ObservableObject {
             .document("pro")
 
         do {
-            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                docRef.setData(data, merge: true) { error in
-                    if let error {
-                        continuation.resume(throwing: error)
-                    } else {
-                        continuation.resume(returning: ())
-                    }
-                }
-            }
+            try await docRef.setData(data, merge: true)
         } catch {
             self.debugLog("[Firestore] Failed to update entitlement:", error.localizedDescription)
         }
@@ -462,6 +463,7 @@ final class SubscriptionManager: ObservableObject {
                     let snapshot = try transaction.getDocument(docRef)
                     if let data = snapshot.data(),
                        let boundUID = data["uid"] as? String {
+                        self.debugLog("[Firestore] Binding exists for transaction:", originalTransactionId, "bound uid:", boundUID)
                         if boundUID != uid {
                             return ["error": "linkedToAnotherAccount"]
                         }
@@ -474,11 +476,11 @@ final class SubscriptionManager: ObservableObject {
                         return ["isEntitled": true]
                     }
 
+                    self.debugLog("[Firestore] Creating binding for transaction:", originalTransactionId, "uid:", uid)
                     transaction.setData([
                         "uid": uid,
                         "productId": productId,
                         "environment": environment,
-                        "createdAt": FieldValue.serverTimestamp(),
                         "updatedAt": FieldValue.serverTimestamp()
                     ], forDocument: docRef, merge: false)
                     return ["isEntitled": true]
@@ -488,6 +490,7 @@ final class SubscriptionManager: ObservableObject {
                 }
             }, completion: { result, error in
                 if let error {
+                    self.debugLog("[Firestore] Binding transaction failed for uid:", uid, "transaction:", originalTransactionId, "error:", error.localizedDescription)
                     continuation.resume(throwing: error)
                     return
                 }
@@ -554,6 +557,7 @@ final class SubscriptionManager: ObservableObject {
             guard let self else { return }
             Task { @MainActor in
                 if let error {
+                    self.debugLog("[Firestore] Entitlement listener error for uid:", uid, "error:", error.localizedDescription)
                     self.lastError = error.localizedDescription
                     return
                 }
