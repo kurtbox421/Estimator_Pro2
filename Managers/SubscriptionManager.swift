@@ -388,7 +388,7 @@ final class SubscriptionManager: ObservableObject {
         environment: String,
         originalTransactionId: String?
     ) async {
-        var data: [String: Any] = [
+        let data: [String: Any] = [
             "isPro": isPro,
             "updatedAt": FieldValue.serverTimestamp(),
             "environment": environment,
@@ -409,7 +409,12 @@ final class SubscriptionManager: ObservableObject {
     }
 
     private func environmentString(for transaction: StoreKit.Transaction) -> String {
-        switch transaction.environment {
+        guard #available(iOS 17.0, *) else {
+            return "unknown"
+        }
+
+        let environment = transaction.environment
+        switch environment {
         case .xcode:
             return "xcode"
         case .sandbox:
