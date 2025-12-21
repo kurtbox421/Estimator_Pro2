@@ -177,7 +177,7 @@ final class SubscriptionManager: ObservableObject {
         let entitlement = await activeSubscriptionEntitlement()
         let entitlementActive = entitlement != nil
         let activeProductID = entitlement?.productID
-        let environment = entitlement.map(environmentString(for:))
+        let environment = entitlement.flatMap { environmentString(for: $0) }
 
         setIsPro(entitlementActive)
         await updateUserEntitlement(
@@ -349,14 +349,10 @@ final class SubscriptionManager: ObservableObject {
 
         if let activeProductID {
             data["activeProductId"] = activeProductID
-        } else {
-            data["activeProductId"] = FieldValue.delete()
         }
 
         if let environment {
             data["environment"] = environment
-        } else {
-            data["environment"] = FieldValue.delete()
         }
 
         do {
