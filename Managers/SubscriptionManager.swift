@@ -373,20 +373,24 @@ final class SubscriptionManager: ObservableObject {
             data["originalTransactionId"] = originalTransactionId
         }
 
-        db.collection("users")
+        let docRef = db.collection("users")
             .document(uid)
             .collection("entitlements")
             .document("pro")
-            .setData(data, merge: true) { error in
-                if let error {
-                    debugLog("[Firestore] Failed to update entitlement:", error.localizedDescription)
-                }
-            }
+
+        do {
+            try await docRef.setData(data, merge: true)
+        } catch {
+            self.debugLog("[Firestore] Failed to update entitlement:", error.localizedDescription)
+        }
     }
 
     private func environmentString(for transaction: StoreKit.Transaction) -> String {
-        let environment = transaction.environment
-        switch environment {
+        guard let env = transaction.environment else {
+            return "unknown"
+        }
+
+        switch env {
         case .xcode:
             return "xcode"
         case .sandbox:
