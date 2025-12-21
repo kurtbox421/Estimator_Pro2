@@ -55,13 +55,25 @@ final class CompanySettingsStore: ObservableObject {
     private let auth: Auth
     private var cancellables: Set<AnyCancellable> = []
     private var listener: ListenerRegistration?
+    private var userListener: ListenerRegistration?
     private var authHandle: AuthStateDidChangeListenerHandle?
     private var currentUserID: String?
     private var currentLogoPath: String?
+    private var currentLogoURL: String?
     private var isApplyingRemoteUpdate = false
 
-    private func logoStoragePath(for uid: String) -> String {
-        "users/\(uid)/branding/logo.png"
+    private enum LogoUploadError: LocalizedError {
+        case missingUser
+        case invalidImageData
+
+        var errorDescription: String? {
+            switch self {
+            case .missingUser:
+                return "You must be signed in to upload a logo."
+            case .invalidImageData:
+                return "We couldn’t process that image. Please try a different file."
+            }
+        }
     }
 
     init(
@@ -81,6 +93,7 @@ final class CompanySettingsStore: ObservableObject {
 
     deinit {
         listener?.remove()
+        userListener?.remove()
         if let authHandle { auth.removeStateDidChangeListener(authHandle) }
     }
 
@@ -120,8 +133,10 @@ final class CompanySettingsStore: ObservableObject {
 
     private func attachListener(for user: User?) {
         listener?.remove()
+        userListener?.remove()
         currentUserID = user?.uid
         currentLogoPath = nil
+        currentLogoURL = nil
         logoImage = nil
         apply(settings: .empty)
 
@@ -129,6 +144,7 @@ final class CompanySettingsStore: ObservableObject {
 
         loadLocalSettings(for: uid)
         loadCachedLogo(for: uid)
+        attachUserListener(for: uid)
 
         listener = companyDocument(for: uid)
             .addSnapshotListener { [weak self] snapshot, error in
@@ -157,10 +173,6 @@ final class CompanySettingsStore: ObservableObject {
         companyPhone = settings.companyPhone
         companyEmail = settings.companyEmail
         currentLogoPath = settings.logoPath
-
-        if let uid = currentUserID, let logoPath = settings.logoPath {
-            fetchLogoIfNeeded(from: logoPath, for: uid)
-        }
         isApplyingRemoteUpdate = false
     }
 
@@ -171,56 +183,71 @@ final class CompanySettingsStore: ObservableObject {
             .document("settings")
     }
 
+    private func userDocument(for uid: String) -> DocumentReference {
+        db.collection("users").document(uid)
+    }
+
     // MARK: - Branding & Logo
 
     @MainActor
-    func uploadLogo(data: Data) async {
-        guard let uid = currentUserID else { return }
+    func uploadLogo(data: Data) async throws {
+        guard let uid = auth.currentUser?.uid else {
+            let error = LogoUploadError.missingUser
+            print("Failed to upload logo: \(error)")
+            throw error
+        }
 
         isUploadingLogo = true
         defer { isUploadingLogo = false }
 
         do {
-            let path = logoStoragePath(for: uid)
+            let timestamp = Int(Date().timeIntervalSince1970)
+            let path = "branding/\(uid)/logo_\(timestamp).jpg"
             let ref = storage.reference(withPath: path)
             let metadata = StorageMetadata()
-            metadata.contentType = "image/png"
+            metadata.contentType = "image/jpeg"
 
             _ = try await ref.putDataAsync(data, metadata: metadata)
 
-            logoImage = UIImage(data: data)
-            CompanyLogoLoader.cacheLogoData(data, for: uid)
-            currentLogoPath = path
-
-            var updatedSettings = settings
-            updatedSettings.logoPath = path
-            do {
-                try companyDocument(for: uid).setData(from: updatedSettings, merge: true)
-            } catch {
-                print("Failed to save logo path: \(error.localizedDescription)")
+            guard let logoImage = UIImage(data: data) else {
+                let error = LogoUploadError.invalidImageData
+                print("Failed to upload logo: \(error)")
+                throw error
             }
+
+            let downloadURL = try await ref.downloadURL()
+            try await userDocument(for: uid).setData([
+                "logoURL": downloadURL.absoluteString,
+                "updatedAt": FieldValue.serverTimestamp()
+            ], merge: true)
+
+            self.logoImage = logoImage
+            CompanyLogoLoader.cacheLogoData(data, for: uid)
+            currentLogoURL = downloadURL.absoluteString
         } catch {
-            print("Failed to upload logo: \(error.localizedDescription)")
+            print("Failed to upload logo: \(error)")
+            throw error
         }
     }
 
     @MainActor
     func removeLogo() async {
-        guard let uid = currentUserID else { return }
+        guard let uid = auth.currentUser?.uid else { return }
 
         isUploadingLogo = true
         defer { isUploadingLogo = false }
 
         do {
-            if let currentLogoPath {
-                let ref = storage.reference(withPath: currentLogoPath)
+            if let currentLogoURL {
+                let ref = storage.reference(forURL: currentLogoURL)
                 try await ref.delete()
             }
         } catch {
-            print("Failed to remove logo: \(error.localizedDescription)")
+            print("Failed to remove logo: \(error)")
         }
 
         currentLogoPath = nil
+        currentLogoURL = nil
         logoImage = nil
         CompanyLogoLoader.clearCache(for: uid)
 
@@ -230,34 +257,58 @@ final class CompanySettingsStore: ObservableObject {
 
         do {
             try companyDocument(for: uid).setData(from: updatedSettings, merge: true)
+            try await userDocument(for: uid).setData([
+                "logoURL": FieldValue.delete(),
+                "updatedAt": FieldValue.serverTimestamp()
+            ], merge: true)
         } catch {
-            print("Failed to clear logo path: \(error.localizedDescription)")
-        }
-    }
-
-    private func fetchLogoIfNeeded(from path: String, for uid: String) {
-        guard path != currentLogoPath || logoImage == nil else { return }
-        if let cached = CompanyLogoLoader.loadLogo(for: uid) {
-            logoImage = cached
-            return
-        }
-
-        let ref = storage.reference(withPath: path)
-        ref.getData(maxSize: 5 * 1024 * 1024) { [weak self] data, error in
-            guard let self else { return }
-            if let error { print("Failed to download logo: \(error.localizedDescription)"); return }
-            guard let data, let image = UIImage(data: data) else { return }
-
-            DispatchQueue.main.async {
-                self.logoImage = image
-                CompanyLogoLoader.cacheLogoData(data, for: uid)
-            }
+            print("Failed to clear logo path: \(error)")
         }
     }
 
     private func loadCachedLogo(for uid: String) {
         if let cached = CompanyLogoLoader.loadLogo(for: uid) {
             logoImage = cached
+        }
+    }
+
+    private func attachUserListener(for uid: String) {
+        userListener = userDocument(for: uid)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self else { return }
+                if let error {
+                    print("Failed to fetch branding logo URL: \(error)")
+                    return
+                }
+
+                let logoURL = snapshot?.data()?["logoURL"] as? String
+                handleLogoURLChange(logoURL, for: uid)
+            }
+    }
+
+    private func handleLogoURLChange(_ logoURL: String?, for uid: String) {
+        guard logoURL != currentLogoURL else { return }
+        currentLogoURL = logoURL
+
+        guard let logoURL, let url = URL(string: logoURL) else {
+            logoImage = nil
+            CompanyLogoLoader.clearCache(for: uid)
+            return
+        }
+
+        CompanyLogoLoader.clearCache(for: uid)
+
+        Task {
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                guard let image = UIImage(data: data) else { return }
+                await MainActor.run {
+                    self.logoImage = image
+                    CompanyLogoLoader.cacheLogoData(data, for: uid)
+                }
+            } catch {
+                print("Failed to download logo: \(error)")
+            }
         }
     }
 }

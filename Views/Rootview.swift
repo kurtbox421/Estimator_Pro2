@@ -1526,11 +1526,7 @@ struct BrandingLogoView: View {
             .buttonStyle(.plain)
             .onChange(of: selectedItem) { _, newItem in
                 Task {
-                    guard let data = try? await newItem?.loadTransferable(type: Data.self) else { return }
-                    await companySettings.uploadLogo(data: data)
-                    logoImage = companySettings.logoImage
-                    uploadError = companySettings.logoImage == nil ? "Couldn’t save logo. Please try again." : nil
-                    showSaveErrorAlert = uploadError != nil
+                    await handleLogoSelection(newItem)
                 }
             }
         } else {
@@ -1578,6 +1574,35 @@ struct BrandingLogoView: View {
         }
         .buttonStyle(.plain)
         .foregroundColor(.red)
+    }
+
+    @MainActor
+    private func handleLogoSelection(_ newItem: PhotosPickerItem?) async {
+        guard let newItem else { return }
+
+        do {
+            guard let data = try await newItem.loadTransferable(type: Data.self) else {
+                throw NSError(domain: "BrandingLogo", code: 1, userInfo: [
+                    NSLocalizedDescriptionKey: "We couldn’t read that image. Please try again."
+                ])
+            }
+
+            guard let image = UIImage(data: data),
+                  let jpegData = image.jpegData(compressionQuality: 0.8) else {
+                throw NSError(domain: "BrandingLogo", code: 2, userInfo: [
+                    NSLocalizedDescriptionKey: "We couldn’t convert that image. Please try again."
+                ])
+            }
+
+            try await companySettings.uploadLogo(data: jpegData)
+            logoImage = companySettings.logoImage ?? image
+            uploadError = nil
+            showSaveErrorAlert = false
+        } catch {
+            print("Failed to save logo: \(error)")
+            uploadError = error.localizedDescription
+            showSaveErrorAlert = true
+        }
     }
 }
 
