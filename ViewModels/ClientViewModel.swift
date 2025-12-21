@@ -1,5 +1,5 @@
 import Foundation
-import FirebaseAuth
+import Combine
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 
@@ -8,19 +8,32 @@ final class ClientViewModel: ObservableObject {
     @Published var clients: [Client] = []
 
     private let db: Firestore
-    private let auth: Auth
     private var listener: ListenerRegistration?
-    private var authHandle: AuthStateDidChangeListenerHandle?
+    private let session: SessionManager
+    private var cancellables: Set<AnyCancellable> = []
+    private var currentUserID: String?
+    private var resetToken: UUID?
 
-    init(database: Firestore = Firestore.firestore(), auth: Auth = Auth.auth()) {
+    init(database: Firestore = Firestore.firestore(), session: SessionManager) {
         self.db = database
-        self.auth = auth
-        configureAuthListener()
+        self.session = session
+        resetToken = session.registerResetHandler { [weak self] in
+            self?.clear()
+        }
+        session.$uid
+            .receive(on: RunLoop.main)
+            .sink { [weak self] uid in
+                self?.setUser(uid)
+            }
+            .store(in: &cancellables)
+        setUser(session.uid)
     }
 
     deinit {
         listener?.remove()
-        if let authHandle { auth.removeStateDidChangeListener(authHandle) }
+        if let resetToken {
+            session.unregisterResetHandler(resetToken)
+        }
     }
 
     func addClient(
@@ -31,7 +44,7 @@ final class ClientViewModel: ObservableObject {
         email: String = "",
         notes: String = ""
     ) -> Client {
-        guard let uid = auth.currentUser?.uid else { return Client() }
+        guard let uid = currentUserID else { return Client() }
 
         let newClient = Client(
             ownerID: uid,
@@ -51,10 +64,13 @@ final class ClientViewModel: ObservableObject {
     }
 
     func delete(_ client: Client) {
-        guard auth.currentUser != nil else { return }
+        guard let uid = currentUserID else { return }
+
+        let path = "users/\(uid)/clients/\(client.id.uuidString)"
+        print("[Data] ClientViewModel uid=\(uid) path=\(path) action=delete")
 
         db.collection("users")
-            .document(auth.currentUser!.uid)
+            .document(uid)
             .collection("clients")
             .document(client.id.uuidString)
             .delete()
@@ -70,24 +86,15 @@ final class ClientViewModel: ObservableObject {
 
     // MARK: - Firestore
 
-    private func configureAuthListener() {
-        authHandle = auth.addStateDidChangeListener { [weak self] _, user in
-            guard let self else { return }
-            Task { @MainActor in
-                self.attachListener(for: user)
-            }
-        }
-
-        Task { @MainActor in
-            attachListener(for: auth.currentUser)
-        }
-    }
-
-    private func attachListener(for user: User?) {
+    private func setUser(_ uid: String?) {
         listener?.remove()
+        currentUserID = uid
         clients = []
 
-        guard let uid = user?.uid else { return }
+        guard let uid else { return }
+
+        let path = "users/\(uid)/clients"
+        print("[Data] ClientViewModel uid=\(uid) path=\(path) action=listen")
 
         listener = db.collection("users")
             .document(uid)
@@ -113,10 +120,12 @@ final class ClientViewModel: ObservableObject {
                     self.clients = decoded
                 }
             }
+
+        session.track(listener)
     }
 
     private func persist(_ client: Client) {
-        guard let uid = auth.currentUser?.uid else { return }
+        guard let uid = currentUserID else { return }
 
         var clientToSave = client
         clientToSave.ownerID = uid
@@ -128,6 +137,8 @@ final class ClientViewModel: ObservableObject {
         }
 
         do {
+            let path = "users/\(uid)/clients/\(clientToSave.id.uuidString)"
+            print("[Data] ClientViewModel uid=\(uid) path=\(path) action=write")
             try db.collection("users")
                 .document(uid)
                 .collection("clients")
@@ -136,5 +147,12 @@ final class ClientViewModel: ObservableObject {
         } catch {
             print("Failed to save client: \(error.localizedDescription)")
         }
+    }
+
+    func clear() {
+        listener?.remove()
+        listener = nil
+        currentUserID = nil
+        clients = []
     }
 }

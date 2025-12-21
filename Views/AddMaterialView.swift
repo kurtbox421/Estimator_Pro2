@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import FirebaseAuth
 
 struct AddMaterialView: View {
     enum Mode {
@@ -19,6 +18,7 @@ struct AddMaterialView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var settingsManager: SettingsManager
     @EnvironmentObject private var subscriptionManager: SubscriptionManager
+    @EnvironmentObject private var session: SessionManager
 
     let mode: Mode
     @ObservedObject var jobVM: JobViewModel
@@ -135,7 +135,7 @@ struct AddMaterialView: View {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else { return }
 
-        guard let uid = Auth.auth().currentUser?.uid else { return }
+        guard let uid = session.uid else { return }
 
         let productURL = parsedURL(from: productURLText)
 
@@ -209,4 +209,3 @@ extension AddMaterialView.Mode: Identifiable {
         }
     }
 }
-

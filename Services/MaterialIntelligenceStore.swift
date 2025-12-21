@@ -1,5 +1,5 @@
 import Foundation
-import FirebaseAuth
+import Combine
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 import os.log
@@ -22,23 +22,37 @@ final class MaterialIntelligenceStore: ObservableObject {
 
     private let db: Firestore
     private let logger = Logger(subsystem: "com.estimatorpro.materials", category: "MaterialIntelligenceStore")
-    private var authHandle: AuthStateDidChangeListenerHandle?
     private var jobsListener: ListenerRegistration?
     private var invoicesListener: ListenerRegistration?
+    private let session: SessionManager
+    private var cancellables: Set<AnyCancellable> = []
+    private var resetToken: UUID?
     private var cachedJobs: [Job] = []
     private var cachedInvoices: [Invoice] = []
     private var invalidJobDocumentPaths: Set<String> = []
     private var coOccurrence: [String: [String: Int]] = [:]
 
-    init(database: Firestore = Firestore.firestore()) {
+    init(database: Firestore = Firestore.firestore(), session: SessionManager) {
         self.db = database
-        configureAuthListener()
+        self.session = session
+        resetToken = session.registerResetHandler { [weak self] in
+            self?.clear()
+        }
+        session.$uid
+            .receive(on: RunLoop.main)
+            .sink { [weak self] uid in
+                self?.setUser(uid)
+            }
+            .store(in: &cancellables)
+        setUser(session.uid)
     }
 
     deinit {
         jobsListener?.remove()
         invoicesListener?.remove()
-        if let authHandle { Auth.auth().removeStateDidChangeListener(authHandle) }
+        if let resetToken {
+            session.unregisterResetHandler(resetToken)
+        }
     }
 
     func frequentlyUsedMaterials(limit: Int) -> [MaterialUsageStats] {
@@ -75,21 +89,19 @@ final class MaterialIntelligenceStore: ObservableObject {
         return Array(matchingStats.prefix(limit))
     }
 
-    private func configureAuthListener() {
-        authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
-            self?.attachListeners(for: user)
-        }
-        attachListeners(for: Auth.auth().currentUser)
-    }
-
-    private func attachListeners(for user: User?) {
+    private func setUser(_ uid: String?) {
         jobsListener?.remove()
         invoicesListener?.remove()
         materialStats = []
         coOccurrence = [:]
         invalidJobDocumentPaths = []
+        cachedJobs = []
+        cachedInvoices = []
 
-        guard let uid = user?.uid else { return }
+        guard let uid else { return }
+
+        let jobsPath = "users/\(uid)/jobs"
+        print("[Data] MaterialIntelligenceStore uid=\(uid) path=\(jobsPath) action=listen")
 
         jobsListener = db.collection("users")
             .document(uid)
@@ -132,6 +144,11 @@ final class MaterialIntelligenceStore: ObservableObject {
                 self.rebuildStats()
             }
 
+        session.track(jobsListener)
+
+        let invoicesPath = "users/\(uid)/invoices"
+        print("[Data] MaterialIntelligenceStore uid=\(uid) path=\(invoicesPath) action=listen")
+
         invoicesListener = db.collection("users")
             .document(uid)
             .collection("invoices")
@@ -159,6 +176,8 @@ final class MaterialIntelligenceStore: ObservableObject {
                 self.cachedInvoices = invoices
                 self.rebuildStats()
             }
+
+        session.track(invoicesListener)
     }
 
     private func rebuildStats() {
@@ -282,6 +301,18 @@ final class MaterialIntelligenceStore: ObservableObject {
             return (lhs.lastUsedAt ?? .distantPast) > (rhs.lastUsedAt ?? .distantPast)
         }
         return lhs.totalUsageCount > rhs.totalUsageCount
+    }
+
+    func clear() {
+        jobsListener?.remove()
+        invoicesListener?.remove()
+        jobsListener = nil
+        invoicesListener = nil
+        materialStats = []
+        coOccurrence = [:]
+        cachedJobs = []
+        cachedInvoices = []
+        invalidJobDocumentPaths = []
     }
 }
 

@@ -477,5 +477,5 @@ private struct ProductRow: View {
 }
 
 #Preview {
-    PaywallView(subscriptionManager: SubscriptionManager())
+    PaywallView(subscriptionManager: SubscriptionManager(session: SessionManager()))
 }

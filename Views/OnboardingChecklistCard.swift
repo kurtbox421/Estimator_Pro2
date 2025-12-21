@@ -109,13 +109,14 @@ struct OnboardingChecklistCard: View {
 }
 
 #Preview {
+    let session = SessionManager()
     OnboardingChecklistCard(
         goToCompanySettings: {},
         goToAddClient: {},
         goToCreateEstimate: {},
         goToPreviewPDF: {}
     )
-    .environmentObject(OnboardingProgressStore())
+    .environmentObject(OnboardingProgressStore(session: session))
     .padding()
     .background(Color.gray.opacity(0.1))
 }

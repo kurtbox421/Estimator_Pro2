@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SignInView: View {
-    @EnvironmentObject private var session: SessionViewModel
+    @EnvironmentObject private var session: SessionManager
 
     @State private var email = ""
     @State private var password = ""
@@ -49,6 +49,7 @@ struct SignInView: View {
 }
 
 #Preview {
-    SignInView()
-        .environmentObject(SessionViewModel())
+    let session = SessionManager()
+    return SignInView()
+        .environmentObject(session)
 }

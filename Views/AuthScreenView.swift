@@ -6,7 +6,7 @@ struct AuthScreenView: View {
         case signUp
     }
 
-    @EnvironmentObject private var session: SessionViewModel
+    @EnvironmentObject private var session: SessionManager
     @EnvironmentObject private var onboarding: OnboardingProgressStore
 
     @State private var mode: Mode = .signIn
@@ -258,7 +258,8 @@ extension View {
 }
 
 #Preview {
-    AuthScreenView()
-        .environmentObject(SessionViewModel())
-        .environmentObject(OnboardingProgressStore())
+    let session = SessionManager()
+    return AuthScreenView()
+        .environmentObject(session)
+        .environmentObject(OnboardingProgressStore(session: session))
 }

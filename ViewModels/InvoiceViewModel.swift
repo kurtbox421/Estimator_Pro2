@@ -1,9 +1,9 @@
 import Foundation
 import SwiftUI
 import os.log
-import FirebaseAuth
 import FirebaseFirestore
 import FirebaseFirestoreSwift
+import Combine
 
 class InvoiceViewModel: ObservableObject {
     @Published var invoices: [Invoice] = []
@@ -14,18 +14,31 @@ class InvoiceViewModel: ObservableObject {
     private let logger = Logger(subsystem: "com.estimatorpro.invoice", category: "InvoiceViewModel")
     private let db: Firestore
     private var listener: ListenerRegistration?
-    private var authHandle: AuthStateDidChangeListenerHandle?
+    private let session: SessionManager
+    private var cancellables: Set<AnyCancellable> = []
+    private var resetToken: UUID?
+    private var currentUserID: String?
     private var loggedDecodingFailures: Set<String> = []
 
-    init(database: Firestore = Firestore.firestore()) {
+    init(database: Firestore = Firestore.firestore(), session: SessionManager) {
         self.db = database
-        configureAuthListener()
+        self.session = session
+        resetToken = session.registerResetHandler { [weak self] in
+            self?.clear()
+        }
+        session.$uid
+            .receive(on: RunLoop.main)
+            .sink { [weak self] uid in
+                self?.setUser(uid)
+            }
+            .store(in: &cancellables)
+        setUser(session.uid)
     }
 
     deinit {
         listener?.remove()
-        if let authHandle {
-            Auth.auth().removeStateDidChangeListener(authHandle)
+        if let resetToken {
+            session.unregisterResetHandler(resetToken)
         }
     }
 
@@ -47,9 +60,10 @@ class InvoiceViewModel: ObservableObject {
     }
 
     func delete(_ invoice: Invoice) {
-        guard Auth.auth().currentUser != nil else { return }
+        guard let uid = currentUserID else { return }
 
-        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let path = "users/\(uid)/invoices/\(invoice.id.uuidString)"
+        print("[Data] InvoiceViewModel uid=\(uid) path=\(path) action=delete")
 
         db.collection("users")
             .document(uid)
@@ -122,19 +136,15 @@ class InvoiceViewModel: ObservableObject {
 
     // MARK: - Firestore Synchronization
 
-    private func configureAuthListener() {
-        authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
-            self?.attachListener(for: user)
-        }
-
-        attachListener(for: Auth.auth().currentUser)
-    }
-
-    private func attachListener(for user: User?) {
+    private func setUser(_ uid: String?) {
         listener?.remove()
+        currentUserID = uid
         invoices = []
 
-        guard let uid = user?.uid else { return }
+        guard let uid else { return }
+
+        let path = "users/\(uid)/invoices"
+        print("[Data] InvoiceViewModel uid=\(uid) path=\(path) action=listen")
 
         listener = db.collection("users")
             .document(uid)
@@ -161,10 +171,12 @@ class InvoiceViewModel: ObservableObject {
                     self.invoices = self.sortInvoices(decoded)
                 }
             }
+
+        session.track(listener)
     }
 
     private func persist(_ invoice: Invoice, completion: ((Error?) -> Void)? = nil) {
-        guard let uid = Auth.auth().currentUser?.uid else {
+        guard let uid = currentUserID else {
             logger.error("Attempted to persist invoice without an authenticated user")
             return
         }
@@ -182,6 +194,8 @@ class InvoiceViewModel: ObservableObject {
         invoices = sortInvoices(invoices)
 
         do {
+            let path = "users/\(uid)/invoices/\(invoiceToSave.id.uuidString)"
+            print("[Data] InvoiceViewModel uid=\(uid) path=\(path) action=write")
             try db.collection("users")
                 .document(uid)
                 .collection("invoices")
@@ -227,6 +241,16 @@ class InvoiceViewModel: ObservableObject {
         }
     }
 
+    func clear() {
+        listener?.remove()
+        listener = nil
+        currentUserID = nil
+        invoices = []
+        previewURL = nil
+        previewError = nil
+        isShowingPreview = false
+    }
+
     private func sortInvoices(_ invoices: [Invoice]) -> [Invoice] {
         let statusPriority: [Invoice.InvoiceStatus: Int] = [
             .overdue: 0,
@@ -269,7 +293,7 @@ class InvoiceViewModel: ObservableObject {
         }
 
         if data["invoiceNumber"] == nil {
-            let fallbackNumber = InvoiceNumberManager.shared.generateInvoiceNumber()
+            let fallbackNumber = InvoiceNumberManager.generateInvoiceNumber(uid: currentUserID)
             data["invoiceNumber"] = fallbackNumber
             patch["invoiceNumber"] = fallbackNumber
             missingFields.append("invoiceNumber")

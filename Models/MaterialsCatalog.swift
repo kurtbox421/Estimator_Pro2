@@ -1,5 +1,5 @@
 import Foundation
-import FirebaseAuth
+import Combine
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 
@@ -331,24 +331,38 @@ final class MaterialsCatalogStore: ObservableObject {
 
     private let db: Firestore
     private var baseMaterials: [MaterialItem] = []
-    private var authHandle: AuthStateDidChangeListenerHandle?
     private var customMaterialsListener: ListenerRegistration?
     private var preferencesListener: ListenerRegistration?
+    private let session: SessionManager
+    private var cancellables: Set<AnyCancellable> = []
+    private var resetToken: UUID?
     private var currentUserID: String?
     private var isApplyingRemoteUpdate = false
 
-    init(database: Firestore = Firestore.firestore()) {
+    init(database: Firestore = Firestore.firestore(), session: SessionManager) {
         self.db = database
+        self.session = session
 
         loadFromBundle()
         rebuildCatalog()
-        configureAuthListener()
+        resetToken = session.registerResetHandler { [weak self] in
+            self?.clear()
+        }
+        session.$uid
+            .receive(on: RunLoop.main)
+            .sink { [weak self] uid in
+                self?.setUser(uid)
+            }
+            .store(in: &cancellables)
+        setUser(session.uid)
     }
 
     deinit {
         customMaterialsListener?.remove()
         preferencesListener?.remove()
-        if let authHandle { Auth.auth().removeStateDidChangeListener(authHandle) }
+        if let resetToken {
+            session.unregisterResetHandler(resetToken)
+        }
     }
 
     private func loadFromBundle() {
@@ -363,14 +377,6 @@ final class MaterialsCatalogStore: ObservableObject {
         } catch {
             print("Failed to load MaterialsCatalog.json: \(error)")
         }
-    }
-
-    private func configureAuthListener() {
-        authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
-            self?.attachListeners(for: user)
-        }
-
-        attachListeners(for: Auth.auth().currentUser)
     }
 
     private func rebuildCatalog() {
@@ -557,7 +563,7 @@ final class MaterialsCatalogStore: ObservableObject {
         coverageUnit: String? = nil,
         wasteFactor: Double = 0
     ) -> MaterialItem {
-        guard let uid = Auth.auth().currentUser?.uid else {
+        guard let uid = currentUserID else {
             print("Attempted to add custom material without authenticated user")
             return MaterialItem(
                 id: UUID().uuidString,
@@ -681,6 +687,9 @@ final class MaterialsCatalogStore: ObservableObject {
         resetProductURLOverride(for: material.id)
 
         guard let uid = currentUserID else { return }
+
+        let path = "users/\(uid)/materials/\(material.id)"
+        print("[Data] MaterialsCatalogStore uid=\(uid) path=\(path) action=delete")
 
         db.collection("users")
             .document(uid)
@@ -811,11 +820,11 @@ final class MaterialsCatalogStore: ObservableObject {
 
     // MARK: - Firestore
 
-    private func attachListeners(for user: User?) {
+    private func setUser(_ uid: String?) {
         customMaterialsListener?.remove()
         preferencesListener?.remove()
 
-        currentUserID = user?.uid
+        currentUserID = uid
         isApplyingRemoteUpdate = true
         customMaterials = []
         priceOverrides = [:]
@@ -824,7 +833,10 @@ final class MaterialsCatalogStore: ObservableObject {
         isApplyingRemoteUpdate = false
         rebuildCatalog()
 
-        guard let uid = user?.uid else { return }
+        guard let uid else { return }
+
+        let materialsPath = "users/\(uid)/materials"
+        print("[Data] MaterialsCatalogStore uid=\(uid) path=\(materialsPath) action=listen")
 
         customMaterialsListener = db.collection("users")
             .document(uid)
@@ -846,6 +858,11 @@ final class MaterialsCatalogStore: ObservableObject {
                 DispatchQueue.main.async { self.customMaterials = decoded }
             }
 
+        session.track(customMaterialsListener)
+
+        let preferencesPath = "users/\(uid)/materialPreferences/preferences"
+        print("[Data] MaterialsCatalogStore uid=\(uid) path=\(preferencesPath) action=listen")
+
         preferencesListener = db.collection("users")
             .document(uid)
             .collection("materialPreferences")
@@ -866,12 +883,16 @@ final class MaterialsCatalogStore: ObservableObject {
                     }
                 }
             }
+
+        session.track(preferencesListener)
     }
 
     private func persistCustomMaterial(_ material: MaterialItem) {
         guard !material.ownerID.isEmpty, let uid = currentUserID else { return }
 
         do {
+            let path = "users/\(uid)/materials/\(material.id)"
+            print("[Data] MaterialsCatalogStore uid=\(uid) path=\(path) action=write")
             try db.collection("users")
                 .document(uid)
                 .collection("materials")
@@ -894,6 +915,8 @@ final class MaterialsCatalogStore: ObservableObject {
         )
 
         do {
+            let path = "users/\(uid)/materialPreferences/preferences"
+            print("[Data] MaterialsCatalogStore uid=\(uid) path=\(path) action=write")
             try db.collection("users")
                 .document(uid)
                 .collection("materialPreferences")
@@ -902,5 +925,20 @@ final class MaterialsCatalogStore: ObservableObject {
         } catch {
             print("Failed to save material preferences: \(error.localizedDescription)")
         }
+    }
+
+    func clear() {
+        customMaterialsListener?.remove()
+        preferencesListener?.remove()
+        customMaterialsListener = nil
+        preferencesListener = nil
+        currentUserID = nil
+        isApplyingRemoteUpdate = true
+        customMaterials = []
+        priceOverrides = [:]
+        productURLOverrides = [:]
+        removedMaterialIDs = []
+        isApplyingRemoteUpdate = false
+        rebuildCatalog()
     }
 }

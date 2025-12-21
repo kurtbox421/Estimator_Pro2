@@ -1,5 +1,5 @@
 import Foundation
-import FirebaseAuth
+import Combine
 
 @MainActor
 final class OnboardingProgressStore: ObservableObject {
@@ -43,23 +43,30 @@ final class OnboardingProgressStore: ObservableObject {
     var isAllComplete: Bool { completedCount == totalCount }
 
     private let userDefaults: UserDefaults
-    private let auth: Auth
-    private var authHandle: AuthStateDidChangeListenerHandle?
+    private let session: SessionManager
+    private var cancellables: Set<AnyCancellable> = []
+    private var resetToken: UUID?
 
-    init(userDefaults: UserDefaults = .standard, auth: Auth = Auth.auth()) {
+    init(userDefaults: UserDefaults = .standard, session: SessionManager) {
         self.userDefaults = userDefaults
-        self.auth = auth
+        self.session = session
         loadState()
 
-        authHandle = auth.addStateDidChangeListener { [weak self] _, _ in
-            Task { @MainActor in
+        resetToken = session.registerResetHandler { [weak self] in
+            self?.resetState()
+        }
+        session.$uid
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
                 self?.loadState()
             }
-        }
+            .store(in: &cancellables)
     }
 
     deinit {
-        if let authHandle { auth.removeStateDidChangeListener(authHandle) }
+        if let resetToken {
+            session.unregisterResetHandler(resetToken)
+        }
     }
 
     func activateForNewAccount() {
@@ -90,16 +97,18 @@ final class OnboardingProgressStore: ObservableObject {
     }
 
     private func persist(_ value: Bool, for key: StorageKey) {
-        guard let uid = auth.currentUser?.uid else { return }
+        guard let uid = session.uid else { return }
+        print("[Data] OnboardingProgressStore uid=\(uid) path=local:Onboarding action=save \(key.rawValue)")
         userDefaults.set(value, forKey: storageKey(key, uid: uid))
     }
 
     private func loadState() {
-        guard let uid = auth.currentUser?.uid else {
+        guard let uid = session.uid else {
             resetState()
             return
         }
 
+        print("[Data] OnboardingProgressStore uid=\(uid) path=local:Onboarding action=load")
         shouldShowOnboarding = userDefaults.bool(forKey: storageKey(.shouldShowOnboarding, uid: uid))
         didCompleteOnboarding = userDefaults.bool(forKey: storageKey(.didCompleteOnboarding, uid: uid))
         companyProfileComplete = userDefaults.bool(forKey: storageKey(.companyProfileComplete, uid: uid))

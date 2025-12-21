@@ -1,6 +1,5 @@
 import Foundation
 import Combine
-import FirebaseAuth
 import FirebaseFirestore
 import FirebaseFirestoreSwift
 
@@ -9,17 +8,31 @@ final class SettingsManager: ObservableObject {
 
     private let db: Firestore
     private var listener: ListenerRegistration?
-    private var authHandle: AuthStateDidChangeListenerHandle?
+    private let session: SessionManager
+    private var cancellables: Set<AnyCancellable> = []
+    private var resetToken: UUID?
     private var currentUserID: String?
 
-    init(database: Firestore = Firestore.firestore()) {
+    init(database: Firestore = Firestore.firestore(), session: SessionManager) {
         self.db = database
-        configureAuthListener()
+        self.session = session
+        resetToken = session.registerResetHandler { [weak self] in
+            self?.clear()
+        }
+        session.$uid
+            .receive(on: RunLoop.main)
+            .sink { [weak self] uid in
+                self?.setUser(uid)
+            }
+            .store(in: &cancellables)
+        setUser(session.uid)
     }
 
     deinit {
         listener?.remove()
-        if let authHandle { Auth.auth().removeStateDidChangeListener(authHandle) }
+        if let resetToken {
+            session.unregisterResetHandler(resetToken)
+        }
     }
 
     func addMaterial(name: String, price: Double) {
@@ -37,6 +50,9 @@ final class SettingsManager: ObservableObject {
 
         materialsToDelete.forEach { material in
             guard let uid = currentUserID else { return }
+
+            let path = "users/\(uid)/materialPrices/\(material.id.uuidString)"
+            print("[Data] SettingsManager uid=\(uid) path=\(path) action=delete")
 
             db.collection("users")
                 .document(uid)
@@ -73,20 +89,15 @@ final class SettingsManager: ObservableObject {
         }?.price
     }
 
-    private func configureAuthListener() {
-        authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
-            self?.attachListener(for: user)
-        }
-
-        attachListener(for: Auth.auth().currentUser)
-    }
-
-    private func attachListener(for user: User?) {
+    private func setUser(_ uid: String?) {
         listener?.remove()
-        currentUserID = user?.uid
+        currentUserID = uid
         commonMaterials = []
 
-        guard let uid = user?.uid else { return }
+        guard let uid else { return }
+
+        let path = "users/\(uid)/materialPrices"
+        print("[Data] SettingsManager uid=\(uid) path=\(path) action=listen")
 
         listener = db.collection("users")
             .document(uid)
@@ -107,6 +118,8 @@ final class SettingsManager: ObservableObject {
 
                 DispatchQueue.main.async { self.commonMaterials = decoded }
             }
+
+        session.track(listener)
     }
 
     private func persist(_ material: SavedMaterial) {
@@ -117,6 +130,8 @@ final class SettingsManager: ObservableObject {
         materialToSave.isDefault = false
 
         do {
+            let path = "users/\(uid)/materialPrices/\(materialToSave.id.uuidString)"
+            print("[Data] SettingsManager uid=\(uid) path=\(path) action=write")
             try db.collection("users")
                 .document(uid)
                 .collection("materialPrices")
@@ -125,5 +140,12 @@ final class SettingsManager: ObservableObject {
         } catch {
             print("Failed to save material price: \(error.localizedDescription)")
         }
+    }
+
+    func clear() {
+        listener?.remove()
+        listener = nil
+        currentUserID = nil
+        commonMaterials = []
     }
 }

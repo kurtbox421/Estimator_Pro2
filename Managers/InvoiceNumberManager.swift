@@ -1,17 +1,18 @@
 import Foundation
+import FirebaseAuth
 
-final class InvoiceNumberManager {
-    static let shared = InvoiceNumberManager()
+enum InvoiceNumberManager {
+    private static func storageKey(for uid: String?) -> String {
+        guard let uid else { return "lastInvoiceNumber_anonymous" }
+        return "lastInvoiceNumber_\(uid)"
+    }
 
-    private let defaultsKey = "lastInvoiceNumber"
-
-    private init() {}
-
-    func generateInvoiceNumber() -> String {
+    static func generateInvoiceNumber(uid: String? = Auth.auth().currentUser?.uid) -> String {
         let defaults = UserDefaults.standard
-        let last = defaults.integer(forKey: defaultsKey) // 0 if not set
+        let key = storageKey(for: uid)
+        let last = defaults.integer(forKey: key)
         let next = last + 1
-        defaults.set(next, forKey: defaultsKey)
-        return String(format: "%03d", next) // 001, 002, ...
+        defaults.set(next, forKey: key)
+        return String(format: "%03d", next)
     }
 }

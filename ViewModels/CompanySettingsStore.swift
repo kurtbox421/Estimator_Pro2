@@ -53,10 +53,11 @@ final class CompanySettingsStore: ObservableObject {
     private let db: Firestore
     private let storage: Storage
     private let auth: Auth
+    private let session: SessionManager
     private var cancellables: Set<AnyCancellable> = []
     private var listener: ListenerRegistration?
     private var userListener: ListenerRegistration?
-    private var authHandle: AuthStateDidChangeListenerHandle?
+    private var resetToken: UUID?
     private var currentUserID: String?
     private var currentLogoPath: String?
     private var currentLogoURL: String?
@@ -81,21 +82,34 @@ final class CompanySettingsStore: ObservableObject {
         persistence: PersistenceService = .shared,
         database: Firestore = Firestore.firestore(),
         storage: Storage = Storage.storage(),
-        auth: Auth = Auth.auth()
+        auth: Auth = Auth.auth(),
+        session: SessionManager
     ) {
         self.persistence = persistence
         self.db = database
         self.storage = storage
         self.auth = auth
+        self.session = session
 
-        configureAuthListener()
+        resetToken = session.registerResetHandler { [weak self] in
+            self?.clear()
+        }
+        session.$uid
+            .receive(on: RunLoop.main)
+            .sink { [weak self] uid in
+                self?.setUser(uid)
+            }
+            .store(in: &cancellables)
+        setUser(session.uid)
         bindSaves()
     }
 
     deinit {
         listener?.remove()
         userListener?.remove()
-        if let authHandle { auth.removeStateDidChangeListener(authHandle) }
+        if let resetToken {
+            session.unregisterResetHandler(resetToken)
+        }
     }
 
     private func bindSaves() {
@@ -113,9 +127,12 @@ final class CompanySettingsStore: ObservableObject {
                     logoPath: self.currentLogoPath
                 )
 
+                print("[Data] CompanySettingsStore uid=\(uid) path=local:\(CompanyStorage.fileName(for: uid)) action=save")
                 self.persistence.save(settings, to: CompanyStorage.fileName(for: uid))
 
                 do {
+                    let path = "users/\(uid)/company/settings"
+                    print("[Data] CompanySettingsStore uid=\(uid) path=\(path) action=write")
                     try self.companyDocument(for: uid).setData(from: settings)
                 } catch {
                     print("Failed to save company settings: \(error.localizedDescription)")
@@ -124,28 +141,23 @@ final class CompanySettingsStore: ObservableObject {
             .store(in: &cancellables)
     }
 
-    private func configureAuthListener() {
-        authHandle = auth.addStateDidChangeListener { [weak self] _, user in
-            self?.attachListener(for: user)
-        }
-
-        attachListener(for: auth.currentUser)
-    }
-
-    private func attachListener(for user: User?) {
+    private func setUser(_ uid: String?) {
         listener?.remove()
         userListener?.remove()
-        currentUserID = user?.uid
+        currentUserID = uid
         currentLogoPath = nil
         currentLogoURL = nil
         logoImage = nil
         apply(settings: .empty)
 
-        guard let uid = user?.uid else { return }
+        guard let uid else { return }
 
         loadLocalSettings(for: uid)
         loadCachedLogo(for: uid)
         attachUserListener(for: uid)
+
+        let path = "users/\(uid)/company/settings"
+        print("[Data] CompanySettingsStore uid=\(uid) path=\(path) action=listen")
 
         listener = companyDocument(for: uid)
             .addSnapshotListener { [weak self] snapshot, error in
@@ -159,9 +171,12 @@ final class CompanySettingsStore: ObservableObject {
                     self.apply(settings: data)
                 }
             }
+
+        session.track(listener)
     }
 
     private func loadLocalSettings(for uid: String) {
+        print("[Data] CompanySettingsStore uid=\(uid) path=local:\(CompanyStorage.fileName(for: uid)) action=load")
         if let stored: CompanySettings = persistence.load(CompanySettings.self, from: CompanyStorage.fileName(for: uid)) {
             apply(settings: stored)
         }
@@ -198,6 +213,8 @@ final class CompanySettingsStore: ObservableObject {
         }
 
         do {
+            let path = "users/\(uid)"
+            print("[Data] CompanySettingsStore uid=\(uid) path=\(path) action=fetch-logo-url")
             let snapshot = try await userDocument(for: uid).getDocument()
             let logoURL = snapshot.data()?[brandingLogoField] as? String
             handleLogoURLChange(logoURL, for: uid)
@@ -233,6 +250,7 @@ final class CompanySettingsStore: ObservableObject {
 
             let downloadURL = try await ref.downloadURL()
             print("Uploaded logo to \(path)")
+            print("[Data] CompanySettingsStore uid=\(uid) path=users/\(uid) action=write-branding-logo")
             try await userDocument(for: uid).setData([
                 brandingLogoField: downloadURL.absoluteString,
                 "updatedAt": FieldValue.serverTimestamp()
@@ -273,6 +291,7 @@ final class CompanySettingsStore: ObservableObject {
         persistence.save(updatedSettings, to: CompanyStorage.fileName(for: uid))
 
         do {
+            print("[Data] CompanySettingsStore uid=\(uid) path=users/\(uid)/company/settings action=write")
             try companyDocument(for: uid).setData(from: updatedSettings, merge: true)
             try await userDocument(for: uid).setData([
                 brandingLogoField: FieldValue.delete(),
@@ -290,6 +309,8 @@ final class CompanySettingsStore: ObservableObject {
     }
 
     private func attachUserListener(for uid: String) {
+        let path = "users/\(uid)"
+        print("[Data] CompanySettingsStore uid=\(uid) path=\(path) action=listen-branding")
         userListener = userDocument(for: uid)
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self else { return }
@@ -301,6 +322,8 @@ final class CompanySettingsStore: ObservableObject {
                 let logoURL = snapshot?.data()?[self.brandingLogoField] as? String
                 handleLogoURLChange(logoURL, for: uid)
             }
+
+        session.track(userListener)
     }
 
     private func handleLogoURLChange(_ logoURL: String?, for uid: String) {
@@ -327,5 +350,17 @@ final class CompanySettingsStore: ObservableObject {
                 print("Failed to download logo: \(error)")
             }
         }
+    }
+
+    func clear() {
+        listener?.remove()
+        userListener?.remove()
+        listener = nil
+        userListener = nil
+        currentUserID = nil
+        currentLogoPath = nil
+        currentLogoURL = nil
+        logoImage = nil
+        apply(settings: .empty)
     }
 }

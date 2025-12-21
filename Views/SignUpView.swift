@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SignUpView: View {
-    @EnvironmentObject private var session: SessionViewModel
+    @EnvironmentObject private var session: SessionManager
     @EnvironmentObject private var onboarding: OnboardingProgressStore
 
     @State private var name = ""
@@ -70,7 +70,8 @@ struct SignUpView: View {
 }
 
 #Preview {
-    SignUpView()
-        .environmentObject(SessionViewModel())
-        .environmentObject(OnboardingProgressStore())
+    let session = SessionManager()
+    return SignUpView()
+        .environmentObject(session)
+        .environmentObject(OnboardingProgressStore(session: session))
 }
