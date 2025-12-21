@@ -38,7 +38,7 @@ enum JobType: String, CaseIterable, Identifiable, Codable {
 /// Connects job types -> list of material IDs + provided context
 struct JobMaterialGenerator {
 
-    let catalog: MaterialsCatalogStore
+    let catalog: MaterialsCatalogSnapshot
     let engine = MaterialQuantityEngine()
 
     func generateMaterials(
