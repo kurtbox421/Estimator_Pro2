@@ -67,11 +67,14 @@ final class SubscriptionManager: ObservableObject {
     }
 
     deinit {
-        stopEntitlementListeners()
-        stopSubscriptionListener()
-        Task { @MainActor in
-            cancellables.removeAll()
-            if let resetToken {
+        updatesTask?.cancel()
+        updatesTask = nil
+        subscriptionListener?.remove()
+        subscriptionListener = nil
+        cancellables.removeAll()
+        if let resetToken {
+            let session = session
+            Task { @MainActor in
                 session.unregisterResetHandler(resetToken)
             }
         }

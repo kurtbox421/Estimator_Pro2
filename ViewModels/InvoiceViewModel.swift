@@ -37,10 +37,11 @@ class InvoiceViewModel: ObservableObject {
     }
 
     deinit {
-        Task { @MainActor in
-            listener?.remove()
-            cancellables.removeAll()
-            if let resetToken {
+        listener?.remove()
+        cancellables.removeAll()
+        if let resetToken {
+            let session = session
+            Task { @MainActor in
                 session.unregisterResetHandler(resetToken)
             }
         }
@@ -155,23 +156,22 @@ class InvoiceViewModel: ObservableObject {
             .collection("invoices")
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self else { return }
+                Task { @MainActor in
+                    if let error {
+                        logger.error("Failed to fetch invoices: \(error.localizedDescription)")
+                        return
+                    }
 
-                if let error {
-                    logger.error("Failed to fetch invoices: \(error.localizedDescription)")
-                    return
-                }
+                    guard let documents = snapshot?.documents else {
+                        self.invoices = []
+                        return
+                    }
 
-                guard let documents = snapshot?.documents else {
-                    DispatchQueue.main.async { self.invoices = [] }
-                    return
-                }
+                    let decoded: [Invoice] = documents.compactMap { document in
+                        guard document.exists else { return nil }
+                        return self.decodeInvoice(from: document)
+                    }
 
-                let decoded: [Invoice] = documents.compactMap { document in
-                    guard document.exists else { return nil }
-                    return self.decodeInvoice(from: document)
-                }
-
-                DispatchQueue.main.async {
                     self.invoices = self.sortInvoices(decoded)
                 }
             }

@@ -47,9 +47,10 @@ class JobViewModel: ObservableObject {
     }
 
     deinit {
-        Task { @MainActor in
-            cancellables.removeAll()
-            if let resetToken {
+        cancellables.removeAll()
+        if let resetToken {
+            let session = session
+            Task { @MainActor in
                 session.unregisterResetHandler(resetToken)
             }
         }

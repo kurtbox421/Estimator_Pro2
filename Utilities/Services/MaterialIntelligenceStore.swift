@@ -51,11 +51,12 @@ final class MaterialIntelligenceStore: ObservableObject {
     }
 
     deinit {
-        Task { @MainActor in
-            jobsListener?.remove()
-            invoicesListener?.remove()
-            cancellables.removeAll()
-            if let resetToken {
+        jobsListener?.remove()
+        invoicesListener?.remove()
+        cancellables.removeAll()
+        if let resetToken {
+            let session = session
+            Task { @MainActor in
                 session.unregisterResetHandler(resetToken)
             }
         }
@@ -75,11 +76,11 @@ final class MaterialIntelligenceStore: ObservableObject {
         let filtered = materialStats.filter { stats in
             stats.jobTypes.keys.contains(where: { $0.localizedCaseInsensitiveContains(jobType) })
         }
-        return Array(filtered.sorted(by: sortByUsage).prefix(limit))
+        return Array(filtered.sorted(by: Self.sortByUsage).prefix(limit))
     }
 
     func commonlyUsed(withMaterialName name: String, limit: Int) -> [MaterialUsageStats] {
-        let key = normalize(name)
+        let key = Self.normalize(name)
         guard let coUsed = coOccurrence[key] else { return [] }
 
         let sortedKeys = coUsed.sorted { lhs, rhs in
@@ -89,7 +90,7 @@ final class MaterialIntelligenceStore: ObservableObject {
             return lhs.value > rhs.value
         }
         let matchingStats: [MaterialUsageStats] = sortedKeys.compactMap { entry in
-            materialStats.first { normalize($0.name) == entry.key }
+            materialStats.first { Self.normalize($0.name) == entry.key }
         }
 
         return Array(matchingStats.prefix(limit))
@@ -116,28 +117,30 @@ final class MaterialIntelligenceStore: ObservableObject {
             .collection("jobs")
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self else { return }
-                if let error { print("Failed to fetch jobs: \(error.localizedDescription)"); return }
+                Task { @MainActor in
+                    if let error { print("Failed to fetch jobs: \(error.localizedDescription)"); return }
 
-                let jobs: [Job] = snapshot?.documents.compactMap { document in
-                    if self.invalidJobDocumentIDs.contains(document.documentID) {
-                        return nil
-                    }
+                    let jobs: [Job] = snapshot?.documents.compactMap { document in
+                        if self.invalidJobDocumentIDs.contains(document.documentID) {
+                            return nil
+                        }
 
-                    guard document.exists else {
-                        self.invalidJobDocumentIDs.insert(document.documentID)
-                        return nil
-                    }
+                        guard document.exists else {
+                            self.invalidJobDocumentIDs.insert(document.documentID)
+                            return nil
+                        }
 
-                    guard let job = self.decodeJob(from: document) else {
-                        self.invalidJobDocumentIDs.insert(document.documentID)
-                        return nil
-                    }
+                        guard let job = self.decodeJob(from: document) else {
+                            self.invalidJobDocumentIDs.insert(document.documentID)
+                            return nil
+                        }
 
-                    return job
-                } ?? []
+                        return job
+                    } ?? []
 
-                self.cachedJobs = jobs
-                self.rebuildStats()
+                    self.cachedJobs = jobs
+                    self.rebuildStats()
+                }
             }
 
         session.track(jobsListener)
@@ -150,15 +153,17 @@ final class MaterialIntelligenceStore: ObservableObject {
             .collection("invoices")
             .addSnapshotListener { [weak self] snapshot, error in
                 guard let self else { return }
-                if let error { print("Failed to fetch invoices: \(error.localizedDescription)"); return }
+                Task { @MainActor in
+                    if let error { print("Failed to fetch invoices: \(error.localizedDescription)"); return }
 
-                let invoices: [Invoice] = snapshot?.documents.compactMap { document in
-                    guard document.exists else { return nil }
-                    return self.decodeInvoice(from: document)
-                } ?? []
+                    let invoices: [Invoice] = snapshot?.documents.compactMap { document in
+                        guard document.exists else { return nil }
+                        return self.decodeInvoice(from: document)
+                    } ?? []
 
-                self.cachedInvoices = invoices
-                self.rebuildStats()
+                    self.cachedInvoices = invoices
+                    self.rebuildStats()
+                }
             }
 
         session.track(invoicesListener)
@@ -170,43 +175,52 @@ final class MaterialIntelligenceStore: ObservableObject {
         let jobs = cachedJobs
         let invoices = cachedInvoices
 
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self else { return }
-            var statsMap: [String: MaterialStatsBuilder] = [:]
-            var coUse: [String: [String: Int]] = [:]
-
-            for job in jobs {
-                let materials = job.materials
-                let normalizedNames = Set(materials.map { self.normalize($0.name) })
-
-                for material in materials {
-                    self.accumulate(material, jobType: job.category, date: job.dateCreated, into: &statsMap)
-                }
-
-                self.trackCoOccurrence(normalizedNames, store: &coUse)
-            }
-
-            for invoice in invoices {
-                let materials = invoice.materials
-                let normalizedNames = Set(materials.map { self.normalize($0.name) })
-                let timestamp = invoice.dueDate ?? Date()
-                let jobType = invoice.title
-
-                for material in materials {
-                    self.accumulate(material, jobType: jobType, date: timestamp, into: &statsMap)
-                }
-
-                self.trackCoOccurrence(normalizedNames, store: &coUse)
-            }
-
-            let finalStats: [MaterialUsageStats] = statsMap.values.map { $0.build() }
-                .sorted(by: self.sortByUsage)
-
-            DispatchQueue.main.async {
-                self.materialStats = finalStats
-                self.coOccurrence = coUse
+        DispatchQueue.global(qos: .userInitiated).async {
+            let result = Self.buildStats(jobs: jobs, invoices: invoices)
+            Task { @MainActor [weak self] in
+                self?.materialStats = result.stats
+                self?.coOccurrence = result.coOccurrence
             }
         }
+    }
+
+    private struct StatsBuildResult {
+        let stats: [MaterialUsageStats]
+        let coOccurrence: [String: [String: Int]]
+    }
+
+    private static func buildStats(jobs: [Job], invoices: [Invoice]) -> StatsBuildResult {
+        var statsMap: [String: MaterialStatsBuilder] = [:]
+        var coUse: [String: [String: Int]] = [:]
+
+        for job in jobs {
+            let materials = job.materials
+            let normalizedNames = Set(materials.map { normalize($0.name) })
+
+            for material in materials {
+                accumulate(material, jobType: job.category, date: job.dateCreated, into: &statsMap)
+            }
+
+            trackCoOccurrence(normalizedNames, store: &coUse)
+        }
+
+        for invoice in invoices {
+            let materials = invoice.materials
+            let normalizedNames = Set(materials.map { normalize($0.name) })
+            let timestamp = invoice.dueDate ?? Date()
+            let jobType = invoice.title
+
+            for material in materials {
+                accumulate(material, jobType: jobType, date: timestamp, into: &statsMap)
+            }
+
+            trackCoOccurrence(normalizedNames, store: &coUse)
+        }
+
+        let finalStats: [MaterialUsageStats] = statsMap.values.map { $0.build() }
+            .sorted(by: sortByUsage)
+
+        return StatsBuildResult(stats: finalStats, coOccurrence: coUse)
     }
 
     private func decodeJob(from document: DocumentSnapshot) -> Job? {
@@ -330,7 +344,7 @@ final class MaterialIntelligenceStore: ObservableObject {
         }
     }
 
-    private func accumulate(_ material: Material, jobType: String, date: Date?, into map: inout [String: MaterialStatsBuilder]) {
+    private static func accumulate(_ material: Material, jobType: String, date: Date?, into map: inout [String: MaterialStatsBuilder]) {
         let key = normalize(material.name)
         let builder = map[key, default: MaterialStatsBuilder(key: key, name: material.name)]
         map[key] = builder.add(
@@ -342,7 +356,7 @@ final class MaterialIntelligenceStore: ObservableObject {
         )
     }
 
-    private func trackCoOccurrence(_ names: Set<String>, store: inout [String: [String: Int]]) {
+    private static func trackCoOccurrence(_ names: Set<String>, store: inout [String: [String: Int]]) {
         for primary in names {
             for secondary in names where secondary != primary {
                 var inner = store[primary, default: [:]]
@@ -352,11 +366,11 @@ final class MaterialIntelligenceStore: ObservableObject {
         }
     }
 
-    private func normalize(_ name: String) -> String {
+    private static func normalize(_ name: String) -> String {
         name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
-    private func sortByUsage(lhs: MaterialUsageStats, rhs: MaterialUsageStats) -> Bool {
+    private static func sortByUsage(lhs: MaterialUsageStats, rhs: MaterialUsageStats) -> Bool {
         if lhs.totalUsageCount == rhs.totalUsageCount {
             return (lhs.lastUsedAt ?? .distantPast) > (rhs.lastUsedAt ?? .distantPast)
         }

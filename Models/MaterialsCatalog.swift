@@ -359,11 +359,12 @@ final class MaterialsCatalogStore: ObservableObject {
     }
 
     deinit {
-        Task { @MainActor in
-            customMaterialsListener?.remove()
-            preferencesListener?.remove()
-            cancellables.removeAll()
-            if let resetToken {
+        customMaterialsListener?.remove()
+        preferencesListener?.remove()
+        cancellables.removeAll()
+        if let resetToken {
+            let session = session
+            Task { @MainActor in
                 session.unregisterResetHandler(resetToken)
             }
         }
