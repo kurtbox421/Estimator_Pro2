@@ -43,13 +43,6 @@ final class SubscriptionManager: ObservableObject {
         self.activeProductID = nil
         self.environment = nil
 
-        updatesTask = Task { [weak self] in
-            guard let self else { return }
-            for await result in StoreKit.Transaction.updates {
-                await self.handle(transactionResult: result)
-            }
-        }
-
         authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
             guard let self else { return }
             self.handleAuthStateChange(user)
@@ -59,7 +52,7 @@ final class SubscriptionManager: ObservableObject {
     }
 
     deinit {
-        updatesTask?.cancel()
+        stopEntitlementListeners()
         if let authHandle {
             Auth.auth().removeStateDidChangeListener(authHandle)
         }
@@ -174,19 +167,45 @@ final class SubscriptionManager: ObservableObject {
             return
         }
 
+        resetEntitlementState()
+
         let entitlement = await activeSubscriptionEntitlement()
         let entitlementActive = entitlement != nil
         let activeProductID = entitlement?.productID
         let environmentValue = entitlement.map { environmentString(for: $0) } ?? "unknown"
         let originalTransactionId = entitlement.map { String($0.originalID) }
 
-        // Reset local state on each auth-bound refresh to avoid cross-account bleed.
-        setIsPro(entitlementActive)
+        var isEntitled = false
+        var bindingDenied = false
+
+        if let entitlement,
+           let originalTransactionId {
+            do {
+                isEntitled = try await bindSubscriptionIfNeeded(
+                    uid: currentUID,
+                    originalTransactionId: originalTransactionId,
+                    productId: entitlement.productID,
+                    environment: environmentValue
+                )
+                bindingDenied = !isEntitled
+            } catch {
+                debugLog("[Firestore] Failed to bind subscription:", error.localizedDescription)
+                lastError = "Unable to verify subscription binding. Please try again."
+                statusMessage = lastError
+            }
+        }
+
+        if entitlementActive, bindingDenied {
+            lastError = "subscription linked to another account"
+            statusMessage = lastError
+        }
+
+        setIsPro(entitlementActive && isEntitled)
         setActiveProductID(activeProductID)
         setEnvironment(environmentValue)
         await updateUserEntitlement(
             uid: currentUID,
-            isPro: entitlementActive,
+            isPro: entitlementActive && isEntitled,
             activeProductID: activeProductID,
             environment: environmentValue,
             originalTransactionId: originalTransactionId
@@ -194,7 +213,9 @@ final class SubscriptionManager: ObservableObject {
 
         if showRestoreMessage {
             if entitlementActive, let entitlement {
-                statusMessage = "Restored Estimator Pro (\(entitlement.productID))."
+                statusMessage = isEntitled
+                    ? "Restored Estimator Pro (\(entitlement.productID))."
+                    : "subscription linked to another account"
             } else {
                 statusMessage = "No purchases found to restore."
             }
@@ -251,7 +272,12 @@ final class SubscriptionManager: ObservableObject {
         setActiveProductID(nil)
         setEnvironment(nil)
         statusMessage = nil
-        UserDefaults.standard.removeObject(forKey: "isPro")
+    }
+
+    private func resetEntitlementState() {
+        setIsPro(false)
+        setActiveProductID(nil)
+        setEnvironment(nil)
     }
 
     func presentPaywall(after delay: TimeInterval = 0) {
@@ -362,16 +388,10 @@ final class SubscriptionManager: ObservableObject {
         var data: [String: Any] = [
             "isPro": isPro,
             "updatedAt": FieldValue.serverTimestamp(),
-            "environment": environment
+            "environment": environment,
+            "activeProductID": activeProductID ?? NSNull(),
+            "originalTransactionId": originalTransactionId ?? NSNull()
         ]
-
-        if let activeProductID {
-            data["activeProductID"] = activeProductID
-        }
-
-        if let originalTransactionId {
-            data["originalTransactionId"] = originalTransactionId
-        }
 
         let docRef = db.collection("users")
             .document(uid)
@@ -399,11 +419,79 @@ final class SubscriptionManager: ObservableObject {
         return "unknown"
     }
 
+    private func bindSubscriptionIfNeeded(
+        uid: String,
+        originalTransactionId: String,
+        productId: String,
+        environment: String
+    ) async throws -> Bool {
+        let docRef = db.collection("subscriptionBindings").document(originalTransactionId)
+
+        return try await withCheckedThrowingContinuation { continuation in
+            db.runTransaction({ transaction, errorPointer in
+                do {
+                    let snapshot = try transaction.getDocument(docRef)
+                    if let data = snapshot.data(),
+                       let boundUID = data["uid"] as? String {
+                        if boundUID != uid {
+                            return ["isEntitled": false]
+                        }
+
+                        transaction.updateData([
+                            "productId": productId,
+                            "environment": environment,
+                            "updatedAt": FieldValue.serverTimestamp()
+                        ], forDocument: docRef)
+                        return ["isEntitled": true]
+                    }
+
+                    transaction.setData([
+                        "uid": uid,
+                        "productId": productId,
+                        "environment": environment,
+                        "createdAt": FieldValue.serverTimestamp(),
+                        "updatedAt": FieldValue.serverTimestamp()
+                    ], forDocument: docRef, merge: false)
+                    return ["isEntitled": true]
+                } catch {
+                    errorPointer?.pointee = error as NSError
+                    return nil
+                }
+            }, completion: { result, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+
+                let isEntitled = (result as? [String: Any])?["isEntitled"] as? Bool ?? false
+                continuation.resume(returning: isEntitled)
+            })
+        }
+    }
+
+    private func startEntitlementListeners() {
+        guard updatesTask == nil else { return }
+        updatesTask = Task { [weak self] in
+            guard let self else { return }
+            for await result in StoreKit.Transaction.updates {
+                await self.handle(transactionResult: result)
+            }
+        }
+    }
+
+    private func stopEntitlementListeners() {
+        updatesTask?.cancel()
+        updatesTask = nil
+    }
+
     private func handleAuthStateChange(_ user: User?) {
         // Tie entitlement state to the auth user and clear it on logout to prevent cross-account bleed.
         if user == nil {
+            stopEntitlementListeners()
             clearCachedProStatus()
         } else {
+            resetEntitlementState()
+            startEntitlementListeners()
             Task {
                 await refreshEntitlements()
             }
