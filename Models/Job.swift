@@ -76,7 +76,7 @@ struct Job: Identifiable, Codable {
             materials = (try? container.decodeIfPresent([Material].self, forKey: .materials)) ?? []
             dateCreated = (try? container.decodeLossyDateIfPresent(forKey: .dateCreated)) ?? Date()
             clientId = try container.decodeLossyUUIDIfPresent(forKey: .clientId)
-            logMissingFieldsIfNeeded(in: container, documentID: documentID)
+            Self.logMissingFieldsIfNeeded(in: container, documentID: documentID, id: id)
 
             if decodedLaborLines.isEmpty {
                 let hours = try container.decodeLossyDoubleIfPresent(forKey: .laborHours) ?? 0
@@ -100,7 +100,11 @@ struct Job: Identifiable, Codable {
     private static let loggedMissingFieldsQueue = DispatchQueue(label: "com.estimatorpro.job.missingFieldsLog")
 #endif
 
-    private func logMissingFieldsIfNeeded(in container: KeyedDecodingContainer<CodingKeys>, documentID: String?) {
+    private static func logMissingFieldsIfNeeded(
+        in container: KeyedDecodingContainer<CodingKeys>,
+        documentID: String?,
+        id: UUID
+    ) {
 #if DEBUG
         var missingFields: [String] = []
         if !container.contains(.id) {
@@ -117,9 +121,9 @@ struct Job: Identifiable, Codable {
         }
         guard !missingFields.isEmpty else { return }
         let logKey = documentID ?? id.uuidString
-        Self.loggedMissingFieldsQueue.sync {
-            guard !Self.loggedMissingFieldsDocumentIDs.contains(logKey) else { return }
-            Self.loggedMissingFieldsDocumentIDs.insert(logKey)
+        loggedMissingFieldsQueue.sync {
+            guard !loggedMissingFieldsDocumentIDs.contains(logKey) else { return }
+            loggedMissingFieldsDocumentIDs.insert(logKey)
             print("Missing fields in document \(logKey): \(missingFields.joined(separator: ", "))")
         }
 #endif
