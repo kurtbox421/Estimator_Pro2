@@ -3,15 +3,15 @@ import FirebaseFirestore
 
 extension KeyedDecodingContainer {
     func decodeLossyDoubleIfPresent(forKey key: Key) throws -> Double? {
-        if let doubleValue = try? decodeIfPresent(Double.self, forKey: key) {
+        if let doubleValue = try decodeIfPresent(Double.self, forKey: key) {
             return doubleValue
         }
-        if let intValue = try? decodeIfPresent(Int.self, forKey: key) {
+        if let intValue = try decodeIfPresent(Int.self, forKey: key) {
             return Double(intValue)
         }
-        if let stringValue = try? decodeIfPresent(String.self, forKey: key),
-           let parsed = Double(stringValue) {
-            return parsed
+        if let stringValue = try decodeIfPresent(String.self, forKey: key) {
+            let normalized = stringValue.replacingOccurrences(of: ",", with: ".")
+            return Double(normalized)
         }
         return nil
     }
