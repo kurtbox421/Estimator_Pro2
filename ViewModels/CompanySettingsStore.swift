@@ -61,6 +61,7 @@ final class CompanySettingsStore: ObservableObject {
     private var currentLogoPath: String?
     private var currentLogoURL: String?
     private var isApplyingRemoteUpdate = false
+    private let brandingLogoField = "brandingLogoURL"
 
     private enum LogoUploadError: LocalizedError {
         case missingUser
@@ -190,6 +191,22 @@ final class CompanySettingsStore: ObservableObject {
     // MARK: - Branding & Logo
 
     @MainActor
+    func fetchBrandingLogo() async {
+        guard let uid = auth.currentUser?.uid else {
+            print("Failed to fetch branding logo URL: missing user")
+            return
+        }
+
+        do {
+            let snapshot = try await userDocument(for: uid).getDocument()
+            let logoURL = snapshot.data()?[brandingLogoField] as? String
+            handleLogoURLChange(logoURL, for: uid)
+        } catch {
+            print("Failed to fetch branding logo URL: \(error)")
+        }
+    }
+
+    @MainActor
     func uploadLogo(data: Data) async throws {
         guard let uid = auth.currentUser?.uid else {
             let error = LogoUploadError.missingUser
@@ -201,8 +218,7 @@ final class CompanySettingsStore: ObservableObject {
         defer { isUploadingLogo = false }
 
         do {
-            let timestamp = Int(Date().timeIntervalSince1970)
-            let path = "branding/\(uid)/logo_\(timestamp).jpg"
+            let path = "branding/\(uid)/logo.jpg"
             let ref = storage.reference(withPath: path)
             let metadata = StorageMetadata()
             metadata.contentType = "image/jpeg"
@@ -216,14 +232,16 @@ final class CompanySettingsStore: ObservableObject {
             }
 
             let downloadURL = try await ref.downloadURL()
+            print("Uploaded logo to \(path)")
             try await userDocument(for: uid).setData([
-                "logoURL": downloadURL.absoluteString,
+                brandingLogoField: downloadURL.absoluteString,
                 "updatedAt": FieldValue.serverTimestamp()
             ], merge: true)
 
             self.logoImage = logoImage
             CompanyLogoLoader.cacheLogoData(data, for: uid)
             currentLogoURL = downloadURL.absoluteString
+            currentLogoPath = path
         } catch {
             print("Failed to upload logo: \(error)")
             throw error
@@ -238,10 +256,9 @@ final class CompanySettingsStore: ObservableObject {
         defer { isUploadingLogo = false }
 
         do {
-            if let currentLogoURL {
-                let ref = storage.reference(forURL: currentLogoURL)
-                try await ref.delete()
-            }
+            let path = "branding/\(uid)/logo.jpg"
+            let ref = storage.reference(withPath: path)
+            try await ref.delete()
         } catch {
             print("Failed to remove logo: \(error)")
         }
@@ -258,7 +275,7 @@ final class CompanySettingsStore: ObservableObject {
         do {
             try companyDocument(for: uid).setData(from: updatedSettings, merge: true)
             try await userDocument(for: uid).setData([
-                "logoURL": FieldValue.delete(),
+                brandingLogoField: FieldValue.delete(),
                 "updatedAt": FieldValue.serverTimestamp()
             ], merge: true)
         } catch {
@@ -281,7 +298,7 @@ final class CompanySettingsStore: ObservableObject {
                     return
                 }
 
-                let logoURL = snapshot?.data()?["logoURL"] as? String
+                let logoURL = snapshot?.data()?[self.brandingLogoField] as? String
                 handleLogoURLChange(logoURL, for: uid)
             }
     }
