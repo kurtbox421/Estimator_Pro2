@@ -753,6 +753,25 @@ final class MaterialsCatalogStore: ObservableObject {
         priceOverrides[material.id] ?? material.defaultUnitCost
     }
 
+    @MainActor
+    func snapshot() -> MaterialsCatalogSnapshot {
+        let materialsByTag = Dictionary(
+            uniqueKeysWithValues: MaterialJobTag.allCases.map { tag in
+                (tag, materials(for: tag))
+            }
+        )
+        let pricesByID = Dictionary(
+            uniqueKeysWithValues: materials.map { material in
+                (material.id, price(for: material))
+            }
+        )
+        return MaterialsCatalogSnapshot(
+            materialsByTag: materialsByTag,
+            pricesByID: pricesByID,
+            customMaterialIDs: customMaterialIDs
+        )
+    }
+
     func productURL(for material: MaterialItem) -> URL? {
         productURLOverrides[material.id] ?? material.productURL
     }

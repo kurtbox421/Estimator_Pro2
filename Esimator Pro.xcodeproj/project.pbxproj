@@ -76,6 +76,7 @@
 		AA0B0B0B0B0B0B0B0B0B0B0B /* EstimateViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0B0B0B0B0B0B0B0B0B0B0A /* EstimateViewModel.swift */; };
 		B1E7E0112F01000100000001 /* MaterialEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E7E0102F01000100000001 /* MaterialEditView.swift */; };
 		D00100022FFF000100000001 /* MaterialsCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100012FFF000100000001 /* MaterialsCatalog.swift */; };
+		D00100092FFF000100000001 /* MaterialsCatalogSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D001000A2FFF000100000001 /* MaterialsCatalogSnapshot.swift */; };
 		D00100042FFF000100000001 /* MaterialQuantityEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100032FFF000100000001 /* MaterialQuantityEngine.swift */; };
 		D00100062FFF000100000001 /* JobMaterialGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100052FFF000100000001 /* JobMaterialGenerator.swift */; };
 		D00100082FFF000100000001 /* MaterialsCatalog.json in Resources */ = {isa = PBXBuildFile; fileRef = D00100072FFF000100000001 /* MaterialsCatalog.json */; };
@@ -157,6 +158,7 @@
 		AA0B0B0B0B0B0B0B0B0B0B0A /* EstimateViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EstimateViewModel.swift; sourceTree = "<group>"; };
 		B1E7E0102F01000100000001 /* MaterialEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialEditView.swift; sourceTree = "<group>"; };
 		D00100012FFF000100000001 /* MaterialsCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialsCatalog.swift; sourceTree = "<group>"; };
+		D001000A2FFF000100000001 /* MaterialsCatalogSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialsCatalogSnapshot.swift; sourceTree = "<group>"; };
 		D00100032FFF000100000001 /* MaterialQuantityEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialQuantityEngine.swift; sourceTree = "<group>"; };
 		D00100052FFF000100000001 /* JobMaterialGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobMaterialGenerator.swift; sourceTree = "<group>"; };
 		D00100072FFF000100000001 /* MaterialsCatalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = MaterialsCatalog.json; sourceTree = "<group>"; };
@@ -231,6 +233,7 @@
 				3969FCFF2ECD35E60005C1AE /* Job.swift */,
 				D00500012FFF000500000001 /* LaborLine.swift */,
 				D00100012FFF000100000001 /* MaterialsCatalog.swift */,
+				D001000A2FFF000100000001 /* MaterialsCatalogSnapshot.swift */,
 				D00200012FFF000200000001 /* MaterialPreferences.swift */,
 				AA03AA03AA03AA03AA03AA03 /* SavedMaterial.swift */,
 			);
@@ -457,6 +460,7 @@
 				398814082EF4C21F00665406 /* DeleteAccountViewModel.swift in Sources */,
 				D00400042FFF000400000001 /* PDFTempWriter.swift in Sources */,
 				D00100022FFF000100000001 /* MaterialsCatalog.swift in Sources */,
+				D00100092FFF000100000001 /* MaterialsCatalogSnapshot.swift in Sources */,
 				D00200022FFF000200000001 /* MaterialPreferences.swift in Sources */,
 				3988C3252EEDEB9300957F3B /* OnboardingChecklistCard.swift in Sources */,
 				3969FD152ECD3F410005C1AE /* AddMaterialView.swift in Sources */,
