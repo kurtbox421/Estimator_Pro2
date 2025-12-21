@@ -1,4 +1,5 @@
 import Combine
+import FirebaseAuth
 import Foundation
 
 private enum EmailTemplateStorage {
@@ -65,33 +66,34 @@ final class EmailTemplateSettingsStore: ObservableObject {
 
     private let persistence: PersistenceService
     private let session: SessionManager
+    private let auth: Auth
+    private var authHandle: AuthStateDidChangeListenerHandle?
     private var cancellables: Set<AnyCancellable> = []
     private var resetToken: UUID?
     private var currentUserID: String?
     private var isApplyingRemoteUpdate = false
 
-    init(persistence: PersistenceService = .shared, session: SessionManager) {
+    init(persistence: PersistenceService = .shared, session: SessionManager, auth: Auth = Auth.auth()) {
         self.persistence = persistence
         self.session = session
+        self.auth = auth
         self.defaultEmailMessage = EmailTemplateSettings.standard.defaultEmailMessage
 
         resetToken = session.registerResetHandler { [weak self] in
             self?.clear()
         }
-        session.$uid
-            .receive(on: RunLoop.main)
-            .sink { [weak self] uid in
-                self?.setUser(uid)
-            }
-            .store(in: &cancellables)
-        setUser(session.uid)
+        configureAuthListener()
         bindPersistence()
     }
 
     deinit {
-        Task { @MainActor in
-            cancellables.removeAll()
-            if let resetToken {
+        cancellables.removeAll()
+        if let authHandle {
+            auth.removeStateDidChangeListener(authHandle)
+        }
+        if let resetToken {
+            let session = session
+            Task { @MainActor in
                 session.unregisterResetHandler(resetToken)
             }
         }
@@ -104,10 +106,12 @@ final class EmailTemplateSettingsStore: ObservableObject {
 
     private func configureAuthListener() {
         authHandle = auth.addStateDidChangeListener { [weak self] _, user in
-            self?.loadSettings(for: user)
+            Task { @MainActor in
+                self?.setUser(user?.uid)
+            }
         }
 
-        loadSettings(for: auth.currentUser)
+        setUser(auth.currentUser?.uid)
     }
 
     private func bindPersistence() {
