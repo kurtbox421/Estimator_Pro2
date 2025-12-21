@@ -25,4 +25,19 @@ struct LaborLine: Identifiable, Codable, Equatable {
         formatter.maximumFractionDigits = 2
         return formatter
     }()
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case hours
+        case rate
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        title = try container.decodeIfPresent(String.self, forKey: .title) ?? "Labor"
+        hours = try container.decodeLossyDouble(forKey: .hours)
+        rate = try container.decodeLossyDouble(forKey: .rate)
+    }
 }

@@ -59,14 +59,13 @@ struct Material: Identifiable, Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        id = try container.decode(UUID.self, forKey: .id)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
         ownerID = try container.decodeIfPresent(String.self, forKey: .ownerID) ?? ""
-        name = try container.decode(String.self, forKey: .name)
-        quantity = try container.decode(Double.self, forKey: .quantity)
-        unitCost = try container.decode(Double.self, forKey: .unitCost)
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Untitled Material"
+        quantity = try container.decodeLossyDouble(forKey: .quantity)
+        unitCost = try container.decodeLossyDouble(forKey: .unitCost)
         productURL = try container.decodeIfPresent(URL.self, forKey: .productURL)
         unit = try container.decodeIfPresent(String.self, forKey: .unit)
         notes = try container.decodeIfPresent(String.self, forKey: .notes)
     }
 }
-
