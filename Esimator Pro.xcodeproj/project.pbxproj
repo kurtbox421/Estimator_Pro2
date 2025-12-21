@@ -86,6 +86,7 @@
 		D00400022FFF000400000001 /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00400012FFF000400000001 /* ShareSheet.swift */; };
 		D00400042FFF000400000001 /* PDFTempWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00400032FFF000400000001 /* PDFTempWriter.swift */; };
 		D00500022FFF000500000001 /* LaborLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00500012FFF000500000001 /* LaborLine.swift */; };
+		D00C00022FFF000700000001 /* DecodingHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00C00012FFF000700000001 /* DecodingHelpers.swift */; };
 		DD3E07E8DEEE477581D62032 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79EBBFE5B3E4988A675993B /* SubscriptionManager.swift */; };
 		EBAF6EC9C54F46FE9BA55665 /* EmailTemplateSettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64B8AB8123854E578A12EEE7 /* EmailTemplateSettingsStore.swift */; };
 /* End PBXBuildFile section */
@@ -166,6 +167,7 @@
 		D00400012FFF000400000001 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
 		D00400032FFF000400000001 /* PDFTempWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFTempWriter.swift; sourceTree = "<group>"; };
 		D00500012FFF000500000001 /* LaborLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaborLine.swift; sourceTree = "<group>"; };
+		D00C00012FFF000700000001 /* DecodingHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecodingHelpers.swift; sourceTree = "<group>"; };
 		D00600012FFF000600000001 /* EstimatorPro.storekit */ = {isa = PBXFileReference; lastKnownFileType = file.storekit; path = EstimatorPro.storekit; sourceTree = "<group>"; };
 		E4A4D7919D79412D88ED443B /* EmailTemplateSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailTemplateSettingsView.swift; sourceTree = "<group>"; };
 		F79EBBFE5B3E4988A675993B /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
@@ -224,6 +226,7 @@
 				39F4059A2EF1FD3A000337A7 /* InventoryTransaction.swift */,
 				39B8DC822EDCDB50005D0E08 /* AuthManager.swift */,
 				398D93D52ECE902900A168FC /* Client.swift */,
+				D00C00012FFF000700000001 /* DecodingHelpers.swift */,
 				39A395202ECD7EE400D5E76D /* Invoice.swift */,
 				3969FCFF2ECD35E60005C1AE /* Job.swift */,
 				D00500012FFF000500000001 /* LaborLine.swift */,
@@ -477,6 +480,7 @@
 				B1E7E0112F01000100000001 /* MaterialEditView.swift in Sources */,
 				AA07AA07AA07AA07AA07AA07 /* InvoicePDFPreviewView.swift in Sources */,
 				D00500022FFF000500000001 /* LaborLine.swift in Sources */,
+				D00C00022FFF000700000001 /* DecodingHelpers.swift in Sources */,
 				3969FD002ECD35E60005C1AE /* Job.swift in Sources */,
 				39CCEF4A2EE12DAD0075521B /* MaterialsRecommender.swift in Sources */,
 				39E0A0112F00000100000001 /* ImportDataView.swift in Sources */,
