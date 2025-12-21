@@ -42,8 +42,10 @@ struct Job: Identifiable, Codable {
 
     private enum CodingKeys: String, CodingKey {
         case id
+        case documentID
         case ownerID
         case name
+        case title
         case category
         case laborLines
         case materials
@@ -57,14 +59,24 @@ struct Job: Identifiable, Codable {
     init(from decoder: Decoder) throws {
         do {
             let container = try decoder.container(keyedBy: CodingKeys.self)
-            id = try container.decodeLossyUUIDIfPresent(forKey: .id) ?? UUID()
+            let documentID = try container.decodeIfPresent(String.self, forKey: .documentID)
+            if let decodedID = try container.decodeLossyUUIDIfPresent(forKey: .id) {
+                id = decodedID
+            } else if let documentID, let documentUUID = UUID(uuidString: documentID) {
+                id = documentUUID
+            } else {
+                id = UUID()
+            }
             ownerID = try container.decodeIfPresent(String.self, forKey: .ownerID) ?? ""
-            name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Untitled Job"
+            name = try container.decodeIfPresent(String.self, forKey: .name)
+                ?? (try container.decodeIfPresent(String.self, forKey: .title))
+                ?? "Untitled Job"
             category = try container.decodeIfPresent(String.self, forKey: .category) ?? "General"
             let decodedLaborLines = (try? container.decodeIfPresent([LaborLine].self, forKey: .laborLines)) ?? []
             materials = (try? container.decodeIfPresent([Material].self, forKey: .materials)) ?? []
             dateCreated = (try? container.decodeLossyDateIfPresent(forKey: .dateCreated)) ?? Date()
             clientId = try container.decodeLossyUUIDIfPresent(forKey: .clientId)
+            logMissingFieldsIfNeeded(in: container, documentID: documentID)
 
             if decodedLaborLines.isEmpty {
                 let hours = try container.decodeLossyDoubleIfPresent(forKey: .laborHours) ?? 0
@@ -81,6 +93,36 @@ struct Job: Identifiable, Codable {
             Self.logDecodingError(error)
             throw error
         }
+    }
+
+#if DEBUG
+    private static var loggedMissingFieldsDocumentIDs: Set<String> = []
+    private static let loggedMissingFieldsQueue = DispatchQueue(label: "com.estimatorpro.job.missingFieldsLog")
+#endif
+
+    private func logMissingFieldsIfNeeded(in container: KeyedDecodingContainer<CodingKeys>, documentID: String?) {
+#if DEBUG
+        var missingFields: [String] = []
+        if !container.contains(.id) {
+            missingFields.append("id")
+        }
+        if !container.contains(.name) && !container.contains(.title) {
+            missingFields.append("name")
+        }
+        if !container.contains(.category) {
+            missingFields.append("category")
+        }
+        if !container.contains(.dateCreated) {
+            missingFields.append("dateCreated")
+        }
+        guard !missingFields.isEmpty else { return }
+        let logKey = documentID ?? id.uuidString
+        Self.loggedMissingFieldsQueue.sync {
+            guard !Self.loggedMissingFieldsDocumentIDs.contains(logKey) else { return }
+            Self.loggedMissingFieldsDocumentIDs.insert(logKey)
+            print("Missing fields in document \(logKey): \(missingFields.joined(separator: ", "))")
+        }
+#endif
     }
 
     private static func logDecodingError(_ error: Error) {

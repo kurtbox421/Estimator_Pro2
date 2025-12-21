@@ -106,6 +106,7 @@ final class MaterialIntelligenceStore: ObservableObject {
                     return
                 }
 
+                let decoder = Firestore.Decoder()
                 let jobs: [Job] = snapshot.documents.compactMap { document in
                     let documentPath = document.reference.path
                     if self.invalidJobDocumentPaths.contains(documentPath) {
@@ -113,7 +114,9 @@ final class MaterialIntelligenceStore: ObservableObject {
                     }
 
                     do {
-                        return try document.data(as: Job.self)
+                        var data = document.data()
+                        data["documentID"] = document.documentID
+                        return try decoder.decode(Job.self, from: data)
                     } catch let decodingError as DecodingError {
                         self.logJobDecodingError(decodingError, documentPath: documentPath)
                         self.invalidJobDocumentPaths.insert(documentPath)
