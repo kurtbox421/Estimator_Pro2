@@ -37,7 +37,7 @@ final class SubscriptionManager: ObservableObject {
     nonisolated(unsafe) private var updatesTask: Task<Void, Never>?
     private var authHandle: AuthStateDidChangeListenerHandle?
     private var currentUID: String?
-    private var entitlementListener: ListenerRegistration?
+    nonisolated(unsafe) private var entitlementListener: ListenerRegistration?
 
     private enum SubscriptionBindingError: LocalizedError {
         case linkedToAnotherAccount
@@ -530,7 +530,7 @@ final class SubscriptionManager: ObservableObject {
         }
     }
 
-    private func stopEntitlementListener() {
+    nonisolated private func stopEntitlementListener() {
         entitlementListener?.remove()
         entitlementListener = nil
     }
