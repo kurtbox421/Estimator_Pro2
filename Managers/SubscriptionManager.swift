@@ -43,6 +43,8 @@ final class SubscriptionManager: ObservableObject {
 
     private var hasActiveStoreKitEntitlement = false
     private var hasSubscriptionBinding = false
+    private var hasRefreshedEntitlementsThisSession = false
+    private var hasSyncedAppStoreThisSession = false
 
     init(
         database: Firestore = Firestore.firestore(),
@@ -220,10 +222,15 @@ final class SubscriptionManager: ObservableObject {
     }
 
     @discardableResult
+    func refreshEntitlementsIfNeeded() async -> Bool {
+        guard !hasRefreshedEntitlementsThisSession else { return isPro }
+        hasRefreshedEntitlementsThisSession = true
+        await syncAppStoreOncePerSession()
+        return await refreshEntitlements()
+    }
+
+    @discardableResult
     func refreshEntitlements() async -> Bool {
-        if #available(iOS 15.0, *) {
-            try? await AppStore.sync()
-        }
         let entitlement = await activeSubscriptionEntitlement()
         hasActiveStoreKitEntitlement = entitlement != nil
         activeProductID = entitlement?.productID
@@ -258,6 +265,14 @@ final class SubscriptionManager: ObservableObject {
         }
 
         return true
+    }
+
+    private func syncAppStoreOncePerSession() async {
+        guard !hasSyncedAppStoreThisSession else { return }
+        hasSyncedAppStoreThisSession = true
+        if #available(iOS 15.0, *) {
+            try? await AppStore.sync()
+        }
     }
 
     private func updateProStatus() {
@@ -468,6 +483,7 @@ final class SubscriptionManager: ObservableObject {
 
         startEntitlementListeners()
         startSubscriptionBindingListener(uid: uid)
+        Task { await refreshEntitlementsIfNeeded() }
     }
 
     nonisolated private func debugLog(_ items: Any...) {

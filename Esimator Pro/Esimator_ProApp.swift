@@ -11,7 +11,6 @@ import FirebaseCore
 @main
 struct EstimatorProApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var session: SessionManager
     @StateObject private var onboarding: OnboardingProgressStore
     @StateObject private var subscriptionManager: SubscriptionManager
@@ -63,10 +62,6 @@ struct EstimatorProApp: App {
                 }
             }
             .onAppear(perform: dismissSplashAfterDelay)
-            .onChange(of: scenePhase) { _, newPhase in
-                guard newPhase == .active else { return }
-                Task { await subscriptionManager.refreshEntitlements() }
-            }
             .environmentObject(session)
             .environmentObject(onboarding)
             .environmentObject(subscriptionManager)
@@ -131,7 +126,6 @@ private struct SessionScopedRoot: View {
         .environmentObject(materialsStore)
         .environmentObject(materialIntelligence)
         .task {
-            await subscriptionManager.refreshEntitlements()
             await subscriptionManager.loadProducts()
         }
     }
