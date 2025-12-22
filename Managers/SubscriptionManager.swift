@@ -35,30 +35,25 @@ final class SubscriptionManager: ObservableObject {
 
     private let db: Firestore
     private let session: SessionManager
-    private let userDefaults: UserDefaults
     nonisolated(unsafe) private var updatesTask: Task<Void, Never>?
     private var cancellables: Set<AnyCancellable> = []
     private var resetToken: UUID?
     private var currentUID: String?
+    private var currentBindingID: String?
     nonisolated(unsafe) private var subscriptionListener: ListenerRegistration?
 
     private var hasActiveStoreKitEntitlement = false
     private var hasSubscriptionBinding = false
+    private var hasMatchingSubscriptionBinding = false
     private var hasRefreshedEntitlementsThisSession = false
-
-    private static func isProCacheKey(for uid: String) -> String {
-        "subscription.isPro.\(uid)"
-    }
 
     init(
         database: Firestore = Firestore.firestore(),
-        session: SessionManager,
-        userDefaults: UserDefaults = .standard
+        session: SessionManager
     ) {
         self.db = database
         self.session = session
-        self.userDefaults = userDefaults
-        self.isPro = Self.cachedIsPro(in: userDefaults, uid: session.uid)
+        self.isPro = false
         self.activeProductID = nil
         self.environment = nil
 
@@ -158,8 +153,8 @@ final class SubscriptionManager: ObservableObject {
                 switch verification {
                 case .verified(let transaction):
                     debugLog("[Purchase] Verified transaction:", transaction.id, "uid:", uid)
-                    await persistSubscriptionBinding(uid: uid, transaction: transaction)
-                    setSubscriptionBindingExists(true)
+                    let bindingSaved = await persistSubscriptionBinding(uid: uid, transaction: transaction)
+                    updateBindingState(saved: bindingSaved, currentUID: uid, transaction: transaction)
                     await transaction.finish()
                     _ = await refreshEntitlements()
                     statusMessage = "Thanks for subscribing to Pro!"
@@ -217,8 +212,8 @@ final class SubscriptionManager: ObservableObject {
         let entitlement = await activeSubscriptionEntitlement()
         if let entitlement {
             debugLog("[Restore] Found entitlement:", entitlement.productID, "uid:", uid)
-            await persistSubscriptionBinding(uid: uid, transaction: entitlement)
-            setSubscriptionBindingExists(true)
+            let bindingSaved = await persistSubscriptionBinding(uid: uid, transaction: entitlement)
+            updateBindingState(saved: bindingSaved, currentUID: uid, transaction: entitlement)
             _ = await refreshEntitlements()
             statusMessage = "Restored Estimator Pro (\(entitlement.productID))."
         } else {
@@ -241,10 +236,8 @@ final class SubscriptionManager: ObservableObject {
         activeProductID = entitlement?.productID
         environment = entitlement.map { environmentString(for: $0) }
         debugLog("[Entitlements] StoreKit active:", hasActiveStoreKitEntitlement, "uid:", session.uid ?? "nil")
+        await refreshBinding(for: entitlement)
         updateProStatus()
-        if let entitlement, let uid = session.uid {
-            Task { await persistSubscriptionBinding(uid: uid, transaction: entitlement) }
-        }
         return isPro
     }
 
@@ -278,15 +271,20 @@ final class SubscriptionManager: ObservableObject {
     }
 
     private func updateProStatus() {
-        let newValue = hasActiveStoreKitEntitlement
+        let newValue = hasActiveStoreKitEntitlement && hasMatchingSubscriptionBinding
         if isPro != newValue {
             isPro = newValue
         }
-        cacheIsProIfNeeded(newValue)
     }
 
-    private func setSubscriptionBindingExists(_ newValue: Bool) {
-        hasSubscriptionBinding = newValue
+    private func updateBindingStatusMessage(_ message: String?) {
+        statusMessage = message
+        if let message {
+            lastError = message
+        } else if lastError == "Subscription already linked to another account."
+                    || lastError == "Subscription is linked to another account." {
+            lastError = nil
+        }
     }
 
     func presentPaywall(after delay: TimeInterval = 0) {
@@ -334,8 +332,93 @@ final class SubscriptionManager: ObservableObject {
             return
         }
 
-        await persistSubscriptionBinding(uid: uid, transaction: transaction)
+        let bindingSaved = await persistSubscriptionBinding(uid: uid, transaction: transaction)
+        updateBindingState(saved: bindingSaved, currentUID: uid, transaction: transaction)
         await transaction.finish()
+    }
+
+    private struct SubscriptionBinding {
+        let uid: String
+        let productId: String
+        let expiresAt: Date?
+        let updatedAt: Date?
+    }
+
+    private func refreshBinding(for entitlement: StoreKit.Transaction?) async {
+        updateBindingStatusMessage(nil)
+        hasSubscriptionBinding = false
+        hasMatchingSubscriptionBinding = false
+
+        guard let entitlement,
+              let uid = session.uid else {
+            stopSubscriptionListener()
+            currentBindingID = nil
+            return
+        }
+
+        let originalTransactionId = String(entitlement.originalID)
+        if currentBindingID != originalTransactionId {
+            startSubscriptionBindingListener(originalTransactionId: originalTransactionId, uid: uid)
+            currentBindingID = originalTransactionId
+        }
+
+        if let binding = await fetchSubscriptionBinding(originalTransactionId: originalTransactionId) {
+            applyBinding(binding, currentUID: uid)
+            return
+        }
+
+        let saved = await persistSubscriptionBinding(uid: uid, transaction: entitlement)
+        updateBindingState(saved: saved, currentUID: uid, transaction: entitlement)
+    }
+
+    private func fetchSubscriptionBinding(originalTransactionId: String) async -> SubscriptionBinding? {
+        do {
+            let snapshot = try await bindingDocRef(originalTransactionId: originalTransactionId).getDocument()
+            guard let data = snapshot.data() else { return nil }
+            guard let uid = data["uid"] as? String,
+                  let productId = data["productId"] as? String else { return nil }
+            let expiresAt = (data["expiresAt"] as? Timestamp)?.dateValue()
+            let updatedAt = (data["updatedAt"] as? Timestamp)?.dateValue()
+            return SubscriptionBinding(uid: uid, productId: productId, expiresAt: expiresAt, updatedAt: updatedAt)
+        } catch {
+            logFirestoreError(error, context: "subscription binding fetch", uid: session.uid)
+            return nil
+        }
+    }
+
+    private func applyBinding(_ binding: SubscriptionBinding, currentUID: String) {
+        guard !binding.uid.isEmpty else {
+            hasSubscriptionBinding = false
+            hasMatchingSubscriptionBinding = false
+            updateBindingStatusMessage(nil)
+            return
+        }
+
+        hasSubscriptionBinding = true
+        hasMatchingSubscriptionBinding = binding.uid == currentUID
+        if hasMatchingSubscriptionBinding {
+            updateBindingStatusMessage(nil)
+            return
+        }
+
+        debugLog("[Firestore] Subscription binding mismatch. boundUID:", binding.uid, "currentUID:", currentUID)
+        updateBindingStatusMessage("Subscription is linked to another account.")
+    }
+
+    private func updateBindingState(saved: Bool, currentUID: String, transaction: StoreKit.Transaction) {
+        if saved {
+            let binding = SubscriptionBinding(
+                uid: currentUID,
+                productId: transaction.productID,
+                expiresAt: transaction.expirationDate,
+                updatedAt: Date()
+            )
+            applyBinding(binding, currentUID: currentUID)
+        } else {
+            hasSubscriptionBinding = false
+            hasMatchingSubscriptionBinding = false
+        }
+        updateProStatus()
     }
 
     private func fetchProducts(within timeout: TimeInterval) async throws -> [Product] {
@@ -362,33 +445,45 @@ final class SubscriptionManager: ObservableObject {
         }
     }
 
-    private func persistSubscriptionBinding(uid: String, transaction: StoreKit.Transaction) async {
+    private func persistSubscriptionBinding(uid: String, transaction: StoreKit.Transaction) async -> Bool {
         let environmentValue = environmentString(for: transaction)
-        let data: [String: Any] = [
-            "productId": transaction.productID,
-            "originalTransactionId": String(transaction.originalID),
-            "transactionId": String(transaction.id),
-            "purchaseDate": Timestamp(date: transaction.purchaseDate),
-            "expirationDate": transaction.expirationDate.map { Timestamp(date: $0) } ?? NSNull(),
-            "environment": environmentValue,
-            "lastVerifiedAt": FieldValue.serverTimestamp()
-        ]
-
-        debugLog("[Firestore] Writing subscription binding for uid:", uid, "transaction:", transaction.id)
-        print("[Data] SubscriptionManager uid=\(uid) path=users/\(uid)/entitlements/subscription action=write")
-        let docRef = subscriptionDocRef(uid: uid)
+        let originalTransactionId = String(transaction.originalID)
+        let docRef = bindingDocRef(originalTransactionId: originalTransactionId)
         do {
+            let snapshot = try await docRef.getDocument()
+            if let data = snapshot.data(),
+               let boundUID = data["uid"] as? String,
+               boundUID != uid {
+                debugLog("[Firestore] Subscription binding already linked to uid:", boundUID, "transaction:", originalTransactionId)
+                updateBindingStatusMessage("Subscription already linked to another account.")
+                return false
+            }
+
+            let data: [String: Any] = [
+                "uid": uid,
+                "productId": transaction.productID,
+                "originalTransactionId": originalTransactionId,
+                "transactionId": String(transaction.id),
+                "appAccountToken": transaction.appAccountToken?.uuidString ?? NSNull(),
+                "purchaseDate": Timestamp(date: transaction.purchaseDate),
+                "expiresAt": transaction.expirationDate.map { Timestamp(date: $0) } ?? NSNull(),
+                "environment": environmentValue,
+                "updatedAt": FieldValue.serverTimestamp()
+            ]
+
+            debugLog("[Firestore] Writing subscription binding for uid:", uid, "transaction:", originalTransactionId)
+            print("[Data] SubscriptionManager uid=\(uid) path=subscriptionBindings/\(originalTransactionId) action=write")
             try await docRef.setData(data, merge: true)
+            return true
         } catch {
             logFirestoreError(error, context: "subscription binding write", uid: uid)
+            return false
         }
     }
 
-    private func subscriptionDocRef(uid: String) -> DocumentReference {
-        db.collection("users")
-            .document(uid)
-            .collection("entitlements")
-            .document("subscription")
+    private func bindingDocRef(originalTransactionId: String) -> DocumentReference {
+        db.collection("subscriptionBindings")
+            .document(originalTransactionId)
     }
 
     private func environmentString(for transaction: StoreKit.Transaction) -> String {
@@ -434,7 +529,9 @@ final class SubscriptionManager: ObservableObject {
             shouldShowPaywall = false
             hasActiveStoreKitEntitlement = false
             hasSubscriptionBinding = false
+            hasMatchingSubscriptionBinding = false
             hasRefreshedEntitlementsThisSession = false
+            currentBindingID = nil
         }
     }
 
@@ -443,24 +540,36 @@ final class SubscriptionManager: ObservableObject {
         subscriptionListener = nil
     }
 
-    private func startSubscriptionBindingListener(uid: String) {
+    private func startSubscriptionBindingListener(originalTransactionId: String, uid: String) {
         stopSubscriptionListener()
-        let docRef = subscriptionDocRef(uid: uid)
-        print("[Data] SubscriptionManager uid=\(uid) path=users/\(uid)/entitlements/subscription action=listen")
+        print("[Data] SubscriptionManager uid=\(uid) path=subscriptionBindings/\(originalTransactionId) action=listen")
 
-        subscriptionListener = docRef.addSnapshotListener { [weak self] snapshot, error in
-            guard let self else { return }
-            Task { @MainActor in
-                if let error {
-                    self.logFirestoreError(error, context: "subscription binding listener", uid: uid)
-                    return
+        subscriptionListener = bindingDocRef(originalTransactionId: originalTransactionId)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self else { return }
+                Task { @MainActor in
+                    if let error {
+                        self.logFirestoreError(error, context: "subscription binding listener", uid: uid)
+                        return
+                    }
+
+                    guard let data = snapshot?.data() else {
+                        self.hasSubscriptionBinding = false
+                        self.hasMatchingSubscriptionBinding = false
+                        self.updateProStatus()
+                        return
+                    }
+
+                    let binding = SubscriptionBinding(
+                        uid: data["uid"] as? String ?? "",
+                        productId: data["productId"] as? String ?? "",
+                        expiresAt: (data["expiresAt"] as? Timestamp)?.dateValue(),
+                        updatedAt: (data["updatedAt"] as? Timestamp)?.dateValue()
+                    )
+                    self.applyBinding(binding, currentUID: uid)
+                    self.updateProStatus()
                 }
-
-                let exists = snapshot?.exists ?? false
-                self.debugLog("[Firestore] Binding snapshot for uid:", uid, "exists:", exists)
-                self.setSubscriptionBindingExists(exists)
             }
-        }
 
         session.track(subscriptionListener)
     }
@@ -470,6 +579,7 @@ final class SubscriptionManager: ObservableObject {
             stopEntitlementListeners()
             stopSubscriptionListener()
             currentUID = uid
+            currentBindingID = nil
         }
 
         guard let uid else {
@@ -477,15 +587,14 @@ final class SubscriptionManager: ObservableObject {
             return
         }
 
-        loadCachedProStatus(for: uid)
         startEntitlementListeners()
-        startSubscriptionBindingListener(uid: uid)
         Task { await refreshEntitlementsIfNeeded() }
     }
 
     private func resetStoreKitStateForSignedOutUser() {
         hasActiveStoreKitEntitlement = false
         hasSubscriptionBinding = false
+        hasMatchingSubscriptionBinding = false
         hasRefreshedEntitlementsThisSession = false
         activeProductID = nil
         environment = nil
@@ -493,21 +602,7 @@ final class SubscriptionManager: ObservableObject {
         lastError = nil
         shouldShowPaywall = false
         isPro = false
-    }
-
-    private func loadCachedProStatus(for uid: String) {
-        isPro = Self.cachedIsPro(in: userDefaults, uid: uid)
-        hasRefreshedEntitlementsThisSession = false
-    }
-
-    private static func cachedIsPro(in defaults: UserDefaults, uid: String?) -> Bool {
-        guard let uid else { return false }
-        return defaults.bool(forKey: isProCacheKey(for: uid))
-    }
-
-    private func cacheIsProIfNeeded(_ value: Bool) {
-        guard let uid = currentUID ?? session.uid else { return }
-        userDefaults.set(value, forKey: Self.isProCacheKey(for: uid))
+        currentBindingID = nil
     }
 
     nonisolated private func debugLog(_ items: Any...) {
@@ -571,16 +666,15 @@ final class SubscriptionManager: ObservableObject {
         isPro = false
         hasActiveStoreKitEntitlement = false
         hasSubscriptionBinding = false
+        hasMatchingSubscriptionBinding = false
         hasRefreshedEntitlementsThisSession = false
-        if let uid = currentUID ?? session.uid {
-            userDefaults.removeObject(forKey: Self.isProCacheKey(for: uid))
-        }
+        currentBindingID = nil
     }
 
     func clear() {
+        clearAuthState()
         stopEntitlementListeners()
         stopSubscriptionListener()
-        clearAuthState()
         currentUID = nil
     }
 }
