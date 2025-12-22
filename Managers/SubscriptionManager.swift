@@ -559,6 +559,24 @@ final class SubscriptionManager: ObservableObject {
         }
     }
 
+    private func clearAuthState() {
+        isLoading = false
+        products = []
+        lastError = nil
+        statusMessage = nil
+        setProductState(.idle)
+        activeProductID = nil
+        environment = nil
+        shouldShowPaywall = false
+        isPro = false
+        hasActiveStoreKitEntitlement = false
+        hasSubscriptionBinding = false
+        hasRefreshedEntitlementsThisSession = false
+        if let uid = currentUID ?? session.uid {
+            userDefaults.removeObject(forKey: Self.isProCacheKey(for: uid))
+        }
+    }
+
     func clear() {
         stopEntitlementListeners()
         stopSubscriptionListener()
