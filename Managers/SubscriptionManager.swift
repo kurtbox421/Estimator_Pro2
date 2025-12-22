@@ -221,12 +221,18 @@ final class SubscriptionManager: ObservableObject {
 
     @discardableResult
     func refreshEntitlements() async -> Bool {
+        if #available(iOS 15.0, *) {
+            try? await AppStore.sync()
+        }
         let entitlement = await activeSubscriptionEntitlement()
         hasActiveStoreKitEntitlement = entitlement != nil
         activeProductID = entitlement?.productID
         environment = entitlement.map { environmentString(for: $0) }
         debugLog("[Entitlements] StoreKit active:", hasActiveStoreKitEntitlement, "uid:", session.uid ?? "nil")
         updateProStatus()
+        if let entitlement, let uid = session.uid {
+            Task { await persistSubscriptionBinding(uid: uid, transaction: entitlement) }
+        }
         return isPro
     }
 
@@ -236,14 +242,6 @@ final class SubscriptionManager: ObservableObject {
             guard Self.productIDs.contains(transaction.productID) else { continue }
 
             if isTransactionActive(transaction) {
-                return transaction
-            }
-        }
-
-        for productID in Self.productIDs {
-            guard let latest = await StoreKit.Transaction.latest(for: productID) else { continue }
-
-            if case .verified(let transaction) = latest, isTransactionActive(transaction) {
                 return transaction
             }
         }
@@ -263,7 +261,7 @@ final class SubscriptionManager: ObservableObject {
     }
 
     private func updateProStatus() {
-        isPro = hasActiveStoreKitEntitlement && hasSubscriptionBinding
+        isPro = hasActiveStoreKitEntitlement
     }
 
     private func setSubscriptionBindingExists(_ newValue: Bool) {
@@ -311,8 +309,8 @@ final class SubscriptionManager: ObservableObject {
             return
         }
 
-        guard hasSubscriptionBinding else {
-            debugLog("[StoreKit] Skipping binding update: no binding for uid:", uid)
+        guard isTransactionActive(transaction) else {
+            debugLog("[StoreKit] Skipping binding update: inactive transaction for uid:", uid)
             return
         }
 
