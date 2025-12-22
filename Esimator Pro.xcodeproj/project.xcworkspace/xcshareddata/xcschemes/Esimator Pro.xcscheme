@@ -1,82 +1,78 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion="1550"
-   version="1.7">
+   LastUpgradeVersion = "1550"
+   version = "1.8">
    <BuildAction
-      parallelizeBuildables="YES"
-      buildImplicitDependencies="YES">
+      parallelizeBuildables = "YES"
+      buildImplicitDependencies = "YES">
       <BuildActionEntries>
          <BuildActionEntry
-            buildForTesting="YES"
-            buildForRunning="YES"
-            buildForProfiling="YES"
-            buildForArchiving="YES"
-            buildForAnalyzing="YES">
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
             <BuildableReference
-               BuildableIdentifier="primary"
-               BlueprintIdentifier="3969FCF02ECD35790005C1AE"
-               BuildableName="Esimator Pro.app"
-               BlueprintName="Esimator Pro"
-               ReferencedContainer="container:Esimator Pro.xcodeproj">
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "3969FCF02ECD35790005C1AE"
+               BuildableName = "Esimator Pro.app"
+               BlueprintName = "Esimator Pro"
+               ReferencedContainer = "container:Esimator Pro.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
-      buildConfiguration="Debug"
-      selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB"
-      selectedLauncherIdentifier="Xcode.DebuggerFoundation.Launcher.LLDB"
-      shouldUseLaunchSchemeArgsEnv="YES"
-      shouldAutocreateTestPlan="YES">
-      <Testables>
-      </Testables>
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      shouldAutocreateTestPlan = "YES">
    </TestAction>
    <LaunchAction
-      buildConfiguration="Debug"
-      selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB"
-      selectedLauncherIdentifier="Xcode.DebuggerFoundation.Launcher.LLDB"
-      launchStyle="0"
-      useCustomWorkingDirectory="NO"
-      ignoresPersistentStateOnLaunch="NO"
-      debugDocumentVersioning="YES"
-      debugServiceExtension="internal"
-      allowLocationSimulation="YES"
-      storeKitConfigurationFileReference="EstimatorPro.storekit">
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      launchStyle = "0"
+      useCustomWorkingDirectory = "NO"
+      ignoresPersistentStateOnLaunch = "NO"
+      debugDocumentVersioning = "YES"
+      debugServiceExtension = "internal"
+      allowLocationSimulation = "YES"
+      storeKitConfigurationFileReference = "EstimatorPro.storekit">
       <BuildableProductRunnable
-         runnableDebuggingMode="0">
+         runnableDebuggingMode = "0">
          <BuildableReference
-            BuildableIdentifier="primary"
-            BlueprintIdentifier="3969FCF02ECD35790005C1AE"
-            BuildableName="Esimator Pro.app"
-            BlueprintName="Esimator Pro"
-            ReferencedContainer="container:Esimator Pro.xcodeproj">
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "3969FCF02ECD35790005C1AE"
+            BuildableName = "Esimator Pro.app"
+            BlueprintName = "Esimator Pro"
+            ReferencedContainer = "container:Esimator Pro.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-      <AdditionalOptions>
-      </AdditionalOptions>
    </LaunchAction>
    <ProfileAction
-      buildConfiguration="Release"
-      shouldUseLaunchSchemeArgsEnv="YES"
-      savedToolIdentifier=""
-      useCustomWorkingDirectory="NO"
-      debugDocumentVersioning="YES">
+      buildConfiguration = "Release"
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      savedToolIdentifier = ""
+      useCustomWorkingDirectory = "NO"
+      debugDocumentVersioning = "YES">
       <BuildableProductRunnable
-         runnableDebuggingMode="0">
+         runnableDebuggingMode = "0">
          <BuildableReference
-            BuildableIdentifier="primary"
-            BlueprintIdentifier="3969FCF02ECD35790005C1AE"
-            BuildableName="Esimator Pro.app"
-            BlueprintName="Esimator Pro"
-            ReferencedContainer="container:Esimator Pro.xcodeproj">
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "3969FCF02ECD35790005C1AE"
+            BuildableName = "Esimator Pro.app"
+            BlueprintName = "Esimator Pro"
+            ReferencedContainer = "container:Esimator Pro.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
    <AnalyzeAction
-      buildConfiguration="Debug">
+      buildConfiguration = "Debug">
    </AnalyzeAction>
    <ArchiveAction
-      buildConfiguration="Release"
-      revealArchiveInOrganizer="YES">
+      buildConfiguration = "Release"
+      revealArchiveInOrganizer = "YES">
    </ArchiveAction>
 </Scheme>

@@ -19,8 +19,6 @@
 		398814062EF4C20100665406 /* PrivacyPolicyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398814052EF4C20100665406 /* PrivacyPolicyView.swift */; };
 		398814082EF4C21F00665406 /* DeleteAccountViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398814072EF4C21F00665406 /* DeleteAccountViewModel.swift */; };
 		3988140A2EF4C22F00665406 /* PrivacyPolicyContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 398814092EF4C22F00665406 /* PrivacyPolicyContent.swift */; };
-		7C1A2B3C4D5E6F708192A0B2 /* AppLinks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C1A2B3C4D5E6F708192A0B1 /* AppLinks.swift */; };
-		D00B00022FFF000500000001 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00B00012FFF000500000001 /* KeychainHelper.swift */; };
 		3988140C2EF4C24600665406 /* AccountDeletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3988140B2EF4C24600665406 /* AccountDeletionService.swift */; };
 		3988C3252EEDEB9300957F3B /* OnboardingChecklistCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3988C3242EEDEB9300957F3B /* OnboardingChecklistCard.swift */; };
 		3988C3272EEDEBA600957F3B /* OnboardingProgressStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3988C3262EEDEBA600957F3B /* OnboardingProgressStore.swift */; };
@@ -65,6 +63,7 @@
 		39F405A12EF1FD66000337A7 /* InventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F405A02EF1FD66000337A7 /* InventoryView.swift */; };
 		39F405A32EF1FD6C000337A7 /* SupplyDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F405A22EF1FD6C000337A7 /* SupplyDetailView.swift */; };
 		417F12F378444C99BAD178E0 /* EmailTemplateSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4A4D7919D79412D88ED443B /* EmailTemplateSettingsView.swift */; };
+		7C1A2B3C4D5E6F708192A0B2 /* AppLinks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C1A2B3C4D5E6F708192A0B1 /* AppLinks.swift */; };
 		850D7CE202A048A4A22AC617 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7047E275B4848FC8D0E30FC /* PaywallView.swift */; };
 		AA02AA02AA02AA02AA02AA02 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA01AA01AA01AA01AA01AA01 /* SettingsManager.swift */; };
 		AA04AA04AA04AA04AA04AA04 /* SavedMaterial.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA03AA03AA03AA03AA03AA03 /* SavedMaterial.swift */; };
@@ -76,10 +75,10 @@
 		AA0B0B0B0B0B0B0B0B0B0B0B /* EstimateViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0B0B0B0B0B0B0B0B0B0B0A /* EstimateViewModel.swift */; };
 		B1E7E0112F01000100000001 /* MaterialEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1E7E0102F01000100000001 /* MaterialEditView.swift */; };
 		D00100022FFF000100000001 /* MaterialsCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100012FFF000100000001 /* MaterialsCatalog.swift */; };
-		D00100092FFF000100000001 /* MaterialsCatalogSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D001000A2FFF000100000001 /* MaterialsCatalogSnapshot.swift */; };
 		D00100042FFF000100000001 /* MaterialQuantityEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100032FFF000100000001 /* MaterialQuantityEngine.swift */; };
 		D00100062FFF000100000001 /* JobMaterialGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100052FFF000100000001 /* JobMaterialGenerator.swift */; };
 		D00100082FFF000100000001 /* MaterialsCatalog.json in Resources */ = {isa = PBXBuildFile; fileRef = D00100072FFF000100000001 /* MaterialsCatalog.json */; };
+		D00100092FFF000100000001 /* MaterialsCatalogSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D001000A2FFF000100000001 /* MaterialsCatalogSnapshot.swift */; };
 		D00100192FFF000100000010 /* MaterialPricingSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00100182FFF000100000010 /* MaterialPricingSettingsView.swift */; };
 		D00200022FFF000200000001 /* MaterialPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00200012FFF000200000001 /* MaterialPreferences.swift */; };
 		D003000A2FFF000300000001 /* NumericHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00300092FFF000300000001 /* NumericHelpers.swift */; };
@@ -87,6 +86,7 @@
 		D00400022FFF000400000001 /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00400012FFF000400000001 /* ShareSheet.swift */; };
 		D00400042FFF000400000001 /* PDFTempWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00400032FFF000400000001 /* PDFTempWriter.swift */; };
 		D00500022FFF000500000001 /* LaborLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00500012FFF000500000001 /* LaborLine.swift */; };
+		D00B00022FFF000500000001 /* KeychainHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00B00012FFF000500000001 /* KeychainHelper.swift */; };
 		D00C00022FFF000700000001 /* DecodingHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00C00012FFF000700000001 /* DecodingHelpers.swift */; };
 		DD3E07E8DEEE477581D62032 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F79EBBFE5B3E4988A675993B /* SubscriptionManager.swift */; };
 		EBAF6EC9C54F46FE9BA55665 /* EmailTemplateSettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64B8AB8123854E578A12EEE7 /* EmailTemplateSettingsStore.swift */; };
@@ -106,8 +106,6 @@
 		398814052EF4C20100665406 /* PrivacyPolicyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyPolicyView.swift; sourceTree = "<group>"; };
 		398814072EF4C21F00665406 /* DeleteAccountViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeleteAccountViewModel.swift; sourceTree = "<group>"; };
 		398814092EF4C22F00665406 /* PrivacyPolicyContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyPolicyContent.swift; sourceTree = "<group>"; };
-		7C1A2B3C4D5E6F708192A0B1 /* AppLinks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLinks.swift; sourceTree = "<group>"; };
-		D00B00012FFF000500000001 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
 		3988140B2EF4C24600665406 /* AccountDeletionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountDeletionService.swift; sourceTree = "<group>"; };
 		3988C3242EEDEB9300957F3B /* OnboardingChecklistCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingChecklistCard.swift; sourceTree = "<group>"; };
 		3988C3262EEDEBA600957F3B /* OnboardingProgressStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingProgressStore.swift; sourceTree = "<group>"; };
@@ -147,6 +145,7 @@
 		39F405A02EF1FD66000337A7 /* InventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryView.swift; sourceTree = "<group>"; };
 		39F405A22EF1FD6C000337A7 /* SupplyDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplyDetailView.swift; sourceTree = "<group>"; };
 		64B8AB8123854E578A12EEE7 /* EmailTemplateSettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailTemplateSettingsStore.swift; sourceTree = "<group>"; };
+		7C1A2B3C4D5E6F708192A0B1 /* AppLinks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLinks.swift; sourceTree = "<group>"; };
 		A7047E275B4848FC8D0E30FC /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		AA01AA01AA01AA01AA01AA01 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
 		AA03AA03AA03AA03AA03AA03 /* SavedMaterial.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedMaterial.swift; sourceTree = "<group>"; };
@@ -158,10 +157,10 @@
 		AA0B0B0B0B0B0B0B0B0B0B0A /* EstimateViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EstimateViewModel.swift; sourceTree = "<group>"; };
 		B1E7E0102F01000100000001 /* MaterialEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialEditView.swift; sourceTree = "<group>"; };
 		D00100012FFF000100000001 /* MaterialsCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialsCatalog.swift; sourceTree = "<group>"; };
-		D001000A2FFF000100000001 /* MaterialsCatalogSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialsCatalogSnapshot.swift; sourceTree = "<group>"; };
 		D00100032FFF000100000001 /* MaterialQuantityEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialQuantityEngine.swift; sourceTree = "<group>"; };
 		D00100052FFF000100000001 /* JobMaterialGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobMaterialGenerator.swift; sourceTree = "<group>"; };
 		D00100072FFF000100000001 /* MaterialsCatalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = MaterialsCatalog.json; sourceTree = "<group>"; };
+		D001000A2FFF000100000001 /* MaterialsCatalogSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialsCatalogSnapshot.swift; sourceTree = "<group>"; };
 		D00100182FFF000100000010 /* MaterialPricingSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialPricingSettingsView.swift; sourceTree = "<group>"; };
 		D00200012FFF000200000001 /* MaterialPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialPreferences.swift; sourceTree = "<group>"; };
 		D00300092FFF000300000001 /* NumericHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NumericHelpers.swift; sourceTree = "<group>"; };
@@ -169,8 +168,9 @@
 		D00400012FFF000400000001 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
 		D00400032FFF000400000001 /* PDFTempWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFTempWriter.swift; sourceTree = "<group>"; };
 		D00500012FFF000500000001 /* LaborLine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaborLine.swift; sourceTree = "<group>"; };
-		D00C00012FFF000700000001 /* DecodingHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecodingHelpers.swift; sourceTree = "<group>"; };
 		D00600012FFF000600000001 /* EstimatorPro.storekit */ = {isa = PBXFileReference; lastKnownFileType = file.storekit; path = EstimatorPro.storekit; sourceTree = "<group>"; };
+		D00B00012FFF000500000001 /* KeychainHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainHelper.swift; sourceTree = "<group>"; };
+		D00C00012FFF000700000001 /* DecodingHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecodingHelpers.swift; sourceTree = "<group>"; };
 		E4A4D7919D79412D88ED443B /* EmailTemplateSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailTemplateSettingsView.swift; sourceTree = "<group>"; };
 		F79EBBFE5B3E4988A675993B /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -649,7 +649,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.curtis.Esimator-Pro";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -679,7 +679,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.curtis.Esimator-Pro";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
