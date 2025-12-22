@@ -1400,6 +1400,9 @@ struct BrandingLogoView: View {
     @State private var uploadError: String?
     @State private var showSaveErrorAlert = false
     @State private var showPaywall = false
+    private var hasProAccess: Bool {
+        subscriptionManager.accessState == .pro
+    }
 
     var body: some View {
         ZStack {
@@ -1472,8 +1475,8 @@ struct BrandingLogoView: View {
         .onReceive(companySettings.$logoImage) { newLogo in
             logoImage = newLogo
         }
-        .onChange(of: subscriptionManager.isPro) { _, newValue in
-            if newValue {
+        .onChange(of: subscriptionManager.accessState) { _, newValue in
+            if newValue == .pro {
                 showPaywall = false
             }
         }
@@ -1522,7 +1525,7 @@ struct BrandingLogoView: View {
 
     @ViewBuilder
     private var logoPickerButton: some View {
-        if subscriptionManager.isPro {
+        if hasProAccess {
             PhotosPicker(selection: $selectedItem, matching: .images) {
                 pickerLabel
             }

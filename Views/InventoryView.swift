@@ -43,9 +43,9 @@ struct InventoryView: View {
                 .padding(.vertical, 8)
             }
             .tint(.white)
-            .allowsHitTesting(subscriptionManager.isPro)
+            .allowsHitTesting(hasProAccess)
 
-            if !subscriptionManager.isPro {
+            if !hasProAccess {
                 VStack(spacing: 14) {
                     Text("Inventory is a Pro feature")
                         .font(.headline.weight(.semibold))
@@ -86,6 +86,10 @@ struct InventoryView: View {
 }
 
 private extension InventoryView {
+    var hasProAccess: Bool {
+        subscriptionManager.accessState == .pro
+    }
+
     var searchBar: some View {
         HStack(spacing: 10) {
             Image(systemName: "magnifyingglass")

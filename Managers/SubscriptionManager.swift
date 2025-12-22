@@ -22,9 +22,17 @@ final class SubscriptionManager: ObservableObject {
         case failed(String)
     }
 
+    enum AccessState: Equatable {
+        case free
+        case pro
+        case proOnDifferentAccount
+    }
+
     @Published var products: [Product] = []
-    @Published var isPro: Bool
+    @Published private(set) var accessState: AccessState = .free
     @Published var activeProductID: String?
+    @Published private(set) var bindingUID: String?
+    @Published private(set) var bindingProductID: String?
     @Published var environment: String?
     @Published var isLoading: Bool = false
     @Published var lastError: String?
@@ -33,11 +41,14 @@ final class SubscriptionManager: ObservableObject {
     @Published var productState: ProductLoadState = .idle
     @Published private(set) var productStateChangeToken: Int = 0
 
+    var isPro: Bool {
+        accessState == .pro
+    }
+
     private let db: Firestore
     private let session: SessionManager
     nonisolated(unsafe) private var updatesTask: Task<Void, Never>?
     private var cancellables: Set<AnyCancellable> = []
-    private var resetToken: UUID?
     private var currentUID: String?
     private var currentBindingID: String?
     nonisolated(unsafe) private var subscriptionListener: ListenerRegistration?
@@ -53,13 +64,9 @@ final class SubscriptionManager: ObservableObject {
     ) {
         self.db = database
         self.session = session
-        self.isPro = false
         self.activeProductID = nil
         self.environment = nil
 
-        resetToken = session.registerResetHandler { [weak self] in
-            self?.clear()
-        }
         session.$uid
             .receive(on: RunLoop.main)
             .sink { [weak self] uid in
@@ -75,12 +82,6 @@ final class SubscriptionManager: ObservableObject {
         subscriptionListener?.remove()
         subscriptionListener = nil
         cancellables.removeAll()
-        if let resetToken {
-            let session = session
-            Task { @MainActor in
-                session.unregisterResetHandler(resetToken)
-            }
-        }
     }
 
     func loadProducts(timeout: TimeInterval = 10) async {
@@ -224,7 +225,7 @@ final class SubscriptionManager: ObservableObject {
 
     @discardableResult
     func refreshEntitlementsIfNeeded() async -> Bool {
-        guard !hasRefreshedEntitlementsThisSession else { return isPro }
+        guard !hasRefreshedEntitlementsThisSession else { return accessState == .pro }
         hasRefreshedEntitlementsThisSession = true
         return await refreshEntitlementsQuietly()
     }
@@ -238,7 +239,7 @@ final class SubscriptionManager: ObservableObject {
         debugLog("[Entitlements] StoreKit active:", hasActiveStoreKitEntitlement, "uid:", session.uid ?? "nil")
         await refreshBinding(for: entitlement)
         updateProStatus()
-        return isPro
+        return accessState == .pro
     }
 
     @discardableResult
@@ -272,8 +273,21 @@ final class SubscriptionManager: ObservableObject {
 
     private func updateProStatus() {
         let newValue = hasActiveStoreKitEntitlement && hasMatchingSubscriptionBinding
-        if isPro != newValue {
-            isPro = newValue
+        let newState: AccessState
+        if hasActiveStoreKitEntitlement {
+            if hasMatchingSubscriptionBinding {
+                newState = .pro
+            } else if hasSubscriptionBinding {
+                newState = .proOnDifferentAccount
+            } else {
+                newState = .free
+            }
+        } else {
+            newState = .free
+        }
+
+        if accessState != newState {
+            accessState = newState
         }
     }
 
@@ -348,6 +362,8 @@ final class SubscriptionManager: ObservableObject {
         updateBindingStatusMessage(nil)
         hasSubscriptionBinding = false
         hasMatchingSubscriptionBinding = false
+        bindingUID = nil
+        bindingProductID = nil
 
         guard let entitlement,
               let uid = session.uid else {
@@ -390,12 +406,16 @@ final class SubscriptionManager: ObservableObject {
         guard !binding.uid.isEmpty else {
             hasSubscriptionBinding = false
             hasMatchingSubscriptionBinding = false
+            bindingUID = nil
+            bindingProductID = nil
             updateBindingStatusMessage(nil)
             return
         }
 
         hasSubscriptionBinding = true
         hasMatchingSubscriptionBinding = binding.uid == currentUID
+        bindingUID = binding.uid
+        bindingProductID = binding.productId
         if hasMatchingSubscriptionBinding {
             updateBindingStatusMessage(nil)
             return
@@ -414,9 +434,11 @@ final class SubscriptionManager: ObservableObject {
                 updatedAt: Date()
             )
             applyBinding(binding, currentUID: currentUID)
-        } else {
+        } else if !hasSubscriptionBinding {
             hasSubscriptionBinding = false
             hasMatchingSubscriptionBinding = false
+            bindingUID = nil
+            bindingProductID = nil
         }
         updateProStatus()
     }
@@ -455,6 +477,14 @@ final class SubscriptionManager: ObservableObject {
                let boundUID = data["uid"] as? String,
                boundUID != uid {
                 debugLog("[Firestore] Subscription binding already linked to uid:", boundUID, "transaction:", originalTransactionId)
+                let binding = SubscriptionBinding(
+                    uid: boundUID,
+                    productId: data["productId"] as? String ?? transaction.productID,
+                    expiresAt: (data["expiresAt"] as? Timestamp)?.dateValue(),
+                    updatedAt: (data["updatedAt"] as? Timestamp)?.dateValue()
+                )
+                applyBinding(binding, currentUID: uid)
+                updateProStatus()
                 updateBindingStatusMessage("Subscription already linked to another account.")
                 return false
             }
@@ -556,6 +586,8 @@ final class SubscriptionManager: ObservableObject {
                     guard let data = snapshot?.data() else {
                         self.hasSubscriptionBinding = false
                         self.hasMatchingSubscriptionBinding = false
+                        self.bindingUID = nil
+                        self.bindingProductID = nil
                         self.updateProStatus()
                         return
                     }
@@ -597,11 +629,13 @@ final class SubscriptionManager: ObservableObject {
         hasMatchingSubscriptionBinding = false
         hasRefreshedEntitlementsThisSession = false
         activeProductID = nil
+        bindingUID = nil
+        bindingProductID = nil
         environment = nil
         statusMessage = nil
         lastError = nil
         shouldShowPaywall = false
-        isPro = false
+        accessState = .free
         currentBindingID = nil
     }
 
@@ -663,11 +697,13 @@ final class SubscriptionManager: ObservableObject {
         activeProductID = nil
         environment = nil
         shouldShowPaywall = false
-        isPro = false
+        accessState = .free
         hasActiveStoreKitEntitlement = false
         hasSubscriptionBinding = false
         hasMatchingSubscriptionBinding = false
         hasRefreshedEntitlementsThisSession = false
+        bindingUID = nil
+        bindingProductID = nil
         currentBindingID = nil
     }
 

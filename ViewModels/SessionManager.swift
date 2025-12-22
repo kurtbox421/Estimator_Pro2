@@ -13,6 +13,7 @@ final class SessionManager: ObservableObject {
     private var handle: AuthStateDidChangeListenerHandle?
     private var listeners: [ListenerRegistration] = []
     private var resetHandlers: [UUID: () -> Void] = [:]
+    private weak var subscriptionManager: SubscriptionManager?
     private let logger = Logger(subsystem: "com.estimatorpro.session", category: "SessionManager")
 
     init(auth: Auth = Auth.auth()) {
@@ -63,6 +64,7 @@ final class SessionManager: ObservableObject {
         listeners.forEach { $0.remove() }
         listeners.removeAll()
 
+        subscriptionManager?.clear()
         resetHandlers.values.forEach { $0() }
 
         let reasonText = reason ?? "unknown"
@@ -83,5 +85,9 @@ final class SessionManager: ObservableObject {
         let uidValue = newUID ?? "nil"
         logger.info("Auth state updated. uid=\(uidValue, privacy: .public)")
         print("[Session] auth change uid=\(uidValue)")
+    }
+
+    func attachSubscriptionManager(_ manager: SubscriptionManager) {
+        subscriptionManager = manager
     }
 }
