@@ -22,9 +22,11 @@ struct EstimatorProApp: App {
             FirebaseApp.configure()
         }
         let session = SessionManager()
+        let subscriptionManager = SubscriptionManager(session: session)
         _session = StateObject(wrappedValue: session)
         _onboarding = StateObject(wrappedValue: OnboardingProgressStore(session: session))
-        _subscriptionManager = StateObject(wrappedValue: SubscriptionManager(session: session))
+        _subscriptionManager = StateObject(wrappedValue: subscriptionManager)
+        session.attachSubscriptionManager(subscriptionManager)
 #if DEBUG
         let bundleID = Bundle.main.bundleIdentifier ?? "(missing bundle identifier)"
         let schemeName = ProcessInfo.processInfo.environment["XCODE_SCHEME"] ?? "(unknown scheme)"
