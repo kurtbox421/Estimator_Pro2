@@ -25,7 +25,8 @@ final class SubscriptionManager: ObservableObject {
     enum AccessState: Equatable {
         case free
         case pro
-        case proOnDifferentAccount
+        case entitledButOtherAccount
+        case loading
     }
 
     @Published var products: [Product] = []
@@ -57,6 +58,7 @@ final class SubscriptionManager: ObservableObject {
     private var hasSubscriptionBinding = false
     private var hasMatchingSubscriptionBinding = false
     private var hasRefreshedEntitlementsThisSession = false
+    private var isRefreshingEntitlements = false
 
     init(
         database: Firestore = Firestore.firestore(),
@@ -232,12 +234,17 @@ final class SubscriptionManager: ObservableObject {
 
     @discardableResult
     func refreshEntitlements() async -> Bool {
+        if session.uid != nil {
+            accessState = .loading
+        }
+        isRefreshingEntitlements = true
         let entitlement = await activeSubscriptionEntitlement()
         hasActiveStoreKitEntitlement = entitlement != nil
         activeProductID = entitlement?.productID
         environment = entitlement.map { environmentString(for: $0) }
         debugLog("[Entitlements] StoreKit active:", hasActiveStoreKitEntitlement, "uid:", session.uid ?? "nil")
         await refreshBinding(for: entitlement)
+        isRefreshingEntitlements = false
         updateProStatus()
         return accessState == .pro
     }
@@ -272,13 +279,17 @@ final class SubscriptionManager: ObservableObject {
     }
 
     private func updateProStatus() {
-        let newValue = hasActiveStoreKitEntitlement && hasMatchingSubscriptionBinding
+        if isRefreshingEntitlements {
+            accessState = .loading
+            return
+        }
+
         let newState: AccessState
         if hasActiveStoreKitEntitlement {
             if hasMatchingSubscriptionBinding {
                 newState = .pro
             } else if hasSubscriptionBinding {
-                newState = .proOnDifferentAccount
+                newState = .entitledButOtherAccount
             } else {
                 newState = .free
             }
@@ -562,6 +573,7 @@ final class SubscriptionManager: ObservableObject {
             hasMatchingSubscriptionBinding = false
             hasRefreshedEntitlementsThisSession = false
             currentBindingID = nil
+            isRefreshingEntitlements = false
         }
     }
 
@@ -637,6 +649,7 @@ final class SubscriptionManager: ObservableObject {
         shouldShowPaywall = false
         accessState = .free
         currentBindingID = nil
+        isRefreshingEntitlements = false
     }
 
     nonisolated private func debugLog(_ items: Any...) {
@@ -705,6 +718,7 @@ final class SubscriptionManager: ObservableObject {
         bindingUID = nil
         bindingProductID = nil
         currentBindingID = nil
+        isRefreshingEntitlements = false
     }
 
     func clear() {

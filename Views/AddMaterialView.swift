@@ -121,7 +121,7 @@ struct AddMaterialView: View {
 
         switch mode {
         case .add, .addToInvoice:
-            guard subscriptionManager.isPro else {
+            guard subscriptionManager.accessState == .pro else {
                 presentPaywallAfterDismissing()
                 return
             }

@@ -213,13 +213,13 @@ struct RootView: View {
                     case .invoices:
                         showingNewInvoice = true
                     case .clients:
-                        guard subscriptionManager.isPro else {
+                        guard subscriptionManager.accessState == .pro else {
                             subscriptionManager.presentPaywall()
                             return
                         }
                         showingNewClient = true
                     case .inventory:
-                        guard subscriptionManager.isPro else {
+                        guard subscriptionManager.accessState == .pro else {
                             subscriptionManager.presentPaywall()
                             return
                         }
