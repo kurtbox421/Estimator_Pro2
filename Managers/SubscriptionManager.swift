@@ -35,6 +35,7 @@ final class SubscriptionManager: ObservableObject {
 
     private let db: Firestore
     private let session: SessionManager
+    private let userDefaults: UserDefaults
     nonisolated(unsafe) private var updatesTask: Task<Void, Never>?
     private var cancellables: Set<AnyCancellable> = []
     private var resetToken: UUID?
@@ -44,15 +45,20 @@ final class SubscriptionManager: ObservableObject {
     private var hasActiveStoreKitEntitlement = false
     private var hasSubscriptionBinding = false
     private var hasRefreshedEntitlementsThisSession = false
-    private var hasSyncedAppStoreThisSession = false
+
+    private static func isProCacheKey(for uid: String) -> String {
+        "subscription.isPro.\(uid)"
+    }
 
     init(
         database: Firestore = Firestore.firestore(),
-        session: SessionManager
+        session: SessionManager,
+        userDefaults: UserDefaults = .standard
     ) {
         self.db = database
         self.session = session
-        self.isPro = false
+        self.userDefaults = userDefaults
+        self.isPro = Self.cachedIsPro(in: userDefaults, uid: session.uid)
         self.activeProductID = nil
         self.environment = nil
 
@@ -225,8 +231,7 @@ final class SubscriptionManager: ObservableObject {
     func refreshEntitlementsIfNeeded() async -> Bool {
         guard !hasRefreshedEntitlementsThisSession else { return isPro }
         hasRefreshedEntitlementsThisSession = true
-        await syncAppStoreOncePerSession()
-        return await refreshEntitlements()
+        return await refreshEntitlementsQuietly()
     }
 
     @discardableResult
@@ -241,6 +246,11 @@ final class SubscriptionManager: ObservableObject {
             Task { await persistSubscriptionBinding(uid: uid, transaction: entitlement) }
         }
         return isPro
+    }
+
+    @discardableResult
+    private func refreshEntitlementsQuietly() async -> Bool {
+        await refreshEntitlements()
     }
 
     private func activeSubscriptionEntitlement() async -> StoreKit.Transaction? {
@@ -267,21 +277,16 @@ final class SubscriptionManager: ObservableObject {
         return true
     }
 
-    private func syncAppStoreOncePerSession() async {
-        guard !hasSyncedAppStoreThisSession else { return }
-        hasSyncedAppStoreThisSession = true
-        if #available(iOS 15.0, *) {
-            try? await AppStore.sync()
-        }
-    }
-
     private func updateProStatus() {
-        isPro = hasActiveStoreKitEntitlement
+        let newValue = hasActiveStoreKitEntitlement
+        if isPro != newValue {
+            isPro = newValue
+        }
+        cacheIsProIfNeeded(newValue)
     }
 
     private func setSubscriptionBindingExists(_ newValue: Bool) {
         hasSubscriptionBinding = newValue
-        updateProStatus()
     }
 
     func presentPaywall(after delay: TimeInterval = 0) {
@@ -424,27 +429,18 @@ final class SubscriptionManager: ObservableObject {
             lastError = nil
             statusMessage = nil
             setProductState(.idle)
-            isPro = false
             activeProductID = nil
             environment = nil
             shouldShowPaywall = false
             hasActiveStoreKitEntitlement = false
             hasSubscriptionBinding = false
+            hasRefreshedEntitlementsThisSession = false
         }
     }
 
     nonisolated private func stopSubscriptionListener() {
         subscriptionListener?.remove()
         subscriptionListener = nil
-    }
-
-    private func clearAuthState() {
-        hasActiveStoreKitEntitlement = false
-        setSubscriptionBindingExists(false)
-        activeProductID = nil
-        environment = nil
-        statusMessage = nil
-        lastError = nil
     }
 
     private func startSubscriptionBindingListener(uid: String) {
@@ -470,7 +466,6 @@ final class SubscriptionManager: ObservableObject {
     }
 
     private func setUser(_ uid: String?) {
-        clearAuthState()
         if uid != currentUID {
             stopEntitlementListeners()
             stopSubscriptionListener()
@@ -478,12 +473,41 @@ final class SubscriptionManager: ObservableObject {
         }
 
         guard let uid else {
+            resetStoreKitStateForSignedOutUser()
             return
         }
 
+        loadCachedProStatus(for: uid)
         startEntitlementListeners()
         startSubscriptionBindingListener(uid: uid)
         Task { await refreshEntitlementsIfNeeded() }
+    }
+
+    private func resetStoreKitStateForSignedOutUser() {
+        hasActiveStoreKitEntitlement = false
+        hasSubscriptionBinding = false
+        hasRefreshedEntitlementsThisSession = false
+        activeProductID = nil
+        environment = nil
+        statusMessage = nil
+        lastError = nil
+        shouldShowPaywall = false
+        isPro = false
+    }
+
+    private func loadCachedProStatus(for uid: String) {
+        isPro = Self.cachedIsPro(in: userDefaults, uid: uid)
+        hasRefreshedEntitlementsThisSession = false
+    }
+
+    private static func cachedIsPro(in defaults: UserDefaults, uid: String?) -> Bool {
+        guard let uid else { return false }
+        return defaults.bool(forKey: isProCacheKey(for: uid))
+    }
+
+    private func cacheIsProIfNeeded(_ value: Bool) {
+        guard let uid = currentUID ?? session.uid else { return }
+        userDefaults.set(value, forKey: Self.isProCacheKey(for: uid))
     }
 
     nonisolated private func debugLog(_ items: Any...) {
