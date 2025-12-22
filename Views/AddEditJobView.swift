@@ -122,7 +122,7 @@ struct AddEditJobView: View {
                             lastNonNewClientSelection = newSelection
 
                         case .newClient:
-                            guard subscriptionManager.isPro else {
+                            guard subscriptionManager.accessState == .pro else {
                                 presentPaywallAfterDismissing()
                                 return
                             }
@@ -343,7 +343,7 @@ struct AddEditJobView: View {
         switch mode {
         case .add:
             print("[Paywall] Running free limit check for estimates. Current count: \(vm.jobs.count)")
-            if !subscriptionManager.isPro && vm.jobs.count >= 2 {
+            if subscriptionManager.accessState != .pro && vm.jobs.count >= 2 {
                 print("[Paywall] Estimate limit exceeded for free tier.")
                 Task { @MainActor in
                     print("[Paywall] Triggering paywall for estimate save.")
@@ -434,7 +434,7 @@ struct NewClientSheet: View {
             }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        guard subscriptionManager.isPro else {
+                        guard subscriptionManager.accessState == .pro else {
                             showPaywallAfterDismissingSheet()
                             return
                         }
