@@ -30,6 +30,7 @@ final class SessionManager: ObservableObject {
 
     func signOut() {
         do {
+            resetUserState(reason: "sign out")
             try AuthManager.shared.signOut()
         } catch {
             logger.error("Sign out error: \(error.localizedDescription)")
