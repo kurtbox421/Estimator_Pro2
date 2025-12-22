@@ -17,6 +17,9 @@ struct EstimatorProApp: App {
     @State private var showingSplash = true
 
     init() {
+        if FirebaseApp.app() == nil {
+            FirebaseApp.configure()
+        }
         let session = SessionManager()
         _session = StateObject(wrappedValue: session)
         _onboarding = StateObject(wrappedValue: OnboardingProgressStore(session: session))
