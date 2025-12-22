@@ -11,8 +11,10 @@ import FirebaseCore
 @main
 struct EstimatorProApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var session: SessionManager
     @StateObject private var onboarding: OnboardingProgressStore
+    @StateObject private var subscriptionManager: SubscriptionManager
 
     @State private var showingSplash = true
 
@@ -23,6 +25,7 @@ struct EstimatorProApp: App {
         let session = SessionManager()
         _session = StateObject(wrappedValue: session)
         _onboarding = StateObject(wrappedValue: OnboardingProgressStore(session: session))
+        _subscriptionManager = StateObject(wrappedValue: SubscriptionManager(session: session))
 #if DEBUG
         let bundleID = Bundle.main.bundleIdentifier ?? "(missing bundle identifier)"
         let schemeName = ProcessInfo.processInfo.environment["XCODE_SCHEME"] ?? "(unknown scheme)"
@@ -60,8 +63,13 @@ struct EstimatorProApp: App {
                 }
             }
             .onAppear(perform: dismissSplashAfterDelay)
+            .onChange(of: scenePhase) { _, newPhase in
+                guard newPhase == .active else { return }
+                Task { await subscriptionManager.refreshEntitlements() }
+            }
             .environmentObject(session)
             .environmentObject(onboarding)
+            .environmentObject(subscriptionManager)
         }
     }
 
@@ -91,7 +99,7 @@ private struct SessionScopedRoot: View {
     @StateObject private var settingsManager: SettingsManager
     @StateObject private var materialsStore: MaterialsCatalogStore
     @StateObject private var materialIntelligence: MaterialIntelligenceStore
-    @StateObject private var subscriptionManager: SubscriptionManager
+    @EnvironmentObject private var subscriptionManager: SubscriptionManager
 
     init(uid: String, session: SessionManager) {
         self.uid = uid
@@ -106,7 +114,6 @@ private struct SessionScopedRoot: View {
         _settingsManager = StateObject(wrappedValue: SettingsManager(session: session))
         _materialsStore = StateObject(wrappedValue: MaterialsCatalogStore(session: session))
         _materialIntelligence = StateObject(wrappedValue: MaterialIntelligenceStore(session: session))
-        _subscriptionManager = StateObject(wrappedValue: SubscriptionManager(session: session))
     }
 
     var body: some View {
@@ -123,7 +130,6 @@ private struct SessionScopedRoot: View {
         .environmentObject(settingsManager)
         .environmentObject(materialsStore)
         .environmentObject(materialIntelligence)
-        .environmentObject(subscriptionManager)
         .task {
             await subscriptionManager.refreshEntitlements()
             await subscriptionManager.loadProducts()

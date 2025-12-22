@@ -82,6 +82,9 @@ struct InventoryView: View {
                 .background(Color.black.opacity(0.35).ignoresSafeArea())
             }
         }
+        .onAppear {
+            Task { await subscriptionManager.refreshEntitlements() }
+        }
     }
 }
 
