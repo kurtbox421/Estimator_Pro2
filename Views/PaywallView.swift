@@ -2,14 +2,14 @@ import SwiftUI
 import StoreKit
 
 struct PaywallView: View {
-    @StateObject private var subscriptionManager: SubscriptionManager
+    @ObservedObject private var subscriptionManager: SubscriptionManager
 
     @State private var selectedProductID: String?
     @State private var showingErrorAlert = false
     @State private var showingPrivacyPolicy = false
 
     init(subscriptionManager: SubscriptionManager) {
-        _subscriptionManager = StateObject(wrappedValue: subscriptionManager)
+        self.subscriptionManager = subscriptionManager
     }
 
     var body: some View {
