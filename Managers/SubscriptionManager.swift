@@ -1,5 +1,6 @@
 import Foundation
 import FirebaseFirestore
+import os
 import StoreKit
 import SwiftUI
 import Combine
@@ -31,6 +32,7 @@ final class SubscriptionManager: ObservableObject {
 
     @Published var products: [Product] = []
     @Published private(set) var accessState: AccessState = .free
+    @Published private(set) var isPro: Bool = false
     @Published var activeProductID: String?
     @Published private(set) var bindingUID: String?
     @Published private(set) var bindingProductID: String?
@@ -42,12 +44,9 @@ final class SubscriptionManager: ObservableObject {
     @Published var productState: ProductLoadState = .idle
     @Published private(set) var productStateChangeToken: Int = 0
 
-    var isPro: Bool {
-        accessState == .pro
-    }
-
     private let db: Firestore
     private let session: SessionManager
+    private let logger = Logger(subsystem: "com.estimatorpro.app", category: "Subscription")
     nonisolated(unsafe) private var updatesTask: Task<Void, Never>?
     private var cancellables: Set<AnyCancellable> = []
     private var currentUID: String?
@@ -151,11 +150,13 @@ final class SubscriptionManager: ObservableObject {
         do {
             let result = try await product.purchase()
             debugLog("[Purchase] Result:", result)
+            logger.info("Purchase started for product \(product.id, privacy: .public)")
             switch result {
             case .success(let verification):
                 switch verification {
                 case .verified(let transaction):
                     debugLog("[Purchase] Verified transaction:", transaction.id, "uid:", uid)
+                    logger.info("Purchase verified. product=\(transaction.productID, privacy: .public) transaction=\(String(transaction.id), privacy: .public)")
                     let bindingSaved = await persistSubscriptionBinding(uid: uid, transaction: transaction)
                     updateBindingState(saved: bindingSaved, currentUID: uid, transaction: transaction)
                     await transaction.finish()
@@ -164,12 +165,15 @@ final class SubscriptionManager: ObservableObject {
                     shouldShowPaywall = false
                 case .unverified(_, let error):
                     debugLog("[Purchase] Verification failed:", error.localizedDescription, "uid:", uid)
+                    logger.error("Purchase verification failed: \(error.localizedDescription, privacy: .public)")
                     lastError = "Purchase verification failed: \(error.localizedDescription)"
                     statusMessage = lastError
                 }
             case .userCancelled:
+                logger.info("Purchase cancelled by user")
                 statusMessage = "Purchase cancelled."
             case .pending:
+                logger.info("Purchase pending approval")
                 lastError = "Purchase is pending. Please check your App Store purchases."
                 statusMessage = lastError
             @unknown default:
@@ -183,6 +187,7 @@ final class SubscriptionManager: ObservableObject {
             lastError = message
             statusMessage = message
             debugLog("[Purchase] Failed:", error.localizedDescription, "uid:", uid)
+            logger.error("Purchase failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -201,6 +206,7 @@ final class SubscriptionManager: ObservableObject {
         statusMessage = "Checking App Store purchases…"
 
         do {
+            logger.info("Restore purchases started")
             try await AppStore.sync()
         } catch {
             let message = error.localizedDescription.isEmpty
@@ -209,25 +215,28 @@ final class SubscriptionManager: ObservableObject {
             lastError = message
             statusMessage = message
             debugLog("[Restore] AppStore.sync failed:", error.localizedDescription, "uid:", uid)
+            logger.error("Restore failed during AppStore.sync: \(error.localizedDescription, privacy: .public)")
             return
         }
 
         let entitlement = await activeSubscriptionEntitlement()
         if let entitlement {
             debugLog("[Restore] Found entitlement:", entitlement.productID, "uid:", uid)
+            logger.info("Restore found entitlement for product \(entitlement.productID, privacy: .public)")
             let bindingSaved = await persistSubscriptionBinding(uid: uid, transaction: entitlement)
             updateBindingState(saved: bindingSaved, currentUID: uid, transaction: entitlement)
             _ = await refreshEntitlements()
             statusMessage = "Restored Estimator Pro (\(entitlement.productID))."
         } else {
             _ = await refreshEntitlements()
+            logger.info("Restore completed with no active entitlements")
             statusMessage = "No purchases found to restore."
         }
     }
 
     @discardableResult
     func refreshEntitlementsIfNeeded() async -> Bool {
-        guard !hasRefreshedEntitlementsThisSession else { return accessState == .pro }
+        guard !hasRefreshedEntitlementsThisSession else { return isPro }
         hasRefreshedEntitlementsThisSession = true
         return await refreshEntitlementsQuietly()
     }
@@ -242,11 +251,12 @@ final class SubscriptionManager: ObservableObject {
         hasActiveStoreKitEntitlement = entitlement != nil
         activeProductID = entitlement?.productID
         environment = entitlement.map { environmentString(for: $0) }
+        logger.info("Entitlements refreshed. active=\(self.hasActiveStoreKitEntitlement, privacy: .public) product=\(self.activeProductID ?? "none", privacy: .public)")
         debugLog("[Entitlements] StoreKit active:", hasActiveStoreKitEntitlement, "uid:", session.uid ?? "nil")
         await refreshBinding(for: entitlement)
         isRefreshingEntitlements = false
         updateProStatus()
-        return accessState == .pro
+        return isPro
     }
 
     @discardableResult
@@ -285,20 +295,15 @@ final class SubscriptionManager: ObservableObject {
         }
 
         let newState: AccessState
-        if hasActiveStoreKitEntitlement {
-            if hasMatchingSubscriptionBinding {
-                newState = .pro
-            } else if hasSubscriptionBinding {
-                newState = .entitledButOtherAccount
-            } else {
-                newState = .free
-            }
-        } else {
-            newState = .free
-        }
+        newState = hasActiveStoreKitEntitlement ? .pro : .free
 
         if accessState != newState {
             accessState = newState
+        }
+
+        let hasProAccess = newState == .pro
+        if isPro != hasProAccess {
+            isPro = hasProAccess
         }
     }
 
@@ -346,14 +351,17 @@ final class SubscriptionManager: ObservableObject {
     }
 
     private func handleVerifiedTransactionUpdate(_ transaction: StoreKit.Transaction) async {
+        logger.info("Transaction update received. product=\(transaction.productID, privacy: .public) transaction=\(String(transaction.id), privacy: .public)")
         await refreshEntitlements()
         guard let uid = session.uid else {
             debugLog("[StoreKit] Skipping binding update: no signed-in user.")
+            await transaction.finish()
             return
         }
 
         guard isTransactionActive(transaction) else {
             debugLog("[StoreKit] Skipping binding update: inactive transaction for uid:", uid)
+            await transaction.finish()
             return
         }
 
@@ -626,7 +634,7 @@ final class SubscriptionManager: ObservableObject {
             currentBindingID = nil
         }
 
-        guard let uid else {
+        guard uid != nil else {
             resetStoreKitStateForSignedOutUser()
             return
         }
@@ -648,6 +656,7 @@ final class SubscriptionManager: ObservableObject {
         lastError = nil
         shouldShowPaywall = false
         accessState = .free
+        isPro = false
         currentBindingID = nil
         isRefreshingEntitlements = false
     }
@@ -711,6 +720,7 @@ final class SubscriptionManager: ObservableObject {
         environment = nil
         shouldShowPaywall = false
         accessState = .free
+        isPro = false
         hasActiveStoreKitEntitlement = false
         hasSubscriptionBinding = false
         hasMatchingSubscriptionBinding = false

@@ -213,13 +213,13 @@ struct RootView: View {
                     case .invoices:
                         showingNewInvoice = true
                     case .clients:
-                        guard subscriptionManager.accessState == .pro else {
+                        guard subscriptionManager.isPro else {
                             subscriptionManager.presentPaywall()
                             return
                         }
                         showingNewClient = true
                     case .inventory:
-                        guard subscriptionManager.accessState == .pro else {
+                        guard subscriptionManager.isPro else {
                             subscriptionManager.presentPaywall()
                             return
                         }
@@ -1401,7 +1401,7 @@ struct BrandingLogoView: View {
     @State private var showSaveErrorAlert = false
     @State private var showPaywall = false
     private var hasProAccess: Bool {
-        subscriptionManager.accessState == .pro
+        subscriptionManager.isPro
     }
 
     var body: some View {
@@ -1475,8 +1475,8 @@ struct BrandingLogoView: View {
         .onReceive(companySettings.$logoImage) { newLogo in
             logoImage = newLogo
         }
-        .onChange(of: subscriptionManager.accessState) { _, newValue in
-            if newValue == .pro {
+        .onChange(of: subscriptionManager.isPro) { _, hasPro in
+            if hasPro {
                 showPaywall = false
             }
         }

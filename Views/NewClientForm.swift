@@ -53,7 +53,7 @@ struct NewClientForm: View {
         let trimmedName = name.trimmingCharacters(in: .whitespaces)
         guard !trimmedName.isEmpty else { return }
 
-        guard subscriptionManager.accessState == .pro else {
+        guard subscriptionManager.isPro else {
             presentPaywallAfterDismissing()
             return
         }

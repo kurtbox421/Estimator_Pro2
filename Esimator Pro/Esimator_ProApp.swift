@@ -16,6 +16,7 @@ struct EstimatorProApp: App {
     @StateObject private var subscriptionManager: SubscriptionManager
 
     @State private var showingSplash = true
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         if FirebaseApp.app() == nil {
@@ -67,6 +68,15 @@ struct EstimatorProApp: App {
             .environmentObject(session)
             .environmentObject(onboarding)
             .environmentObject(subscriptionManager)
+            .task {
+                await subscriptionManager.refreshEntitlementsIfNeeded()
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                guard newPhase == .active else { return }
+                Task {
+                    await subscriptionManager.refreshEntitlements()
+                }
+            }
         }
     }
 
