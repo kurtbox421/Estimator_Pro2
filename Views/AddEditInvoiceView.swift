@@ -83,7 +83,7 @@ struct AddEditInvoiceView: View {
                         Divider()
 
                         Button {
-                            guard subscriptionManager.accessState == .pro else {
+                            guard subscriptionManager.isPro else {
                                 presentPaywallAfterDismissing()
                                 return
                             }
@@ -323,7 +323,7 @@ struct AddEditInvoiceView: View {
         switch mode {
         case .add:
             print("[Paywall] Running free limit check for invoices. Current count: \(invoiceVM.invoices.count)")
-            if subscriptionManager.accessState != .pro && invoiceVM.invoices.count >= 2 {
+            if !subscriptionManager.isPro && invoiceVM.invoices.count >= 2 {
                 print("[Paywall] Invoice limit exceeded for free tier.")
                 Task { @MainActor in
                     print("[Paywall] Triggering paywall for invoice save.")

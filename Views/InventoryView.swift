@@ -87,7 +87,7 @@ struct InventoryView: View {
 
 private extension InventoryView {
     var hasProAccess: Bool {
-        subscriptionManager.accessState == .pro
+        subscriptionManager.isPro
     }
 
     var searchBar: some View {
